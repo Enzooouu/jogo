@@ -1,14 +1,17 @@
-// Ponto de entrada do navegador: troca de telas e ligação entre menu,
-// partida e resultado.
+// Ponto de entrada do navegador: troca de telas e o caminho
+// início -> modo -> carta do elemento -> versus -> partida -> resultado.
 
-import { ELEMENTS } from '/shared/elements.js';
+import { ELEMENTS, HAZARDS, HAZARD_REACTION } from '/shared/elements.js';
+import { WEAPONS, weaponProfile } from '/shared/weapons.js';
 import { MatchRunner } from './match.js';
-import { unlockAudio, toggleMute } from './audio.js';
-import { drawFighter } from './render/fighter.js';
+import { unlockAudio, toggleMute, isMuted } from './audio.js';
 import { Renderer, TEAM_COLORS } from './render/renderer.js';
+import { drawPortrait, fitCanvas } from './render/portrait.js';
 import { buildLocalSetup, outcomeFor } from './setup.js';
 import { api } from './api.js';
 import { renderAccountBox, initAuthScreen, setAuthMode, focusAuth, loadProfile } from './screens/account.js';
+import { DemoArena } from './screens/demo.js';
+import { VersusScreen } from './screens/versus.js';
 
 const $ = (sel) => document.querySelector(sel);
 const DEBUG = new URLSearchParams(location.search).has('debug');
@@ -16,29 +19,44 @@ const DEBUG = new URLSearchParams(location.search).has('debug');
 const state = {
   screen: null,
   element: loadPref('elemento', 'fogo'),
-  teamSize: 2,
+  teamSize: Number(loadPref('tamanho', '2')) || 2,
   mode: 'times',
   difficulty: loadPref('dificuldade', 'normal'),
+  demo: loadPref('demo', '1') === '1',
   runner: null,
+  pendingSetup: null,  // times montados na tela Versus
   lastSetup: null,
   user: null,
+  offline: false,      // sem servidor: só modo convidado
   matchTicket: null,   // promessa com o id da partida no servidor (se logado)
 };
 
+const demo = new DemoArena($('#menu-bg'));
+const versus = new VersusScreen($('#versus-canvas'));
+
 // ------------------------------------------------------------ telas
 
-const SCREENS = ['menu', 'game', 'result', 'auth', 'profile'];
+const SCREENS = ['home', 'mode', 'cards', 'versus', 'game', 'result', 'auth', 'profile'];
+const WITH_DEMO = new Set(['home', 'mode', 'cards', 'auth', 'profile']);
 
 export function show(name) {
   for (const s of SCREENS) $(`#screen-${s}`).hidden = s !== name;
   state.screen = name;
-  if (name === 'menu') startPreviews();
-  else stopPreviews();
+  if (WITH_DEMO.has(name) && state.demo) demo.start();
+  else demo.stop();
+  if (name !== 'versus') versus.stop();
+  if (name === 'cards') startCardAnimation();
+  else stopCardAnimation();
+  if (name === 'mode') drawModeTiles();
+  closePanels();
 }
 
 document.addEventListener('click', (e) => {
   const go = e.target.closest('[data-go]');
   if (go) show(go.dataset.go);
+  const back = e.target.closest('[data-back]');
+  if (back) show(back.dataset.back);
+  if (e.target.closest('[data-close]')) closePanels();
 });
 
 // ------------------------------------------------------------ conta
@@ -57,6 +75,14 @@ function setUser(user) {
       }
     },
   });
+  if (state.offline) setOfflineMode();
+}
+
+function setOfflineMode() {
+  state.offline = true;
+  $('#account-box').hidden = true;
+  $('#home-profile').hidden = true;
+  $('#save-hint').textContent = 'Versão sem servidor: dá para jogar, mas contas e estatísticas ficam desligadas.';
 }
 
 function openAuth(mode) {
@@ -66,6 +92,10 @@ function openAuth(mode) {
 }
 
 async function openProfile() {
+  if (!state.user) {
+    openAuth('login');
+    return;
+  }
   show('profile');
   const ok = await loadProfile();
   if (!ok) {
@@ -78,27 +108,97 @@ async function openProfile() {
   }
 }
 
-// ------------------------------------------------------------ menu
+// ------------------------------------------------------------ início
 
-function buildElementCards() {
-  const list = $('#element-list');
+function closePanels() {
+  for (const p of document.querySelectorAll('.side-panel')) p.hidden = true;
+}
+
+function togglePanel(id) {
+  const panel = $(id);
+  const open = panel.hidden;
+  closePanels();
+  panel.hidden = !open;
+  if (id === '#settings-panel') {
+    $('#opt-sound').checked = !isMuted();
+    $('#opt-demo').checked = state.demo;
+  }
+}
+
+// ------------------------------------------------------------ passo 1: modo
+
+function drawModeTiles() {
+  requestAnimationFrame(() => {
+    for (const tile of document.querySelectorAll('.mode-tile')) {
+      const { ctx, w, h } = fitCanvas(tile.querySelector('canvas'));
+      const ffa = tile.dataset.mode === 'ffa';
+      const n = ffa ? 2 : Number(tile.dataset.size);
+      const scale = Math.min(1.5, h / 95) * (n === 3 ? 0.78 : n === 2 ? 0.9 : 1);
+      const gap = scale * 26;
+      const foot = h - 12;
+      if (ffa) {
+        ['fogo', 'agua', 'terra', 'ar'].forEach((el, i) => {
+          drawPortrait(ctx, el, w * (0.17 + i * 0.22), foot, scale * 0.9, { facing: i < 2 ? 1 : -1 });
+        });
+        continue;
+      }
+      // Cada time agrupado de um lado, com espaço no meio para o "VS"
+      for (let i = 0; i < n; i++) {
+        const offset = (i - (n - 1) / 2) * gap;
+        drawPortrait(ctx, 'fogo', w * 0.25 + offset, foot, scale, { facing: 1 });
+        drawPortrait(ctx, 'agua', w * 0.75 + offset, foot, scale, { facing: -1 });
+      }
+      ctx.font = `italic 900 ${Math.round(h * 0.16)}px system-ui, sans-serif`;
+      ctx.textAlign = 'center';
+      ctx.fillStyle = 'rgba(255,255,255,0.85)';
+      ctx.fillText('VS', w / 2, h * 0.6);
+    }
+  });
+}
+
+function chooseMode(teamSize) {
+  state.teamSize = teamSize;
+  state.mode = 'times';
+  savePref('tamanho', String(teamSize));
+  show('cards');
+  $('#cards-mode').textContent = `Modo ${teamSize} × ${teamSize} · o time inteiro usa o elemento da carta`;
+  $(`.el-card[data-element="${state.element}"]`)?.focus();
+}
+
+// ------------------------------------------------------------ passo 2: cartas
+
+function buildCards() {
+  const list = $('#card-list');
   list.innerHTML = '';
   for (const el of Object.values(ELEMENTS)) {
-    const btn = document.createElement('button');
-    btn.type = 'button';
-    btn.className = 'element-card';
-    btn.dataset.element = el.id;
-    btn.style.setProperty('--el', el.color);
-    btn.disabled = !el.enabled;
-    btn.innerHTML = `
-      ${el.enabled ? '' : '<span class="soon">EM BREVE</span>'}
-      <canvas width="192" height="220" aria-hidden="true"></canvas>
-      <span class="name"></span>
-      <span class="desc"></span>`;
-    btn.querySelector('.name').textContent = el.name;
-    btn.querySelector('.desc').textContent = el.description;
-    btn.addEventListener('click', () => selectElement(el.id));
-    list.appendChild(btn);
+    const reactions = HAZARD_REACTION[el.id] ?? {};
+    const imune = Object.keys(reactions).filter((h) => reactions[h] === 'imune').map((h) => HAZARDS[h].name).join(', ');
+    const morre = Object.keys(reactions).filter((h) => reactions[h] === 'morre').map((h) => HAZARDS[h].name).join(', ');
+    const rows = [['Imune', imune || '—'], ['Morre', morre || '—']];
+    for (const id of Object.keys(WEAPONS)) {
+      if (WEAPONS[id].byElement?.[el.id]) rows.push([WEAPONS[id].name, weaponProfile(id, el.id).name]);
+    }
+    const card = document.createElement('button');
+    card.type = 'button';
+    card.className = 'el-card';
+    card.dataset.element = el.id;
+    card.disabled = !el.enabled;
+    card.style.setProperty('--c1', el.color);
+    card.style.setProperty('--c2', el.dark);
+    card.innerHTML = `<div class="top"><span class="n"></span>${el.enabled ? '<i class="sel" hidden>SELECIONADO</i>' : '<i>EM BREVE</i>'}</div>
+      <canvas aria-hidden="true"></canvas><dl></dl>`;
+    card.querySelector('.n').textContent = el.name.toUpperCase();
+    const dl = card.querySelector('dl');
+    for (const [k, v] of rows) {
+      const dt = document.createElement('dt');
+      dt.textContent = k;
+      const dd = document.createElement('dd');
+      dd.textContent = v;
+      dl.append(dt, dd);
+    }
+    card.addEventListener('click', () => selectElement(el.id));
+    card.addEventListener('dblclick', () => el.enabled && goVersus());
+    list.appendChild(card);
   }
   selectElement(ELEMENTS[state.element]?.enabled ? state.element : 'fogo');
 }
@@ -106,55 +206,91 @@ function buildElementCards() {
 function selectElement(id) {
   state.element = id;
   savePref('elemento', id);
-  for (const card of document.querySelectorAll('.element-card')) {
-    card.classList.toggle('on', card.dataset.element === id);
+  for (const card of document.querySelectorAll('.el-card')) {
+    const on = card.dataset.element === id;
+    card.classList.toggle('on', on);
+    const sel = card.querySelector('.sel');
+    if (sel) sel.hidden = !on;
   }
 }
 
-function bindSegment(selector, onChange) {
-  const seg = $(selector);
-  seg.addEventListener('click', (e) => {
-    const btn = e.target.closest('button');
-    if (!btn || btn.disabled) return;
-    for (const b of seg.querySelectorAll('button')) b.classList.toggle('on', b === btn);
-    onChange(btn.dataset.value);
-  });
-}
-
-function setSegment(selector, value) {
-  for (const b of $(selector).querySelectorAll('button')) b.classList.toggle('on', b.dataset.value === value);
-}
-
-// Bonecos animados nos cartões de elemento
-let previewFrame = null;
-function startPreviews() {
-  if (previewFrame) return;
+let cardFrame = null;
+function startCardAnimation() {
+  if (cardFrame) return;
   const t0 = performance.now();
-  const draw = (now) => {
-    const time = (now - t0) / 1000;
-    for (const card of document.querySelectorAll('.element-card')) {
-      const canvas = card.querySelector('canvas');
-      const ctx = canvas.getContext('2d');
-      const selected = card.classList.contains('on');
-      ctx.setTransform(1, 0, 0, 1, 0, 0);
-      ctx.clearRect(0, 0, canvas.width, canvas.height);
-      ctx.setTransform(2.2, 0, 0, 2.2, 0, 0);
-      const fake = {
-        element: card.dataset.element, facing: 1, slot: 0, w: 30, h: 66,
-        vx: 0, vy: 0, onGround: true, hitstun: 0, invuln: 0, status: {},
-        attack: selected && time % 2 > 1.6 ? { weapon: null, t: (time % 2) - 1.6, startup: 0.07, duration: 0.4 } : null,
-        weapon: null, name: '',
-      };
-      drawFighter(ctx, fake, 29, 22, { runPhase: 0 }, selected ? time : 0, { teamColor: '#fff', isLocal: false, showName: false });
+  const loop = (now) => {
+    const t = (now - t0) / 1000 + 1;
+    for (const card of document.querySelectorAll('.el-card')) {
+      const { ctx, w, h } = fitCanvas(card.querySelector('canvas'));
+      const on = card.classList.contains('on');
+      const el = card.dataset.element;
+      const weapon = el === 'fogo' ? 'espada' : el === 'agua' ? 'cajado' : null;
+      drawPortrait(ctx, el, w / 2, h - 12, Math.min(2.1, h / 80), {
+        time: on ? t : 0,
+        extra: weapon ? { weapon: { id: weapon } } : {},
+      });
     }
-    previewFrame = requestAnimationFrame(draw);
+    cardFrame = requestAnimationFrame(loop);
   };
-  previewFrame = requestAnimationFrame(draw);
+  cardFrame = requestAnimationFrame(loop);
 }
 
-function stopPreviews() {
-  if (previewFrame) cancelAnimationFrame(previewFrame);
-  previewFrame = null;
+function stopCardAnimation() {
+  if (cardFrame) cancelAnimationFrame(cardFrame);
+  cardFrame = null;
+}
+
+// ------------------------------------------------------------ passo 3: versus
+
+function goVersus() {
+  const setup = newSetup();
+  state.pendingSetup = setup;
+  const me = setup.players.find((p) => p.id === setup.localPlayerId);
+  const mine = setup.players.filter((p) => p.team === me.team);
+  const theirs = setup.players.filter((p) => p.team !== me.team);
+  const a = ELEMENTS[mine[0].element];
+  const b = ELEMENTS[theirs[0].element];
+
+  const title = $('#vs-title');
+  title.innerHTML = '<span class="a"></span> × <span class="b"></span>';
+  title.querySelector('.a').textContent = a.name.toUpperCase();
+  title.querySelector('.a').style.color = a.light;
+  title.querySelector('.b').textContent = b.name.toUpperCase();
+  title.querySelector('.b').style.color = b.light;
+
+  fillSide($('#vs-left'), 'SEU TIME', a, mine, me.id);
+  fillSide($('#vs-right'), 'ADVERSÁRIO', b, theirs, me.id);
+  setChips('#diff-seg', state.difficulty);
+  show('versus');
+  versus.start(setup);
+  $('#play-btn').focus();
+}
+
+function fillSide(box, tag, el, members, myId) {
+  const reactions = HAZARD_REACTION[el.id] ?? {};
+  const imune = Object.keys(reactions).find((h) => reactions[h] === 'imune');
+  const morre = Object.keys(reactions).find((h) => reactions[h] === 'morre');
+  box.innerHTML = '<span class="tag"></span><h2></h2><ul></ul><div class="names"></div>';
+  const tagEl = box.querySelector('.tag');
+  tagEl.textContent = tag;
+  tagEl.style.background = tag === 'SEU TIME' ? el.color : 'rgba(255,255,255,.14)';
+  tagEl.style.color = tag === 'SEU TIME' ? '#140600' : el.light;
+  const h2 = box.querySelector('h2');
+  h2.textContent = el.name.toUpperCase();
+  h2.style.color = el.light;
+  const ul = box.querySelector('ul');
+  const effect = { fogo: 'Armas queimam o alvo', agua: 'Armas deixam o alvo lento' }[el.id];
+  for (const line of [imune && `Imune: ${HAZARDS[imune].name}`, morre && `Morre: ${HAZARDS[morre].name}`, effect]) {
+    if (!line) continue;
+    const li = document.createElement('li');
+    li.textContent = line;
+    ul.appendChild(li);
+  }
+  box.querySelector('.names').textContent = members.map((p) => (p.id === myId ? `${p.name} (você)` : p.name)).join(' · ');
+}
+
+function setChips(selector, value) {
+  for (const b of $(selector).querySelectorAll('button')) b.classList.toggle('on', b.dataset.value === value);
 }
 
 // ------------------------------------------------------------ partida
@@ -191,8 +327,9 @@ async function startMatch(setup) {
   runner.start();
 
   // Avisa o servidor que a partida começou (só para quem está logado).
+  const teamSize = setup.players.filter((p) => p.team === setup.players[0].team).length;
   state.matchTicket = state.user
-    ? api.startMatch({ mode: setup.mode, element: setup.players[0].element, teamSize: state.teamSize }).catch((err) => ({ error: err }))
+    ? api.startMatch({ mode: setup.mode, element: setup.players[0].element, teamSize }).catch((err) => ({ error: err }))
     : null;
   if (DEBUG) window.__brawl = { runner, state };
 }
@@ -314,6 +451,13 @@ window.addEventListener('keydown', (e) => {
   if (state.screen === 'game' && (e.code === 'Escape' || e.code === 'KeyP')) {
     e.preventDefault();
     setPaused(!state.runner?.paused);
+    return;
+  }
+  // Esc volta um passo nos menus
+  if (e.code === 'Escape') {
+    const back = { mode: 'home', cards: 'mode', versus: 'cards', auth: 'home', profile: 'home' }[state.screen];
+    if (state.screen === 'home') closePanels();
+    else if (back) show(back);
   }
 });
 
@@ -342,30 +486,53 @@ function savePref(key, value) {
 // ------------------------------------------------------------ início
 
 function init() {
-  buildElementCards();
-  setSegment('#diff-seg', state.difficulty);
-  bindSegment('#mode-seg', (v) => { state.mode = v; });
-  bindSegment('#size-seg', (v) => { state.teamSize = Number(v); });
-  bindSegment('#diff-seg', (v) => {
-    state.difficulty = v;
-    savePref('dificuldade', v);
+  buildCards();
+  $('#home-play').addEventListener('click', () => show('mode'));
+  $('#home-profile').addEventListener('click', openProfile);
+  $('#home-controls').addEventListener('click', () => togglePanel('#controls-panel'));
+  $('#home-settings').addEventListener('click', () => togglePanel('#settings-panel'));
+  $('#opt-sound').addEventListener('change', (e) => {
+    if (e.target.checked === isMuted()) toggleMute();
   });
-  $('#play-btn').addEventListener('click', () => startMatch(newSetup()));
+  $('#opt-demo').addEventListener('change', (e) => {
+    state.demo = e.target.checked;
+    savePref('demo', state.demo ? '1' : '0');
+    if (state.demo) demo.start();
+    else demo.stop();
+  });
+  for (const tile of document.querySelectorAll('.mode-tile[data-size]')) {
+    tile.addEventListener('click', () => chooseMode(Number(tile.dataset.size)));
+  }
+  $('#cards-next').addEventListener('click', goVersus);
+  $('#diff-seg').addEventListener('click', (e) => {
+    const btn = e.target.closest('button');
+    if (!btn) return;
+    state.difficulty = btn.dataset.value;
+    savePref('dificuldade', state.difficulty);
+    setChips('#diff-seg', state.difficulty);
+  });
+  $('#play-btn').addEventListener('click', () => {
+    const setup = state.pendingSetup ?? newSetup();
+    setup.difficulty = state.difficulty;
+    startMatch(setup);
+  });
   $('#resume-btn').addEventListener('click', () => setPaused(false));
   $('#quit-btn').addEventListener('click', quitMatch);
   $('#again-btn').addEventListener('click', () => startMatch(newSetup()));
-  $('#menu-btn').addEventListener('click', () => show('menu'));
+  $('#menu-btn').addEventListener('click', () => show('home'));
+  window.addEventListener('resize', () => {
+    if (state.screen === 'mode') drawModeTiles();
+  });
   initAuthScreen((user) => {
     setUser(user);
-    show('menu');
+    show('home');
   });
   setUser(null);
-  show('menu');
+  show('home');
   api.me().then(({ user }) => setUser(user)).catch(() => {
     // Sem servidor (ex.: aberto como página estática): joga só como convidado.
     setUser(null);
-    $('#account-box').hidden = true;
-    $('#save-hint').textContent = 'Versão sem servidor: dá para jogar, mas contas e estatísticas ficam desligadas.';
+    setOfflineMode();
   });
 }
 

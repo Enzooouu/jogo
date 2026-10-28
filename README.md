@@ -23,6 +23,11 @@ Abra **http://localhost:3000** no navegador.
 
 ## Como jogar
 
+Na tela inicial (com uma partida de demonstração rodando ao fundo), clique em
+**Jogar** → escolha o modo (**1×1, 2×2 ou 3×3**) → escolha a **carta** do
+elemento do seu time → confira os times na tela **Versus** e clique em **Lutar**.
+
+
 | Ação | Teclas |
 | --- | --- |
 | Andar | `A` `D` ou `←` `→` |
@@ -39,7 +44,7 @@ Abra **http://localhost:3000** no navegador.
 
 **Regras**
 
-- Partida **Time vs Time**: você + 1 bot contra 2 bots (dá para escolher 3v3 e 4v4).
+- Partida **Time vs Time**: 1×1, 2×2 ou 3×3 contra bots. Todos contra todos chega junto com Terra e Ar.
 - Cada time é de um elemento só, e dois times nunca têm o mesmo elemento (hoje: Fogo contra Água).
 - Cada jogador tem 3 vidas. Perde uma vida quem **cai do mapa** ou **toca num perigo mortal**.
 - Cada golpe aumenta o dano (%) do alvo; quanto mais dano, mais longe ele voa.

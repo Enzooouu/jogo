@@ -10,71 +10,96 @@
 <body>
   <div id="app">
 
-    <!-- ===================== MENU ===================== -->
-    <section id="screen-menu" class="screen" hidden>
-      <header class="topbar">
-        <div class="brand">
-          <span class="brand-mark" aria-hidden="true"></span>
-          <span>Brawl dos Elementos</span>
+    <!-- Fundo animado dos menus: partida de demonstração entre bots -->
+    <canvas id="menu-bg" aria-hidden="true"></canvas>
+
+    <!-- ===================== INÍCIO ===================== -->
+    <section id="screen-home" class="screen menu-screen" hidden>
+      <div class="home-shade"></div>
+      <div class="live-tag">● PARTIDA DE DEMONSTRAÇÃO</div>
+      <nav class="home-menu">
+        <div class="logo">
+          <b>BRAWL<br>DOS ELEMENTOS</b>
+          <small>FOGO · ÁGUA · TERRA · AR</small>
         </div>
-        <div id="account-box" class="account-box"></div>
+        <button type="button" class="home-item on" id="home-play">JOGAR</button>
+        <button type="button" class="home-item" id="home-profile">PERFIL</button>
+        <button type="button" class="home-item" id="home-controls">CONTROLES</button>
+        <button type="button" class="home-item" id="home-settings">CONFIGURAÇÕES</button>
+      </nav>
+      <div id="account-box" class="account-box"></div>
+
+      <div id="controls-panel" class="side-panel" hidden>
+        <h2>Controles</h2>
+        <ul class="keys">
+          <li><span><kbd>A</kbd><kbd>D</kbd> <kbd>←</kbd><kbd>→</kbd></span> andar</li>
+          <li><span><kbd>W</kbd> <kbd>↑</kbd> <kbd>Espaço</kbd></span> pular (2x no ar)</li>
+          <li><span><kbd>S</kbd> <kbd>↓</kbd></span> descer / cair rápido</li>
+          <li><span>segurar p/ parede</span> se pendurar · pular sai</li>
+          <li><span><kbd>Clique esq.</kbd> <kbd>J</kbd></span> atacar</li>
+          <li><span><kbd>Clique dir.</kbd> <kbd>K</kbd></span> lançar a arma</li>
+          <li><span><kbd>Tab</kbd> (segurar)</span> placar completo</li>
+          <li><span><kbd>Esc</kbd></span> pausar · <kbd>M</kbd> som</li>
+        </ul>
+        <p class="hint">Armas caem do céu: encoste para pegar. O efeito delas muda com o seu elemento.</p>
+        <button type="button" class="btn ghost small" data-close>Fechar</button>
+      </div>
+
+      <div id="settings-panel" class="side-panel" hidden>
+        <h2>Configurações</h2>
+        <label class="toggle"><input type="checkbox" id="opt-sound"> Som</label>
+        <label class="toggle"><input type="checkbox" id="opt-demo"> Partida de demonstração no fundo</label>
+        <button type="button" class="btn ghost small" data-close>Fechar</button>
+      </div>
+    </section>
+
+    <!-- ===================== MODO ===================== -->
+    <section id="screen-mode" class="screen menu-screen" hidden>
+      <div class="dim"></div>
+      <header class="step-head">
+        <button type="button" class="back" data-back="home">‹ Voltar</button>
+        <div><small>PASSO 1 DE 3</small><h1>ESCOLHA O MODO</h1></div>
       </header>
+      <div class="mode-grid">
+        <button type="button" class="mode-tile" data-size="1"><canvas></canvas><b>1 × 1</b><span>Duelo: você contra um bot</span></button>
+        <button type="button" class="mode-tile" data-size="2"><canvas></canvas><b>2 × 2</b><span>Você + 1 aliado contra 2</span></button>
+        <button type="button" class="mode-tile" data-size="3"><canvas></canvas><b>3 × 3</b><span>Você + 2 aliados contra 3</span></button>
+        <button type="button" class="mode-tile" data-mode="ffa" disabled><canvas></canvas><b>TODOS CONTRA TODOS</b><span>Em breve: chega junto com Terra e Ar</span><i>EM BREVE</i></button>
+      </div>
+    </section>
 
-      <div class="menu-body">
-        <div class="hero">
-          <h1 class="title">BRAWL<span>dos</span>ELEMENTOS</h1>
-          <p class="tagline">Derrube o time inimigo no abismo — ou no perigo que ele não aguenta.</p>
+    <!-- ===================== CARTAS (ELEMENTO) ===================== -->
+    <section id="screen-cards" class="screen menu-screen" hidden>
+      <div class="dim strong"></div>
+      <header class="step-head">
+        <button type="button" class="back" data-back="mode">‹ Voltar</button>
+        <div><small>PASSO 2 DE 3</small><h1>ESCOLHA A CARTA DO SEU TIME</h1></div>
+      </header>
+      <div id="card-list" class="card-list"></div>
+      <div class="step-foot">
+        <span id="cards-mode" class="hint"></span>
+        <button type="button" id="cards-next" class="go-btn">CONTINUAR ›</button>
+      </div>
+    </section>
+
+    <!-- ===================== VERSUS ===================== -->
+    <section id="screen-versus" class="screen" hidden>
+      <canvas id="versus-canvas" aria-hidden="true"></canvas>
+      <header class="vs-top">
+        <button type="button" class="back" data-back="cards">‹ Voltar</button>
+        <div class="vs-title"><h1 id="vs-title"></h1><p>PASSO 3 DE 3 · CONFIRA OS TIMES</p></div>
+        <span></span>
+      </header>
+      <div class="vs-side l" id="vs-left"></div>
+      <div class="vs-side r" id="vs-right"></div>
+      <div class="vs-bar">
+        <div class="chips" id="diff-seg">
+          <button type="button" data-value="facil">Fácil</button>
+          <button type="button" data-value="normal">Normal</button>
+          <button type="button" data-value="dificil">Difícil</button>
         </div>
-
-        <div class="menu-grid">
-          <div class="panel">
-            <h2>Seu elemento</h2>
-            <div id="element-list" class="element-list"></div>
-            <p class="hint">Seu time inteiro luta com o seu elemento. O time adversário é de outro elemento.</p>
-          </div>
-
-          <div class="panel">
-            <h2>Partida</h2>
-            <div class="field">
-              <span class="label">Modo</span>
-              <div class="seg" id="mode-seg">
-                <button type="button" data-value="times" class="on">Time vs Time</button>
-                <button type="button" data-value="ffa" disabled title="Em breve">Todos contra todos <small>em breve</small></button>
-              </div>
-            </div>
-            <div class="field">
-              <span class="label">Tamanho dos times</span>
-              <div class="seg" id="size-seg">
-                <button type="button" data-value="2" class="on">2 v 2</button>
-                <button type="button" data-value="3">3 v 3</button>
-                <button type="button" data-value="4">4 v 4</button>
-              </div>
-            </div>
-            <div class="field">
-              <span class="label">Bots</span>
-              <div class="seg" id="diff-seg">
-                <button type="button" data-value="facil">Fácil</button>
-                <button type="button" data-value="normal" class="on">Normal</button>
-                <button type="button" data-value="dificil">Difícil</button>
-              </div>
-            </div>
-            <button id="play-btn" class="btn-play" type="button">JOGAR</button>
-            <p class="hint" id="save-hint"></p>
-          </div>
-        </div>
-
-        <div class="panel controls">
-          <h2>Controles</h2>
-          <ul>
-            <li><kbd>A</kbd><kbd>D</kbd> ou <kbd>←</kbd><kbd>→</kbd> andar</li>
-            <li><kbd>W</kbd> <kbd>↑</kbd> ou <kbd>Espaço</kbd> pular (2x no ar)</li>
-            <li><kbd>S</kbd> ou <kbd>↓</kbd> descer da plataforma / cair rápido</li>
-            <li><kbd>Clique esquerdo</kbd>, <kbd>J</kbd> ou <kbd>Z</kbd> atacar</li>
-            <li><kbd>Clique direito</kbd>, <kbd>K</kbd> ou <kbd>X</kbd> arremessar a arma</li>
-            <li><kbd>Tab</kbd> (segurar) placar · <kbd>Esc</kbd> pausar · <kbd>M</kbd> som</li>
-          </ul>
-          <p class="hint">Armas caem do céu: encoste para pegar. O efeito delas muda com o seu elemento.</p>
-        </div>
+        <button type="button" id="play-btn" class="fight">LUTAR</button>
+        <p class="hint" id="save-hint"></p>
       </div>
     </section>
 
@@ -135,7 +160,7 @@
           <button id="auth-submit" type="submit" class="btn">Entrar</button>
         </form>
         <p class="hint" id="auth-rules">Usuário: 3 a 20 letras, números ou _. Senha: mínimo 6 caracteres.</p>
-        <button type="button" class="btn ghost small" data-go="menu">Voltar</button>
+        <button type="button" class="btn ghost small" data-go="home">Voltar</button>
       </div>
     </section>
 
@@ -147,7 +172,7 @@
             <h1 id="profile-name"></h1>
             <p class="hint" id="profile-since"></p>
           </div>
-          <button type="button" class="btn ghost small" data-go="menu">Voltar ao menu</button>
+          <button type="button" class="btn ghost small" data-go="home">Voltar ao menu</button>
         </header>
         <div id="profile-stats" class="stat-grid"></div>
         <div class="menu-grid">
