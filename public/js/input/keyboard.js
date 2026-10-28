@@ -1,4 +1,5 @@
-// Teclado -> comando do jogador (mesmo formato dos bots, ver shared/input.js).
+// Teclado e mouse -> comando do jogador (mesmo formato dos bots, ver shared/input.js).
+// Botões do mouse entram no mapa como 'Mouse0' (esquerdo) e 'Mouse2' (direito).
 
 import { makeInput, INPUT_KEYS } from '/shared/input.js';
 
@@ -7,8 +8,8 @@ export const KEYMAP = {
   right: ['KeyD', 'ArrowRight'],
   up: ['KeyW', 'ArrowUp', 'Space'],
   down: ['KeyS', 'ArrowDown'],
-  attack: ['KeyJ', 'KeyZ'],
-  throw: ['KeyK', 'KeyX'],
+  attack: ['Mouse0', 'KeyJ', 'KeyZ'],
+  throw: ['Mouse2', 'KeyK', 'KeyX'],
 };
 
 export class KeyboardController {
@@ -22,21 +23,30 @@ export class KeyboardController {
     for (const [action, codes] of Object.entries(keymap)) {
       for (const code of codes) this.codeToAction.set(code, action);
     }
-    this.onDown = (e) => {
-      const action = this.codeToAction.get(e.code);
+    this.press = (code, e) => {
+      const action = this.codeToAction.get(code);
       if (!action) return;
       e.preventDefault();
       if (!this.isHeld(action)) this.tapped.add(action);
-      this.heldCodes.add(e.code);
+      this.heldCodes.add(code);
     };
-    this.onUp = (e) => {
-      if (!this.codeToAction.has(e.code)) return;
+    this.release = (code, e) => {
+      if (!this.codeToAction.has(code)) return;
       e.preventDefault();
-      this.heldCodes.delete(e.code);
+      this.heldCodes.delete(code);
     };
+    this.onDown = (e) => this.press(e.code, e);
+    this.onUp = (e) => this.release(e.code, e);
+    // Cliques em botões (ex.: menu de pausa) não contam como ataque.
+    this.onMouseDown = (e) => { if (!e.target.closest?.('button')) this.press(`Mouse${e.button}`, e); };
+    this.onMouseUp = (e) => this.release(`Mouse${e.button}`, e);
+    this.onContextMenu = (e) => e.preventDefault();   // botão direito não abre o menu do navegador
     this.onBlur = () => this.heldCodes.clear();
     target.addEventListener('keydown', this.onDown);
     target.addEventListener('keyup', this.onUp);
+    target.addEventListener('mousedown', this.onMouseDown);
+    target.addEventListener('mouseup', this.onMouseUp);
+    target.addEventListener('contextmenu', this.onContextMenu);
     window.addEventListener('blur', this.onBlur);
   }
 
@@ -56,6 +66,9 @@ export class KeyboardController {
   destroy() {
     this.target.removeEventListener('keydown', this.onDown);
     this.target.removeEventListener('keyup', this.onUp);
+    this.target.removeEventListener('mousedown', this.onMouseDown);
+    this.target.removeEventListener('mouseup', this.onMouseUp);
+    this.target.removeEventListener('contextmenu', this.onContextMenu);
     window.removeEventListener('blur', this.onBlur);
   }
 }

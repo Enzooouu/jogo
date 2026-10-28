@@ -30,8 +30,8 @@ Abra **http://localhost:3000** no navegador.
 | Descer da plataforma / cair rápido | `S` ou `↓` |
 | Se pendurar na parede (no ar) | segurar a direção da parede |
 | Pulo de parede | pular enquanto pendurado |
-| Atacar | `J` ou `Z` |
-| Arremessar a arma | `K` ou `X` |
+| Atacar | clique esquerdo, `J` ou `Z` |
+| Arremessar a arma | clique direito, `K` ou `X` |
 | Pausar | `Esc` ou `P` |
 | Som liga/desliga | `M` |
 | Acelerar (depois de eliminado) | `F` |
