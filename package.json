@@ -1,0 +1,25 @@
+{
+  "name": "brawl-dos-elementos",
+  "version": "0.1.0",
+  "description": "Jogo de luta 2D com plataformas e elementos (Fogo, Água, Terra, Ar) que roda no navegador.",
+  "private": true,
+  "type": "module",
+  "main": "server/index.js",
+  "engines": {
+    "node": ">=22.13"
+  },
+  "scripts": {
+    "start": "node --disable-warning=ExperimentalWarning server/index.js",
+    "dev": "node --disable-warning=ExperimentalWarning --watch server/index.js",
+    "test": "node --disable-warning=ExperimentalWarning --test \"tests/**/*.test.js\""
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Enzooouu/jogo.git"
+  },
+  "license": "UNLICENSED",
+  "dependencies": {
+    "bcryptjs": "^3.0.3",
+    "express": "^5.3.0"
+  }
+}

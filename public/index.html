@@ -1,0 +1,168 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Brawl dos Elementos</title>
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Cpath d='M16 2c4 6-2 8 2 13 2-2 2-4 1-6 5 4 7 9 3 14-3 4-9 5-13 2-5-3-5-10-1-14 1 3 3 4 4 4-3-5 0-10 4-13z' fill='%23ff6a1f'/%3E%3C/svg%3E">
+  <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+  <div id="app">
+
+    <!-- ===================== MENU ===================== -->
+    <section id="screen-menu" class="screen" hidden>
+      <header class="topbar">
+        <div class="brand">
+          <span class="brand-mark" aria-hidden="true"></span>
+          <span>Brawl dos Elementos</span>
+        </div>
+        <div id="account-box" class="account-box"></div>
+      </header>
+
+      <div class="menu-body">
+        <div class="hero">
+          <h1 class="title">BRAWL<span>dos</span>ELEMENTOS</h1>
+          <p class="tagline">Derrube o time inimigo no abismo — ou no perigo que ele não aguenta.</p>
+        </div>
+
+        <div class="menu-grid">
+          <div class="panel">
+            <h2>Seu elemento</h2>
+            <div id="element-list" class="element-list"></div>
+          </div>
+
+          <div class="panel">
+            <h2>Partida</h2>
+            <div class="field">
+              <span class="label">Modo</span>
+              <div class="seg" id="mode-seg">
+                <button type="button" data-value="times" class="on">Time vs Time</button>
+                <button type="button" data-value="ffa" disabled title="Em breve">Todos contra todos <small>em breve</small></button>
+              </div>
+            </div>
+            <div class="field">
+              <span class="label">Tamanho dos times</span>
+              <div class="seg" id="size-seg">
+                <button type="button" data-value="2" class="on">2 v 2</button>
+                <button type="button" data-value="3">3 v 3</button>
+                <button type="button" data-value="4">4 v 4</button>
+              </div>
+            </div>
+            <div class="field">
+              <span class="label">Bots</span>
+              <div class="seg" id="diff-seg">
+                <button type="button" data-value="facil">Fácil</button>
+                <button type="button" data-value="normal" class="on">Normal</button>
+                <button type="button" data-value="dificil">Difícil</button>
+              </div>
+            </div>
+            <button id="play-btn" class="btn-play" type="button">JOGAR</button>
+            <p class="hint" id="save-hint"></p>
+          </div>
+        </div>
+
+        <div class="panel controls">
+          <h2>Controles</h2>
+          <ul>
+            <li><kbd>A</kbd><kbd>D</kbd> ou <kbd>←</kbd><kbd>→</kbd> andar</li>
+            <li><kbd>W</kbd> <kbd>↑</kbd> ou <kbd>Espaço</kbd> pular (2x no ar)</li>
+            <li><kbd>S</kbd> ou <kbd>↓</kbd> descer da plataforma / cair rápido</li>
+            <li><kbd>J</kbd> ou <kbd>Z</kbd> atacar</li>
+            <li><kbd>K</kbd> ou <kbd>X</kbd> arremessar a arma</li>
+            <li><kbd>Esc</kbd> pausar · <kbd>M</kbd> som</li>
+          </ul>
+          <p class="hint">Armas caem do céu: encoste para pegar. O efeito delas muda com o seu elemento.</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- ===================== PARTIDA ===================== -->
+    <section id="screen-game" class="screen" hidden>
+      <div class="stage-wrap">
+        <canvas id="game-canvas" width="1280" height="720"></canvas>
+        <div id="pause-overlay" class="overlay" hidden>
+          <div class="overlay-card">
+            <h2>Pausado</h2>
+            <button id="resume-btn" type="button" class="btn">Continuar</button>
+            <button id="quit-btn" type="button" class="btn ghost">Desistir</button>
+            <p class="hint" id="quit-hint">Desistir conta como derrota.</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ===================== RESULTADO ===================== -->
+    <section id="screen-result" class="screen" hidden>
+      <div class="result-wrap">
+        <h1 id="result-title" class="result-title">VITÓRIA!</h1>
+        <p id="result-sub" class="result-sub"></p>
+        <div class="panel">
+          <table class="score">
+            <thead>
+              <tr><th>Jogador</th><th>Time</th><th>Elemento</th><th>Kills</th><th>Mortes</th><th>Dano</th></tr>
+            </thead>
+            <tbody id="result-rows"></tbody>
+          </table>
+        </div>
+        <p id="result-save" class="hint"></p>
+        <div class="row">
+          <button id="again-btn" type="button" class="btn">Jogar de novo</button>
+          <button id="menu-btn" type="button" class="btn ghost">Menu</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- ===================== LOGIN / CADASTRO ===================== -->
+    <section id="screen-auth" class="screen" hidden>
+      <div class="auth-wrap panel">
+        <div class="tabs">
+          <button type="button" data-tab="login" class="on">Entrar</button>
+          <button type="button" data-tab="register">Criar conta</button>
+        </div>
+        <form id="auth-form" autocomplete="on" novalidate>
+          <label>Usuário
+            <input id="auth-user" name="username" autocomplete="username" maxlength="20" required>
+          </label>
+          <label>Senha
+            <input id="auth-pass" name="password" type="password" autocomplete="current-password" maxlength="72" required>
+          </label>
+          <label id="auth-pass2-label" hidden>Confirmar senha
+            <input id="auth-pass2" name="password2" type="password" autocomplete="new-password" maxlength="72">
+          </label>
+          <p id="auth-error" class="error" role="alert"></p>
+          <button id="auth-submit" type="submit" class="btn">Entrar</button>
+        </form>
+        <p class="hint" id="auth-rules">Usuário: 3 a 20 letras, números ou _. Senha: mínimo 6 caracteres.</p>
+        <button type="button" class="btn ghost small" data-go="menu">Voltar</button>
+      </div>
+    </section>
+
+    <!-- ===================== PERFIL ===================== -->
+    <section id="screen-profile" class="screen" hidden>
+      <div class="profile-wrap">
+        <header class="profile-head">
+          <div>
+            <h1 id="profile-name"></h1>
+            <p class="hint" id="profile-since"></p>
+          </div>
+          <button type="button" class="btn ghost small" data-go="menu">Voltar ao menu</button>
+        </header>
+        <div id="profile-stats" class="stat-grid"></div>
+        <div class="menu-grid">
+          <div class="panel">
+            <h2>Elementos</h2>
+            <div id="profile-elements"></div>
+          </div>
+          <div class="panel">
+            <h2>Últimas partidas</h2>
+            <div id="profile-history"></div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+  </div>
+  <script type="module" src="/js/main.js"></script>
+</body>
+</html>

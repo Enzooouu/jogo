@@ -1,0 +1,53 @@
+// Constantes da simulação. Este arquivo (e toda a pasta /shared) roda tanto
+// no navegador quanto no Node, para que no futuro o servidor possa rodar a
+// mesma simulação no modo online (servidor autoritativo via WebSocket).
+
+export const TICK_RATE = 60;            // passos de simulação por segundo
+export const DT = 1 / TICK_RATE;        // duração de um passo (segundos)
+
+export const PHYS = {
+  gravity: 2300,          // px/s²
+  maxFall: 1000,          // velocidade máxima de queda
+  fastFall: 1250,         // segurando "baixo" no ar
+  moveSpeed: 330,         // velocidade horizontal máxima
+  groundAccel: 3200,
+  airAccel: 1900,
+  groundFriction: 2800,
+  airDrag: 320,
+  hitstunDrag: 140,       // atrito horizontal enquanto atordoado
+  jumpSpeed: 800,
+  doubleJumpSpeed: 720,
+  maxJumps: 2,            // pulo + pulo duplo
+};
+
+export const PLAYER = {
+  width: 30,
+  height: 66,
+  lives: 3,
+  respawnTime: 1.6,       // segundos fora antes de reaparecer
+  invulnTime: 2.0,        // invencibilidade após reaparecer
+  killCreditTime: 6,      // até quantos segundos depois do último golpe a kill conta
+  pickupCooldown: 0.4,    // tempo sem pegar arma depois de arremessar
+};
+
+export const MATCH = {
+  countdown: 3,           // "3, 2, 1, LUTA!"
+  timeLimit: 240,         // 4 minutos; depois disso vence quem tem mais vidas
+  endDelay: 2.2,          // tempo mostrando o último K.O. antes do resultado
+};
+
+export const ITEMS = {
+  spawnMin: 5,            // intervalo entre armas caindo (segundos)
+  spawnMax: 9,
+  firstSpawn: 3,
+  maxOnMap: 3,
+  fallSpeed: 150,         // queda lenta (caixote com paraquedas)
+  lifetime: 15,           // some se ninguém pegar
+};
+
+// Modos de jogo. 'ffa' (todos contra todos) já funciona no motor, só falta
+// liberar no menu.
+export const MODES = {
+  times: { id: 'times', name: 'Time vs Time', teams: true },
+  ffa: { id: 'ffa', name: 'Todos contra todos', teams: false },
+};
