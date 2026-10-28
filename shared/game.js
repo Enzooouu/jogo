@@ -9,7 +9,7 @@
 
 import { DT, PHYS, PLAYER, MATCH, ITEMS, MODES } from './constants.js';
 import { getMap } from './maps.js';
-import { ELEMENTS, hazardReaction } from './elements.js';
+import { ELEMENTS, hazardReaction, teamElementsError } from './elements.js';
 import { WEAPONS, WEAPON_IDS, weaponProfile } from './weapons.js';
 import { EMPTY_INPUT } from './input.js';
 import { createRng } from './rng.js';
@@ -65,6 +65,10 @@ export class Game {
     });
     if (new Set(this.players.map((p) => p.team)).size < 2) {
       throw new Error('A partida precisa de pelo menos 2 times');
+    }
+    if (this.mode.teams) {
+      const error = teamElementsError(this.players);
+      if (error) throw new Error(error);
     }
     this.placeAtSpawns();
   }
@@ -158,11 +162,20 @@ export class Game {
     const teams = this.teams();
     // Com 2 times, cada time fica com uma metade do mapa; senão, todos dividem
     // a lista inteira.
-    const pools = teams.map((_, i) => {
-      if (teams.length !== 2) return spawns;
-      const side = spawns.filter((s) => (i === 0 ? s.x < width / 2 : s.x >= width / 2));
-      return side.length ? side : spawns;
-    });
+    let pools = teams.map(() => spawns);
+    if (teams.length === 2) {
+      const left = spawns.filter((s) => s.x < width / 2);
+      const right = spawns.filter((s) => s.x >= width / 2);
+      // Cada time fica no lado do mapa com menos perigos mortais para ele
+      // (ex.: time de Água do lado da água).
+      const danger = (team, pool) => {
+        const el = this.players.find((p) => p.team === team).element;
+        return pool.filter((s) => s.near && hazardReaction(el, s.near) !== 'imune').length;
+      };
+      const straight = danger(teams[0], left) + danger(teams[1], right);
+      const swapped = danger(teams[0], right) + danger(teams[1], left);
+      pools = swapped < straight ? [right, left] : [left, right];
+    }
     const used = new Map();   // ponto -> quantas vezes já foi usado
     let overflow = 0;
     teams.forEach((team, ti) => {

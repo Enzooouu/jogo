@@ -31,9 +31,18 @@ export function buildLocalSetup({ element, name, teamSize = 2, mode = 'times', d
   const players = [{ id: 1, name, element, team: 'A', isBot: false }];
   let id = 2;
   const total = mode === 'ffa' ? Math.max(2, teamSize * 2) : teamSize * 2;
+  // Times: o seu time inteiro é do seu elemento; o adversário é de outro.
+  const enemyElement = pick(elements.filter((e) => e !== element));
   while (players.length < total) {
-    const el = pick(elements);
-    const team = mode === 'ffa' ? `P${id}` : players.filter((p) => p.team === 'A').length < teamSize ? 'A' : 'B';
+    let team;
+    let el;
+    if (mode === 'ffa') {
+      team = `P${id}`;
+      el = pick(elements);
+    } else {
+      team = players.filter((p) => p.team === 'A').length < teamSize ? 'A' : 'B';
+      el = team === 'A' ? element : enemyElement;
+    }
     players.push({ id, name: botName(el), element: el, team, isBot: true });
     id++;
   }

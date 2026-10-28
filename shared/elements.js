@@ -50,6 +50,20 @@ export function hazardReaction(elementId, hazardId) {
   return HAZARD_REACTION[elementId]?.[hazardId] ?? 'morre';
 }
 
+// Regra dos times: cada time é de um elemento só, e dois times nunca têm
+// o mesmo elemento. Devolve a mensagem de erro, ou null se estiver tudo certo.
+export function teamElementsError(players) {
+  const byTeam = new Map();
+  for (const p of players) {
+    const el = byTeam.get(p.team);
+    if (el && el !== p.element) return `O time ${p.team} mistura elementos (${el} e ${p.element}).`;
+    byTeam.set(p.team, p.element);
+  }
+  const elements = [...byTeam.values()];
+  if (new Set(elements).size !== elements.length) return 'Dois times não podem ter o mesmo elemento.';
+  return null;
+}
+
 export function enabledElements() {
   return Object.values(ELEMENTS).filter((e) => e.enabled);
 }

@@ -39,6 +39,7 @@ Abra **http://localhost:3000** no navegador.
 **Regras**
 
 - Partida **Time vs Time**: você + 1 bot contra 2 bots (dá para escolher 3v3 e 4v4).
+- Cada time é de um elemento só, e dois times nunca têm o mesmo elemento (hoje: Fogo contra Água).
 - Cada jogador tem 3 vidas. Perde uma vida quem **cai do mapa** ou **toca num perigo mortal**.
 - Cada golpe aumenta o dano (%) do alvo; quanto mais dano, mais longe ele voa.
 - Foi arremessado? Segure na direção da ilha para se pendurar na parede e pule para subir.

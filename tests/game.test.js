@@ -11,12 +11,13 @@ import { encodeInput, decodeInput, makeInput } from '../shared/input.js';
 
 const FPS = 60;
 
+// Cada elemento é um time (regra: times não misturam elementos).
 function newGame(elements = ['fogo', 'agua', 'agua', 'fogo'], opts = {}) {
   const players = elements.map((element, i) => ({
     id: i + 1,
     name: `P${i + 1}`,
     element,
-    team: i % 2 === 0 ? 'A' : 'B',
+    team: element,
   }));
   const game = new Game({ players, seed: 42, ...opts });
   // Pula a contagem regressiva
@@ -281,13 +282,13 @@ test('arremessar a arma solta ela e cria um projétil', () => {
 
 test('vence o time que eliminar o outro', () => {
   const g = newGame(['fogo', 'agua', 'agua', 'fogo']);
-  for (const p of g.players.filter((q) => q.team === 'B')) {
+  for (const p of g.players.filter((q) => q.team === 'agua')) {
     p.lives = 1;
     p.x = -1000;     // fora do mapa
   }
   run(g, 2);
   assert.equal(g.phase, 'ending');
-  assert.equal(g.result.winnerTeam, 'A');
+  assert.equal(g.result.winnerTeam, 'fogo');
   assert.equal(g.result.reason, 'eliminacao');
   run(g, Math.ceil(MATCH.endDelay * FPS) + 2);
   assert.equal(g.phase, 'ended');
@@ -298,19 +299,19 @@ test('tempo esgotado: vence quem tem mais vidas', () => {
   g.playerById(2).lives = 1;
   run(g, FPS + 2);
   assert.equal(g.result.reason, 'tempo');
-  assert.equal(g.result.winnerTeam, 'A');
+  assert.equal(g.result.winnerTeam, 'fogo');
 });
 
 test('desistir dá a vitória ao outro time', () => {
   const g = newGame();
   g.forfeit(1);
   assert.equal(g.phase, 'ended');
-  assert.equal(g.result.winnerTeam, 'B');
+  assert.equal(g.result.winnerTeam, 'agua');
   assert.equal(g.result.forfeitedBy, 1);
 });
 
 test('ninguém nasce ao lado do perigo que o mata', () => {
-  for (const elements of [['agua', 'fogo', 'fogo', 'agua'], ['fogo', 'agua', 'agua', 'fogo'], ['agua', 'agua', 'agua', 'agua']]) {
+  for (const elements of [['agua', 'fogo', 'fogo', 'agua'], ['fogo', 'agua', 'agua', 'fogo']]) {
     const g = newGame(elements);
     for (const p of g.players) {
       for (const h of g.map.hazards) {
@@ -327,7 +328,7 @@ function botMatch({ count = 4, mode = 'times', seed = 7, difficulty = 'normal' }
   const players = Array.from({ length: count }, (_, i) => ({
     id: i + 1,
     name: `Bot ${i + 1}`,
-    element: i % 3 === 0 ? 'fogo' : 'agua',
+    element: mode === 'ffa' ? (i % 2 ? 'agua' : 'fogo') : i < count / 2 ? 'fogo' : 'agua',
     team: i < count / 2 ? 'A' : 'B',
     isBot: true,
   }));
@@ -432,4 +433,20 @@ test('bot derrubado para fora se recupera pela parede', () => {
     if (p.state === 'alive' && p.y + p.h <= 540) recovered++;
   }
   assert.ok(recovered >= 5, `recuperou ${recovered} de 6`);
+});
+
+test('times não misturam elementos e não repetem elemento', () => {
+  const make = (list) => () => new Game({ players: list.map(([element, team], i) => ({ id: i + 1, element, team })), seed: 1 });
+  assert.throws(make([['fogo', 'A'], ['agua', 'A'], ['agua', 'B'], ['fogo', 'B']]), /mistura/);
+  assert.throws(make([['fogo', 'A'], ['fogo', 'A'], ['fogo', 'B'], ['fogo', 'B']]), /mesmo elemento/);
+  assert.doesNotThrow(make([['fogo', 'A'], ['fogo', 'A'], ['agua', 'B'], ['agua', 'B']]));
+});
+
+test('cada time nasce no lado do mapa mais seguro para o seu elemento', () => {
+  for (const [a, b] of [['fogo', 'agua'], ['agua', 'fogo']]) {
+    const players = [[a, 'A'], [a, 'A'], [b, 'B'], [b, 'B']].map(([element, team], i) => ({ id: i + 1, element, team }));
+    const g = new Game({ players, seed: 1 });
+    const water = g.players.filter((p) => p.element === 'agua');
+    assert.ok(water.every((p) => p.x > 640 - 60), 'time de Água fica do lado da água');
+  }
 });
