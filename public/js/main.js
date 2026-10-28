@@ -225,7 +225,7 @@ function startCardAnimation() {
       const on = card.classList.contains('on');
       const el = card.dataset.element;
       const weapon = el === 'fogo' ? 'espada' : el === 'agua' ? 'cajado' : null;
-      drawPortrait(ctx, el, w / 2, h - 12, Math.min(2.1, h / 80), {
+      drawPortrait(ctx, el, w / 2, h - 10, Math.min(1.85, h / 94), {
         time: on ? t : 0,
         extra: weapon ? { weapon: { id: weapon } } : {},
       });

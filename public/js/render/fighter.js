@@ -3,6 +3,7 @@
 // aqui altera a simulação.
 
 import { ELEMENTS } from '/shared/elements.js';
+import { lookOf, aura, scarf, limbStroke, torso, feet, fist, pauldron, head, shade } from './look.js';
 
 const OUTLINE = '#0c0710';
 const LIMB = 11;          // comprimento de cada metade de braço/perna
@@ -89,7 +90,7 @@ function computePose(p, vis, time) {
 }
 
 export function drawFighter(ctx, p, x, y, vis, time, { teamColor, isLocal, showName = true }) {
-  const el = ELEMENTS[p.element];
+  const k = lookOf(p.element);
   const pose = computePose(p, vis, time);
   const dir = p.facing;
   const cx = x + p.w / 2;
@@ -98,37 +99,32 @@ export function drawFighter(ctx, p, x, y, vis, time, { teamColor, isLocal, showN
   ctx.save();
   if (p.invuln > 0 && Math.floor(time * 14) % 2 === 0) ctx.globalAlpha = 0.35;
 
-  // Sombra/brilho do elemento
-  ctx.save();
-  ctx.translate(cx, footY - 30);
-  const aura = ctx.createRadialGradient(0, 0, 4, 0, 0, 46);
-  aura.addColorStop(0, hexA(el.color, 0.32));
-  aura.addColorStop(1, hexA(el.color, 0));
-  ctx.fillStyle = aura;
-  ctx.fillRect(-46, -46, 92, 92);
-  ctx.restore();
-
   ctx.translate(cx, footY);
   ctx.scale(dir, 1);
   if (p.hitstun > 0) ctx.rotate(-0.25 * Math.sign(p.vx || 1) * dir);
 
   const hip = { x: 0, y: -24 - pose.bob };
   const neck = { x: Math.sin(pose.lean) * 20, y: hip.y - Math.cos(pose.lean) * 20 };
-  const head = { x: neck.x + Math.sin(pose.lean) * 11, y: neck.y - Math.cos(pose.lean) * 11 };
-  const shoulder = { x: hip.x + (neck.x - hip.x) * 0.85, y: hip.y + (neck.y - hip.y) * 0.85 };
+  const headPos = { x: neck.x + Math.sin(pose.lean) * 12, y: neck.y - Math.cos(pose.lean) * 12 };
+  const shoulder = { x: hip.x + (neck.x - hip.x) * 0.86, y: hip.y + (neck.y - hip.y) * 0.86 };
 
   const legF = limb(hip, pose.legF);
   const legB = limb(hip, pose.legB);
   const armF = limb(shoulder, pose.armF);
   const armB = limb(shoulder, pose.armB);
+  const wind = Math.min(1, Math.abs(p.vx) / 300 + (p.onGround ? 0 : 0.4)) + 0.2;
+
+  aura(ctx, k);
+  scarf(ctx, p.element, k, neck, time, wind);
 
   // Membros de trás (mais escuros)
-  stroke(ctx, [hip, legB.mid, legB.end], el.dark, 6);
-  stroke(ctx, [shoulder, armB.mid, armB.end], el.dark, 6);
+  const back = shade(k.body, p.element === 'ar' ? -0.25 : -0.35);
+  limbStroke(ctx, [hip, legB.mid, legB.end], 6 * k.thick, back);
+  limbStroke(ctx, [shoulder, armB.mid, armB.end], 5.5 * k.thick, back);
 
-  // Tronco e membros da frente
-  stroke(ctx, [hip, neck], el.color, 7);
-  stroke(ctx, [hip, legF.mid, legF.end], el.color, 6);
+  torso(ctx, p.element, k, shoulder, hip, time);
+  limbStroke(ctx, [hip, legF.mid, legF.end], 6.5 * k.thick, k.body, k.bodyHi);
+  feet(ctx, p.element, k, legF.end, legB.end, time);
 
   // Arma (atrás do braço da frente)
   if (p.weapon || (p.attack && p.attack.weapon)) {
@@ -136,15 +132,11 @@ export function drawFighter(ctx, p, x, y, vis, time, { teamColor, isLocal, showN
     const angle = pose.weaponAngle ?? (weaponId === 'cajado' ? 2.9 : pose.armF[1] + 0.6);
     drawHeldWeapon(ctx, weaponId, p.element, armF.end, angle, time);
   }
-  stroke(ctx, [shoulder, armF.mid, armF.end], el.color, 6);
+  limbStroke(ctx, [shoulder, armF.mid, armF.end], 6 * k.thick, k.body, k.bodyHi);
+  fist(ctx, p.element, k, armF.end, time);
+  if (p.element === 'terra') pauldron(ctx, k, shoulder);
 
-  // Mão
-  ctx.fillStyle = el.light;
-  ctx.beginPath();
-  ctx.arc(armF.end.x, armF.end.y, 3.5, 0, Math.PI * 2);
-  ctx.fill();
-
-  drawHead(ctx, head, p.element, time);
+  head(ctx, p.element, k, headPos, time);
   ctx.restore();
 
   // Marcadores acima da cabeça (não espelhados)
@@ -155,80 +147,6 @@ function limb(start, [a1, a2]) {
   const mid = { x: start.x + Math.sin(a1) * LIMB, y: start.y + Math.cos(a1) * LIMB };
   const end = { x: mid.x + Math.sin(a2) * LIMB, y: mid.y + Math.cos(a2) * LIMB };
   return { mid, end };
-}
-
-function stroke(ctx, pts, color, width) {
-  ctx.lineCap = 'round';
-  ctx.lineJoin = 'round';
-  for (const [c, w] of [[OUTLINE, width + 4], [color, width]]) {
-    ctx.strokeStyle = c;
-    ctx.lineWidth = w;
-    ctx.beginPath();
-    ctx.moveTo(pts[0].x, pts[0].y);
-    for (let i = 1; i < pts.length; i++) ctx.lineTo(pts[i].x, pts[i].y);
-    ctx.stroke();
-  }
-}
-
-function drawHead(ctx, head, elementId, time) {
-  const el = ELEMENTS[elementId];
-  ctx.save();
-  ctx.translate(head.x, head.y);
-  ctx.lineWidth = 3;
-  ctx.strokeStyle = OUTLINE;
-
-  if (elementId === 'fogo') {
-    // Chamas no topo da cabeça
-    for (let i = 0; i < 3; i++) {
-      const flick = Math.sin(time * 18 + i * 2.1) * 3;
-      const bx = -7 + i * 7;
-      ctx.fillStyle = i === 1 ? el.light : el.color;
-      ctx.beginPath();
-      ctx.moveTo(bx - 5, -4);
-      ctx.quadraticCurveTo(bx - 2 + flick * 0.3, -14, bx + flick * 0.5 - 2, -22 - (i === 1 ? 6 : 0) + flick);
-      ctx.quadraticCurveTo(bx + 4, -12, bx + 5, -4);
-      ctx.fill();
-    }
-    ctx.fillStyle = el.color;
-    ctx.beginPath();
-    ctx.arc(0, 0, 10, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.stroke();
-  } else if (elementId === 'agua') {
-    // Cabeça em forma de gota
-    ctx.fillStyle = el.color;
-    ctx.beginPath();
-    ctx.moveTo(-3, -19);
-    ctx.quadraticCurveTo(-11, -6, -10, 1);
-    ctx.arc(0, 1, 10, Math.PI, 0, true);
-    ctx.quadraticCurveTo(11, -6, -3, -19);
-    ctx.closePath();
-    ctx.fill();
-    ctx.stroke();
-    ctx.fillStyle = 'rgba(255,255,255,0.55)';
-    ctx.beginPath();
-    ctx.ellipse(-4, -4, 2.2, 4, 0.4, 0, Math.PI * 2);
-    ctx.fill();
-  } else {
-    ctx.fillStyle = el.color;
-    ctx.beginPath();
-    ctx.arc(0, 0, 10, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.stroke();
-  }
-
-  // Olho "bravo" virado para a frente
-  ctx.fillStyle = '#fff';
-  ctx.beginPath();
-  ctx.moveTo(2, -2);
-  ctx.lineTo(9, -4);
-  ctx.lineTo(8, 1);
-  ctx.lineTo(3, 1);
-  ctx.closePath();
-  ctx.fill();
-  ctx.fillStyle = OUTLINE;
-  ctx.fillRect(6, -2, 2, 2);
-  ctx.restore();
 }
 
 export function drawHeldWeapon(ctx, weaponId, elementId, hand, angle, time) {
