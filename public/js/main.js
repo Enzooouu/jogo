@@ -361,7 +361,12 @@ function init() {
   });
   setUser(null);
   show('menu');
-  api.me().then(({ user }) => setUser(user)).catch(() => setUser(null));
+  api.me().then(({ user }) => setUser(user)).catch(() => {
+    // Sem servidor (ex.: aberto como página estática): joga só como convidado.
+    setUser(null);
+    $('#account-box').hidden = true;
+    $('#save-hint').textContent = 'Versão sem servidor: dá para jogar, mas contas e estatísticas ficam desligadas.';
+  });
 }
 
 init();
