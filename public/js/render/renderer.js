@@ -205,6 +205,7 @@ export class Renderer {
     ctx.setTransform(this.scale, 0, 0, this.scale, 0, 0);
     this.drawOffscreen(ctx, alpha);
     this.drawHud(ctx);
+    if (this.showScores) this.drawScoreboard(ctx);
   }
 
   updateAmbient(dt) {
@@ -543,6 +544,113 @@ export class Renderer {
       ctx.arc(x + 24 + i * 13, y + 34, 4.5, 0, Math.PI * 2);
       ctx.fill();
     }
+    ctx.restore();
+  }
+
+  // Placar completo (segurando TAB)
+  drawScoreboard(ctx) {
+    const g = this.game;
+    const cols = [
+      ['Jogador', 250, 'left'], ['Vidas', 70], ['Kills', 70], ['Mortes', 75],
+      ['Dano causado', 125], ['Dano recebido', 130], ['Golpes', 80], ['Armas', 75],
+    ];
+    const tableW = cols.reduce((s, c) => s + c[1], 0);
+    const rowH = 34;
+    const teams = g.teams();
+    const rows = teams.length + g.players.length;
+    const w = tableW + 48;
+    const h = 120 + rows * rowH;
+    const x0 = (VIEW_W - w) / 2;
+    const y0 = Math.max(20, (VIEW_H - 80 - h) / 2);
+
+    ctx.save();
+    ctx.fillStyle = 'rgba(8,4,14,0.55)';
+    ctx.fillRect(0, 0, VIEW_W, VIEW_H);
+    ctx.fillStyle = 'rgba(20,12,28,0.94)';
+    roundRect(ctx, x0, y0, w, h, 16);
+    ctx.fill();
+    ctx.strokeStyle = 'rgba(255,255,255,0.12)';
+    ctx.lineWidth = 1.5;
+    ctx.stroke();
+
+    ctx.textBaseline = 'middle';
+    ctx.font = '900 22px system-ui, sans-serif';
+    ctx.textAlign = 'left';
+    ctx.fillStyle = '#ffffff';
+    ctx.fillText('PLACAR', x0 + 24, y0 + 32);
+    ctx.font = '600 13px system-ui, sans-serif';
+    ctx.textAlign = 'right';
+    ctx.fillStyle = 'rgba(255,255,255,0.55)';
+    const t = Math.floor(g.time);
+    ctx.fillText(`Tempo de luta ${Math.floor(t / 60)}:${String(t % 60).padStart(2, '0')}`, x0 + w - 24, y0 + 32);
+
+    // Cabeçalho
+    let y = y0 + 70;
+    let x = x0 + 24;
+    ctx.font = '700 11px system-ui, sans-serif';
+    ctx.fillStyle = 'rgba(255,255,255,0.5)';
+    for (const [label, cw, align] of cols) {
+      ctx.textAlign = align ?? 'right';
+      ctx.fillText(label.toUpperCase(), align === 'left' ? x : x + cw - 8, y);
+      x += cw;
+    }
+
+    y += 22;
+    teams.forEach((team, ti) => {
+      const color = this.teamColor.get(team);
+      const members = g.players.filter((p) => p.team === team)
+        .sort((a, b) => b.stats.kills - a.stats.kills || b.stats.damageDealt - a.stats.damageDealt);
+      ctx.textAlign = 'left';
+      ctx.font = '800 13px system-ui, sans-serif';
+      ctx.fillStyle = color;
+      const el = ELEMENTS[members[0].element];
+      const teamLabel = g.mode.teams ? `${Renderer.teamName(ti)} · ${el.name}` : '';
+      if (teamLabel) ctx.fillText(teamLabel.toUpperCase(), x0 + 24, y + rowH / 2);
+      y += teamLabel ? rowH : 0;
+
+      for (const p of members) {
+        const s = p.stats;
+        if (p.id === this.localId) {
+          ctx.fillStyle = 'rgba(255,255,255,0.08)';
+          roundRect(ctx, x0 + 14, y + 2, w - 28, rowH - 4, 8);
+          ctx.fill();
+        }
+        ctx.globalAlpha = p.state === 'out' ? 0.5 : 1;
+        const cy = y + rowH / 2;
+        // nome com bolinha do elemento
+        ctx.fillStyle = ELEMENTS[p.element].color;
+        ctx.beginPath();
+        ctx.arc(x0 + 32, cy, 6, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.textAlign = 'left';
+        ctx.font = `${p.id === this.localId ? 800 : 600} 15px system-ui, sans-serif`;
+        ctx.fillStyle = '#ffffff';
+        let name = p.id === this.localId ? `${p.name} (você)` : p.name;
+        if (p.isBot) name += '  BOT';
+        ctx.fillText(name, x0 + 46, cy);
+
+        const values = [
+          p.state === 'out' ? '—' : String(p.lives), String(s.kills), String(s.deaths),
+          String(Math.round(s.damageDealt)), String(Math.round(s.damageTaken)), String(s.hits), String(s.pickups),
+        ];
+        ctx.font = '700 15px system-ui, sans-serif';
+        ctx.textAlign = 'right';
+        let cx = x0 + 24 + cols[0][1];
+        values.forEach((v, i) => {
+          const cw = cols[i + 1][1];
+          ctx.fillStyle = i === 3 ? '#ffd27a' : i === 4 ? '#ff9a9a' : '#ffffff';
+          ctx.fillText(v, cx + cw - 8, cy);
+          cx += cw;
+        });
+        ctx.globalAlpha = 1;
+        y += rowH;
+      }
+    });
+
+    ctx.textAlign = 'center';
+    ctx.font = '600 12px system-ui, sans-serif';
+    ctx.fillStyle = 'rgba(255,255,255,0.45)';
+    ctx.fillText('Solte TAB para voltar', VIEW_W / 2, y0 + h - 18);
     ctx.restore();
   }
 

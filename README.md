@@ -32,6 +32,7 @@ Abra **http://localhost:3000** no navegador.
 | Pulo de parede | pular enquanto pendurado |
 | Atacar | clique esquerdo, `J` ou `Z` |
 | Arremessar a arma | clique direito, `K` ou `X` |
+| Placar completo (dano causado, recebido...) | segurar `Tab` |
 | Pausar | `Esc` ou `P` |
 | Som liga/desliga | `M` |
 | Acelerar (depois de eliminado) | `F` |

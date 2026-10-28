@@ -47,7 +47,19 @@ export class MatchRunner {
     this.lastCount = null;
 
     this.onResize = () => this.renderer.resize();
+    this.onKeyUp = (e) => {
+      if (e.code === 'Tab') {
+        e.preventDefault();
+        this.renderer.showScores = false;
+      }
+    };
+    this.onBlur = () => { this.renderer.showScores = false; };
     this.onKey = (e) => {
+      if (e.code === 'Tab') {
+        // Segurar TAB mostra o placar completo
+        e.preventDefault();
+        this.renderer.showScores = true;
+      }
       if (e.code === 'KeyF') {
         const me = this.game.playerById(this.localId);
         if (me?.state === 'out') this.speed = this.speed === 1 ? 3 : 1;
@@ -55,6 +67,8 @@ export class MatchRunner {
     };
     window.addEventListener('resize', this.onResize);
     window.addEventListener('keydown', this.onKey);
+    window.addEventListener('keyup', this.onKeyUp);
+    window.addEventListener('blur', this.onBlur);
   }
 
   start() {
@@ -118,5 +132,7 @@ export class MatchRunner {
     this.keyboard?.destroy();
     window.removeEventListener('resize', this.onResize);
     window.removeEventListener('keydown', this.onKey);
+    window.removeEventListener('keyup', this.onKeyUp);
+    window.removeEventListener('blur', this.onBlur);
   }
 }

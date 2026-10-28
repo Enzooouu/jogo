@@ -371,6 +371,7 @@ export class Game {
     if (burn) {
       const dmg = burn.dps * DT;
       p.damage += dmg;
+      p.stats.damageTaken += dmg;
       const source = this.playerById(burn.source);
       if (source) source.stats.damageDealt += dmg;
       // A queimadura mantém o crédito da kill com quem acendeu o fogo.
@@ -428,6 +429,7 @@ export class Game {
       if (!rectsOverlap(p, item)) continue;
       p.weapon = { id: item.weapon, uses: WEAPONS[item.weapon].uses };
       this.items.splice(i, 1);
+      p.stats.pickups++;
       const profile = weaponProfile(item.weapon, p.element);
       this.emit('pickup', { id: p.id, weapon: item.weapon, name: profile.name, x: item.x + item.w / 2, y: item.y });
       return;
@@ -585,7 +587,9 @@ export class Game {
   applyHit(attacker, target, profile, dirX, scale = {}) {
     const damage = profile.damage * (scale.damage ?? 1);
     target.damage += damage;
+    target.stats.damageTaken += damage;
     attacker.stats.damageDealt += damage;
+    attacker.stats.hits++;
 
     const kb = (profile.kbBase + target.damage * profile.kbScale) * (scale.kb ?? 1);
     const angle = profile.angle;
@@ -766,7 +770,8 @@ export class Game {
         id: p.id, name: p.name, team: p.team, element: p.element, isBot: p.isBot,
         kills: p.stats.kills, deaths: p.stats.deaths, falls: p.stats.falls,
         hazardDeaths: p.stats.hazardDeaths,
-        damageDealt: Math.round(p.stats.damageDealt), livesLeft: p.state === 'out' ? 0 : p.lives,
+        damageDealt: Math.round(p.stats.damageDealt), damageTaken: Math.round(p.stats.damageTaken),
+        hits: p.stats.hits, pickups: p.stats.pickups, livesLeft: p.state === 'out' ? 0 : p.lives,
       })),
     };
     this.emit('matchEnd', { winnerTeam, reason });
@@ -807,6 +812,6 @@ function createPlayer(cfg, index, lives) {
     lastHitBy: null,
     lastHitTime: -Infinity,
     prevInput: { ...EMPTY_INPUT },
-    stats: { kills: 0, deaths: 0, falls: 0, hazardDeaths: 0, damageDealt: 0 },
+    stats: { kills: 0, deaths: 0, falls: 0, hazardDeaths: 0, damageDealt: 0, damageTaken: 0, hits: 0, pickups: 0 },
   };
 }

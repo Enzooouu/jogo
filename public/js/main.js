@@ -290,7 +290,7 @@ function showResult(setup, result) {
       <td><span class="pname"></span>${p.isBot ? '<span class="tag">BOT</span>' : ''}</td>
       <td><span class="dot" style="background:${teamColor(result, p.team)}"></span><span class="tname"></span></td>
       <td><span class="dot" style="background:${el.color}"></span>${el.name}</td>
-      <td>${p.kills}</td><td>${p.deaths}</td><td>${p.damageDealt}</td>`;
+      <td>${p.kills}</td><td>${p.deaths}</td><td>${p.damageDealt}</td><td>${p.damageTaken}</td>`;
     tr.querySelector('.pname').textContent = p.name;
     tr.querySelector('.tname').textContent = teamLabel(result, p.team);
     rows.appendChild(tr);

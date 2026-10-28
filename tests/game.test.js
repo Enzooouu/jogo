@@ -450,3 +450,22 @@ test('cada time nasce no lado do mapa mais seguro para o seu elemento', () => {
     assert.ok(water.every((p) => p.x > 640 - 60), 'time de Água fica do lado da água');
   }
 });
+
+test('placar conta dano causado, dano recebido, golpes e armas pegas', () => {
+  const g = newGame(['fogo', 'agua', 'fogo', 'agua']);
+  park(g, 3, 4);
+  const a = g.playerById(1);
+  const b = g.playerById(2);
+  place(a, 600, 540);
+  place(b, 640, 540);
+  a.facing = 1;
+  run(g, 2);
+  run(g, 1, { 1: makeInput({ attack: true }) });
+  run(g, 10);
+  assert.equal(a.stats.hits, 1);
+  assert.equal(a.stats.damageDealt, 6);
+  assert.equal(b.stats.damageTaken, 6);
+  g.forfeit(2);
+  const row = g.result.players.find((p) => p.id === 2);
+  assert.equal(row.damageTaken, 6);
+});
