@@ -7,6 +7,7 @@ import { StageRenderer, roundRect } from './stage.js';
 import { Particles } from './particles.js';
 import { Camera } from './camera.js';
 import { drawFighter, drawSword, drawStaff, hexA } from './fighter.js';
+import { drawSwordArt, drawStaffArt, drawShot } from './weapons-art.js';
 
 export const VIEW_W = 1280;
 export const VIEW_H = 720;
@@ -336,40 +337,15 @@ export class Renderer {
 
   drawProjectiles(ctx) {
     for (const pr of this.game.projectiles) {
-      const el = ELEMENTS[pr.element];
       ctx.save();
-      ctx.translate(pr.x, pr.y);
       if (pr.kind === 'arremesso') {
+        ctx.translate(pr.x, pr.y);
         ctx.rotate(this.time * 22 * Math.sign(pr.vx || 1));
         ctx.translate(0, 18);
-        if (pr.weapon === 'espada') drawSword(ctx, el, this.time);
-        else drawStaff(ctx, el, this.time);
-      } else if (pr.element === 'agua') {
-        ctx.scale(Math.sign(pr.vx) || 1, 1);
-        ctx.shadowColor = el.color;
-        ctx.shadowBlur = 14;
-        const g = ctx.createLinearGradient(-pr.r * 2.4, 0, pr.r, 0);
-        g.addColorStop(0, 'rgba(120,200,255,0)');
-        g.addColorStop(1, '#bfefff');
-        ctx.fillStyle = g;
-        ctx.beginPath();
-        ctx.ellipse(-pr.r * 0.7, 0, pr.r * 1.8, pr.r * 0.8, 0, 0, Math.PI * 2);
-        ctx.fill();
-        ctx.fillStyle = '#ffffff';
-        ctx.beginPath();
-        ctx.arc(pr.r * 0.3, -2, 3, 0, Math.PI * 2);
-        ctx.fill();
+        if (pr.weapon === 'espada') drawSwordArt(ctx, pr.element, this.time);
+        else drawStaffArt(ctx, pr.element, this.time);
       } else {
-        ctx.shadowColor = el.color;
-        ctx.shadowBlur = 20;
-        const g = ctx.createRadialGradient(0, 0, 1, 0, 0, pr.r * 1.3);
-        g.addColorStop(0, '#fff7c2');
-        g.addColorStop(0.45, el.light);
-        g.addColorStop(1, el.color);
-        ctx.fillStyle = g;
-        ctx.beginPath();
-        ctx.arc(0, 0, pr.r * 1.2, 0, Math.PI * 2);
-        ctx.fill();
+        drawShot(ctx, pr.element, pr.x, pr.y, pr.r, Math.sign(pr.vx) || 1, this.time);
       }
       ctx.restore();
     }

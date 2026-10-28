@@ -3,7 +3,8 @@
 // aqui altera a simulação.
 
 import { ELEMENTS } from '/shared/elements.js';
-import { lookOf, aura, scarf, limbStroke, torso, feet, fist, pauldron, head, shade } from './look.js';
+import { drawSwordArt, drawStaffArt, drawSlash } from './weapons-art.js';
+import { lookOf, aura, scarf, limbStroke, torso, feet, fist, pauldron, head, shade, rgba as rgbaHex } from './look.js';
 
 const OUTLINE = '#0c0710';
 const LIMB = 11;          // comprimento de cada metade de braço/perna
@@ -126,6 +127,12 @@ export function drawFighter(ctx, p, x, y, vis, time, { teamColor, isLocal, showN
   limbStroke(ctx, [hip, legF.mid, legF.end], 6.5 * k.thick, k.body, k.bodyHi);
   feet(ctx, p.element, k, legF.end, legB.end, time);
 
+  // Rastro do corte da espada
+  if (p.attack?.weapon === 'espada' && pose.weaponAngle !== null && p.attack.t >= p.attack.startup) {
+    const u = (p.attack.t - p.attack.startup) / (p.attack.duration - p.attack.startup);
+    drawSlash(ctx, rgbaHex(k.glow2, 0.9), shoulder, pose.weaponAngle, 2.9, Math.max(0, 1 - u * 1.2));
+  }
+
   // Arma (atrás do braço da frente)
   if (p.weapon || (p.attack && p.attack.weapon)) {
     const weaponId = p.attack?.weapon ?? p.weapon?.id;
@@ -150,13 +157,12 @@ function limb(start, [a1, a2]) {
 }
 
 export function drawHeldWeapon(ctx, weaponId, elementId, hand, angle, time) {
-  const el = ELEMENTS[elementId];
   ctx.save();
   ctx.translate(hand.x, hand.y);
-  // angle: 0 = para baixo; giramos para que o eixo +y local aponte para o ângulo
+  // angle: 0 = para baixo; giramos para que o eixo -y local aponte para o ângulo
   ctx.rotate(-angle + Math.PI);
-  if (weaponId === 'espada') drawSword(ctx, el, time);
-  else if (weaponId === 'cajado') drawStaff(ctx, el, time);
+  if (weaponId === 'espada') drawSwordArt(ctx, elementId, time);
+  else if (weaponId === 'cajado') drawStaffArt(ctx, elementId, time);
   ctx.restore();
 }
 
