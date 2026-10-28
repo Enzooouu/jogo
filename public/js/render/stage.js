@@ -785,7 +785,7 @@ function drawSpikes(ctx, h, time) {
   const sw = h.w / n;
   for (let i = 0; i < n; i++) {
     const x = h.x + i * sw;
-    const tall = h.h + 8 + ((i * 7) % 3) * 3;
+    const tall = h.h + 14 + ((i * 7) % 3) * 4;
     const g = ctx.createLinearGradient(0, base - tall, 0, base);
     g.addColorStop(0, '#ff8a7a');
     g.addColorStop(0.25, '#c9b8c4');

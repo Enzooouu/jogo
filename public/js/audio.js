@@ -107,6 +107,9 @@ export function playEvents(events, localId) {
       case 'explosion':
         noise({ dur: 0.3, vol: 0.4, freq: 700 });
         break;
+      case 'hazardHurt':
+        if (e.id === localId) tone({ freq: 700, to: 300, dur: 0.09, type: 'square', vol: 0.12 });
+        break;
       case 'windWarn':
         tone({ freq: 300, to: 500, dur: 0.25, type: 'sine', vol: 0.08 });
         break;

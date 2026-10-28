@@ -15,6 +15,8 @@ import { EMPTY_INPUT } from './input.js';
 import { createRng } from './rng.js';
 import { rectsOverlap, circleRectOverlap, approach } from './geometry.js';
 
+// Espinhos espetam em "pancadas" a cada meio segundo (fica fácil de perceber)
+const SPIKE_TICK = 0.5;
 const NO_STATS = { speed: 1, jump: 1, weight: 1 };
 const statsOf = (p) => ({ ...NO_STATS, ...ELEMENTS[p.element].stats });
 // Quanto cada elemento sente o vento (Ar é imune pela tabela de perigos)
@@ -224,6 +226,7 @@ export class Game {
     p.pickupCooldown = Math.max(0, p.pickupCooldown - DT);
     p.dropTimer = Math.max(0, p.dropTimer - DT);
     p.wallJumpLock = Math.max(0, p.wallJumpLock - DT);
+    p.spikeTimer = Math.max(0, p.spikeTimer - DT);
     this.updateStatus(p);
 
     const control = p.hitstun <= 0 && !p.status.atordoado;
@@ -483,11 +486,17 @@ export class Game {
       if (!rectsOverlap(p, h, 4)) continue;
       const reaction = hazardReaction(p.element, h.type);
       if (reaction === 'dano') {
-        // Espinhos: não matam, mas somam dano enquanto você fica em cima.
-        const dmg = (HAZARDS[h.type].dps ?? 0) * DT;
-        p.damage += dmg;
-        p.stats.damageTaken += dmg;
+        // Espinhos: não matam, mas espetam enquanto você fica em cima
+        // (dps por segundo, aplicado de meio em meio segundo; o primeiro
+        // espeto é na hora que encosta).
         p.inHazard = h.type;
+        if (p.spikeTimer <= 0) {
+          const amount = (HAZARDS[h.type].dps ?? 0) * SPIKE_TICK;
+          p.damage += amount;
+          p.stats.damageTaken += amount;
+          p.spikeTimer = SPIKE_TICK;
+          this.emit('hazardHurt', { id: p.id, hazard: h.type, amount, x: p.x + p.w / 2, y: p.y + p.h - 8 });
+        }
         continue;
       }
       if (reaction === 'imune') {
@@ -884,6 +893,7 @@ function createPlayer(cfg, index, lives) {
     jumpsLeft: PHYS.maxJumps,
     dropTimer: 0,
     onWall: 0,              // -1/1 = pendurado numa parede à esquerda/direita
+    spikeTimer: 0,
     wallHang: 0,
     wallJumpLock: 0,
     damage: 0,

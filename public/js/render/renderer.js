@@ -67,6 +67,14 @@ export class Renderer {
         case 'jump':
           if (e.double) P.add({ type: 'ring', x: e.x, y: e.y, size: 6, grow: 90, life: 0.3, color: 'rgba(255,255,255,0.8)' });
           break;
+        case 'hazardHurt': {
+          P.burst(e.x, e.y, { type: 'spark', count: 10, speed: 260, angle: -Math.PI / 2, spread: 2.2, life: 0.35, size: 2.2, color: '#ff5a5a', drag: 3 });
+          P.add({ type: 'text', text: `+${Math.round(e.amount)}%`, x: e.x + 22, y: e.y - 40, vy: -50, life: 0.8, size: 17, color: '#ff7a7a' });
+          const v = this.vis.get(e.id);
+          if (v) v.hurt = 0.18;
+          if (e.id === this.localId) this.shake(3, 0.1);
+          break;
+        }
         case 'wallGrab':
           P.burst(e.x, e.y, { count: 5, speed: 80, life: 0.3, size: 2.5, color: 'rgba(220,200,210,0.7)', gravity: 200 });
           break;
@@ -173,6 +181,7 @@ export class Renderer {
     for (const p of this.game.players) {
       const v = this.vis.get(p.id);
       if (p.onGround) v.runPhase += Math.abs(p.vx) * dt * 0.045;
+      if (v.hurt > 0) v.hurt -= dt;
     }
 
     const ctx = this.ctx;
@@ -286,6 +295,17 @@ export class Renderer {
         isLocal: p.id === this.localId,
       });
       if (p.status.atordoado) this.drawStunStars(ctx, x + p.w / 2, y - 6);
+      // Clarão vermelho quando os espinhos espetam
+      const v = this.vis.get(p.id);
+      if (v.hurt > 0) {
+        ctx.save();
+        ctx.globalAlpha = v.hurt / 0.18 * 0.5;
+        ctx.fillStyle = '#ff3b3b';
+        ctx.beginPath();
+        ctx.ellipse(x + p.w / 2, y + p.h / 2, 26, 40, 0, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.restore();
+      }
     }
   }
 

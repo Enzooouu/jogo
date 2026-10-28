@@ -596,3 +596,14 @@ test('times de Terra e de Ar também terminam a partida', () => {
     assert.equal(g.phase, 'ended', `${a} x ${b}`);
   }
 });
+
+test('passar correndo pelos espinhos também machuca (espeta na hora)', () => {
+  const g = duel('fogo', 'agua');
+  place(g.playerById(2), 1050, 540);
+  g.nextWindIn = Infinity;
+  const p = g.playerById(1);
+  place(p, 590, 315);
+  p.vx = 330;
+  run(g, 15, { 1: makeInput({ right: true }) });
+  assert.ok(p.damage >= 3, `levou ${p.damage}`);
+});
