@@ -333,12 +333,13 @@ kbd {
 .stat .v { font-size: 30px; font-weight: 900; }
 .stat .k { font-size: 12px; text-transform: uppercase; letter-spacing: 0.1em; color: var(--muted); }
 
-.bar-row { display: grid; grid-template-columns: 70px 1fr 60px; align-items: center; gap: 10px; margin-bottom: 10px; }
+.bar-row { display: grid; grid-template-columns: 70px 1fr 84px; align-items: center; gap: 10px; margin-bottom: 10px; }
 .bar { height: 12px; border-radius: 6px; background: rgba(255, 255, 255, 0.08); overflow: hidden; }
 .bar > span { display: block; height: 100%; border-radius: 6px; }
 
 .history { list-style: none; margin: 0; padding: 0; }
-.history li { display: flex; justify-content: space-between; gap: 8px; padding: 8px 0; border-top: 1px solid var(--line); font-size: 14px; }
+.history li { display: grid; grid-template-columns: 70px 1fr auto; gap: 10px; padding: 8px 0; border-top: 1px solid var(--line); font-size: 14px; }
+.history li .hint { white-space: nowrap; }
 .history li:first-child { border-top: 0; }
 .res-vitoria { color: var(--good); font-weight: 800; }
 .res-derrota { color: var(--bad); font-weight: 800; }

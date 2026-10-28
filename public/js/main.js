@@ -7,6 +7,8 @@ import { unlockAudio, toggleMute } from './audio.js';
 import { drawFighter } from './render/fighter.js';
 import { Renderer, TEAM_COLORS } from './render/renderer.js';
 import { buildLocalSetup, outcomeFor } from './setup.js';
+import { api } from './api.js';
+import { renderAccountBox, initAuthScreen, setAuthMode, focusAuth, loadProfile } from './screens/account.js';
 
 const $ = (sel) => document.querySelector(sel);
 const DEBUG = new URLSearchParams(location.search).has('debug');
@@ -19,6 +21,8 @@ const state = {
   difficulty: loadPref('dificuldade', 'normal'),
   runner: null,
   lastSetup: null,
+  user: null,
+  matchTicket: null,   // promessa com o id da partida no servidor (se logado)
 };
 
 // ------------------------------------------------------------ telas
@@ -36,6 +40,43 @@ document.addEventListener('click', (e) => {
   const go = e.target.closest('[data-go]');
   if (go) show(go.dataset.go);
 });
+
+// ------------------------------------------------------------ conta
+
+function setUser(user) {
+  state.user = user;
+  renderAccountBox(user, {
+    onLogin: () => openAuth('login'),
+    onRegister: () => openAuth('register'),
+    onProfile: openProfile,
+    onLogout: async () => {
+      try {
+        await api.logout();
+      } finally {
+        setUser(null);
+      }
+    },
+  });
+}
+
+function openAuth(mode) {
+  setAuthMode(mode);
+  show('auth');
+  focusAuth();
+}
+
+async function openProfile() {
+  show('profile');
+  const ok = await loadProfile();
+  if (!ok) {
+    // Sessão expirou: volta para o login
+    const { user } = await api.me().catch(() => ({ user: null }));
+    if (!user) {
+      setUser(null);
+      openAuth('login');
+    }
+  }
+}
 
 // ------------------------------------------------------------ menu
 
@@ -119,7 +160,7 @@ function stopPreviews() {
 // ------------------------------------------------------------ partida
 
 function playerName() {
-  return 'Jogador';
+  return state.user?.username ?? 'Jogador';
 }
 
 function newSetup() {
@@ -135,6 +176,8 @@ function newSetup() {
 async function startMatch(setup) {
   state.lastSetup = setup;
   unlockAudio();
+  // Tira o foco do botão clicado para Enter/Espaço não "clicarem" nele durante a luta.
+  document.activeElement?.blur?.();
   show('game');
   $('#pause-overlay').hidden = true;
   state.runner?.stop();
@@ -146,6 +189,11 @@ async function startMatch(setup) {
   });
   state.runner = runner;
   runner.start();
+
+  // Avisa o servidor que a partida começou (só para quem está logado).
+  state.matchTicket = state.user
+    ? api.startMatch({ mode: setup.mode, element: setup.players[0].element, teamSize: state.teamSize }).catch((err) => ({ error: err }))
+    : null;
   if (DEBUG) window.__brawl = { runner, state };
 }
 
@@ -169,7 +217,38 @@ function quitMatch() {
 function endMatch(setup, result) {
   state.runner?.stop();
   state.runner = null;
-  showResult(setup, result);
+  const outcome = showResult(setup, result);
+  saveResult(setup, result, outcome);
+}
+
+async function saveResult(setup, result, outcome) {
+  const note = $('#result-save');
+  const ticket = state.matchTicket;
+  state.matchTicket = null;
+  if (!ticket) {
+    note.textContent = 'Partida de convidado: entre na sua conta para salvar suas estatísticas.';
+    return;
+  }
+  note.textContent = 'Salvando estatísticas...';
+  const me = result.players.find((p) => p.id === setup.localPlayerId);
+  try {
+    const started = await ticket;
+    if (started.error) throw started.error;
+    await api.finishMatch(started.matchId, { result: outcome, kills: me.kills, deaths: me.deaths });
+    note.innerHTML = '<span class="ok">✓ Estatísticas salvas na sua conta.</span> ';
+    const link = document.createElement('button');
+    link.type = 'button';
+    link.className = 'btn ghost small';
+    link.textContent = 'Ver perfil';
+    link.addEventListener('click', openProfile);
+    note.appendChild(link);
+  } catch (err) {
+    note.innerHTML = '';
+    const span = document.createElement('span');
+    span.className = 'error';
+    span.textContent = `Não deu para salvar as estatísticas: ${err.message}`;
+    note.appendChild(span);
+  }
 }
 
 // ------------------------------------------------------------ resultado
@@ -276,7 +355,13 @@ function init() {
   $('#quit-btn').addEventListener('click', quitMatch);
   $('#again-btn').addEventListener('click', () => startMatch(newSetup()));
   $('#menu-btn').addEventListener('click', () => show('menu'));
+  initAuthScreen((user) => {
+    setUser(user);
+    show('menu');
+  });
+  setUser(null);
   show('menu');
+  api.me().then(({ user }) => setUser(user)).catch(() => setUser(null));
 }
 
 init();
