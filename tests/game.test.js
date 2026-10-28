@@ -430,7 +430,8 @@ test('bot derrubado para fora se recupera pela parede', () => {
     p.jumpsLeft = 0;
     place(g.playerById(2), 1050, 540);
     for (let i = 0; i < FPS * 4 && p.state === 'alive'; i++) g.step({ 1: bot.getInput(g) });
-    if (p.state === 'alive' && p.y + p.h <= 540) recovered++;
+    // voltou para cima da ilha (vale estar na lava, já que é de Fogo)
+    if (p.state === 'alive' && p.x > 180 && p.x < 1100 && p.y + p.h <= 572) recovered++;
   }
   assert.ok(recovered >= 5, `recuperou ${recovered} de 6`);
 });
@@ -606,4 +607,67 @@ test('passar correndo pelos espinhos também machuca (espeta na hora)', () => {
   p.vx = 330;
   run(g, 15, { 1: makeInput({ right: true }) });
   assert.ok(p.damage >= 3, `levou ${p.damage}`);
+});
+
+// ------------------------------------------------------------ dash
+
+test('dash: arranco rápido na direção segurada, sem gravidade', () => {
+  const g = duel('fogo', 'agua');
+  place(g.playerById(2), 1050, 540);
+  g.nextWindIn = Infinity;
+  const p = g.playerById(1);
+  place(p, 600, 540);
+  run(g, 2);
+  const x0 = p.x;
+  run(g, 1, { 1: makeInput({ right: true, dash: true }) });
+  run(g, 8, { 1: makeInput({ right: true }) });
+  assert.ok(p.x - x0 > 90, `andou ${p.x - x0}`);
+});
+
+test('no ar só tem 1 dash; recarrega ao pisar no chão', () => {
+  const g = duel('fogo', 'agua');
+  place(g.playerById(2), 1050, 540);
+  g.nextWindIn = Infinity;
+  const p = g.playerById(1);
+  p.x = 150; p.y = 100; p.vx = 0; p.vy = 0;   // no ar, fora da ilha
+  run(g, 1);
+  run(g, 1, { 1: makeInput({ left: true, dash: true }) });
+  assert.equal(p.airDashes, 0);
+  run(g, 40);
+  const vy = p.vy;
+  run(g, 1, { 1: makeInput({ dash: true }) });
+  assert.equal(p.dashTime, 0, 'segundo dash no ar não sai');
+  place(p, 640, 540);
+  run(g, 3);
+  assert.equal(p.onGround, true);
+  assert.equal(p.airDashes, 1, 'recarregou');
+  void vy;
+});
+
+test('dash para cima na diagonal ajuda a voltar para a ilha', () => {
+  const g = duel('fogo', 'agua');
+  place(g.playerById(2), 1050, 540);
+  g.nextWindIn = Infinity;
+  const p = g.playerById(1);
+  p.x = 60; p.y = 560; p.vx = 0; p.vy = 300; p.jumpsLeft = 0;
+  run(g, 1, { 1: makeInput({ right: true, up: true, dash: true }) });
+  run(g, 9, { 1: makeInput({ right: true }) });
+  assert.ok(p.y < 520, `subiu até ${p.y}`);
+});
+
+test('bots usam o dash quando acabam os pulos fora da ilha', () => {
+  let dashed = 0;
+  for (let seed = 1; seed <= 6; seed++) {
+    const g = duel('fogo', 'agua', { seed });
+    place(g.playerById(2), 1050, 540);
+    g.nextWindIn = Infinity;
+    const bot = new BotController(1, { seed });
+    const p = g.playerById(1);
+    p.x = 20; p.y = 450; p.vx = -100; p.vy = 100; p.jumpsLeft = 0;
+    for (let i = 0; i < 30; i++) {
+      g.step({ 1: bot.getInput(g) });
+      if (g.drainEvents().some((e) => e.type === 'dash')) { dashed++; break; }
+    }
+  }
+  assert.ok(dashed >= 5, `dash em ${dashed} de 6`);
 });

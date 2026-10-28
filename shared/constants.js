@@ -23,6 +23,10 @@ export const PHYS = {
   wallJumpSpeed: 740,     // pulo de parede (para cima)
   wallJumpPush: 300,      // pulo de parede (para longe da parede)
   wallJumpLock: 0.14,     // tempo em que o impulso vale mais que o direcional
+  dashSpeed: 820,         // velocidade do dash
+  dashTime: 0.16,         // duração do dash (sem gravidade)
+  dashCooldown: 0.55,     // intervalo mínimo entre dashes
+  airDashes: 1,           // dashes no ar até pisar no chão / parede / levar golpe
 };
 
 export const PLAYER = {

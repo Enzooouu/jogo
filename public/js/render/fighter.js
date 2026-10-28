@@ -30,6 +30,16 @@ function computePose(p, vis, time) {
     return pose;
   }
 
+  if (p.dashTime > 0) {
+    // Dash: corpo inclinado, braços e pernas para trás
+    pose.lean = 0.55;
+    pose.legF = [-0.4, -0.9];
+    pose.legB = [-0.9, -0.5];
+    pose.armF = [-1.2, -0.9];
+    pose.armB = [-1.6, -1.2];
+    return pose;
+  }
+
   if (p.onWall) {
     // Pendurado: mãos na parede, pés apoiados, corpo um pouco afastado
     const slide = Math.min(1, Math.max(0, p.vy) / 150);

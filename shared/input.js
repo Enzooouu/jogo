@@ -2,10 +2,10 @@
 // Teclado, bots e (no futuro) jogadores remotos via WebSocket produzem
 // exatamente este objeto. É pequeno de propósito, para trafegar pela rede.
 
-export const INPUT_KEYS = ['left', 'right', 'up', 'down', 'attack', 'throw'];
+export const INPUT_KEYS = ['left', 'right', 'up', 'down', 'attack', 'throw', 'dash'];
 
 export const EMPTY_INPUT = Object.freeze({
-  left: false, right: false, up: false, down: false, attack: false, throw: false,
+  left: false, right: false, up: false, down: false, attack: false, throw: false, dash: false,
 });
 
 export function makeInput(partial = {}) {

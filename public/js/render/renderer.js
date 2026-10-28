@@ -75,6 +75,13 @@ export class Renderer {
           if (e.id === this.localId) this.shake(3, 0.1);
           break;
         }
+        case 'dash': {
+          const p = g.playerById(e.id);
+          const el = ELEMENTS[p.element];
+          P.add({ type: 'ring', x: e.x, y: e.y, size: 8, grow: 160, life: 0.22, color: el.light });
+          P.burst(e.x, e.y, { type: 'spark', count: 8, speed: 260, angle: Math.atan2(-e.dy, -e.dx), spread: 0.9, life: 0.3, size: 2.2, color: el.light, drag: 3 });
+          break;
+        }
         case 'wallGrab':
           P.burst(e.x, e.y, { count: 5, speed: 80, life: 0.3, size: 2.5, color: 'rgba(220,200,210,0.7)', gravity: 200 });
           break;
@@ -182,6 +189,11 @@ export class Renderer {
       const v = this.vis.get(p.id);
       if (p.onGround) v.runPhase += Math.abs(p.vx) * dt * 0.045;
       if (v.hurt > 0) v.hurt -= dt;
+      // Rastro de "fantasmas" durante o dash
+      v.trail = v.trail ?? [];
+      if (p.dashTime > 0 && p.state === 'alive') v.trail.push({ x: p.x, y: p.y, life: 0.18 });
+      for (const t of v.trail) t.life -= dt;
+      v.trail = v.trail.filter((t) => t.life > 0).slice(-6);
     }
 
     const ctx = this.ctx;
@@ -244,6 +256,10 @@ export class Renderer {
     for (const p of g.players) {
       if (p.state !== 'alive') continue;
       const cx = p.x + p.w / 2;
+      if (p.dashTime > 0) {
+        // rastro do dash: "fantasmas" do lutador
+        P.add({ x: cx + (Math.random() - 0.5) * 10, y: p.y + 10 + Math.random() * 50, vx: -p.vx * 0.1, vy: -p.vy * 0.1, life: 0.3, size: 4, grow: -10, color: ELEMENTS[p.element].light });
+      }
       if (p.onWall && p.vy > 40 && chance(25)) {
         P.add({ x: p.onWall > 0 ? p.x + p.w : p.x, y: p.y + 14, vx: -p.onWall * 30, vy: -20, life: 0.35, size: 2.2, color: 'rgba(220,200,210,0.75)', gravity: 150 });
       }
@@ -290,6 +306,12 @@ export class Renderer {
       if (p.state !== 'alive') continue;
       const x = p.px + (p.x - p.px) * alpha;
       const y = p.py + (p.y - p.py) * alpha;
+      for (const t of this.vis.get(p.id).trail ?? []) {
+        ctx.save();
+        ctx.globalAlpha = (t.life / 0.18) * 0.3;
+        drawFighter(ctx, p, t.x, t.y, this.vis.get(p.id), this.time, { showName: false });
+        ctx.restore();
+      }
       drawFighter(ctx, p, x, y, this.vis.get(p.id), this.time, {
         teamColor: this.teamColor.get(p.team),
         isLocal: p.id === this.localId,

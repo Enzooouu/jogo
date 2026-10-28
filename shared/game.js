@@ -17,7 +17,7 @@ import { rectsOverlap, circleRectOverlap, approach } from './geometry.js';
 
 // Espinhos espetam em "pancadas" a cada meio segundo (fica fácil de perceber)
 const SPIKE_TICK = 0.5;
-const NO_STATS = { speed: 1, jump: 1, weight: 1 };
+const NO_STATS = { speed: 1, jump: 1, weight: 1, airDashes: PHYS.airDashes };
 const statsOf = (p) => ({ ...NO_STATS, ...ELEMENTS[p.element].stats });
 // Quanto cada elemento sente o vento (Ar é imune pela tabela de perigos)
 const WIND_FACTOR = { terra: 0.5 };
@@ -115,6 +115,7 @@ export class Game {
         id: p.id, x: p.x, y: p.y, vx: p.vx, vy: p.vy, facing: p.facing,
         damage: p.damage, lives: p.lives, state: p.state, invuln: p.invuln,
         hitstun: p.hitstun, onGround: p.onGround, onWall: p.onWall, windVx: p.windVx,
+        dashTime: p.dashTime, airDashes: p.airDashes,
         weapon: p.weapon ? { ...p.weapon } : null,
         attack: p.attack ? { ...p.attack } : null,
         status: structuredClone(p.status),
@@ -227,6 +228,7 @@ export class Game {
     p.dropTimer = Math.max(0, p.dropTimer - DT);
     p.wallJumpLock = Math.max(0, p.wallJumpLock - DT);
     p.spikeTimer = Math.max(0, p.spikeTimer - DT);
+    p.dashCooldown = Math.max(0, p.dashCooldown - DT);
     this.updateStatus(p);
 
     const control = p.hitstun <= 0 && !p.status.atordoado;
@@ -257,6 +259,7 @@ export class Game {
       const grabbing = !p.onGround && dir !== 0 && this.touchingWall(p, dir);
       if (grabbing && p.onWall !== dir) {
         p.wallHang = PHYS.wallHangTime;
+        p.airDashes = statsOf(p).airDashes;
         this.emit('wallGrab', { id: p.id, side: dir, x: p.x + (dir > 0 ? p.w : 0), y: p.y + 20 });
       }
       p.onWall = grabbing ? dir : 0;
@@ -285,6 +288,7 @@ export class Game {
         p.onGround = false;
       }
 
+      if (pressed('dash') && p.dashCooldown <= 0 && (p.onGround || p.airDashes > 0)) this.startDash(p, input);
       if (pressed('attack') && p.cooldown <= 0 && !p.attack) this.startAttack(p);
       if (pressed('throw') && p.weapon) this.throwWeapon(p);
     } else {
@@ -301,7 +305,17 @@ export class Game {
       if (p.attack && p.attack.t >= p.attack.duration) p.attack = null;
     }
 
-    if (p.onWall && p.vy >= 0) {
+    if (p.dashTime > 0) {
+      // Dash: velocidade fixa na direção escolhida, sem gravidade
+      p.dashTime -= DT;
+      p.vx = p.dashVx;
+      p.vy = p.dashVy;
+      if (p.dashTime <= 0) {
+        p.dashTime = 0;
+        p.vx = p.dashVx * 0.45;
+        p.vy = p.dashVy * 0.35;
+      }
+    } else if (p.onWall && p.vy >= 0) {
       // Pendurado: fica parado um instante e depois escorrega devagar.
       if (p.wallHang > 0) {
         p.wallHang -= DT;
@@ -321,6 +335,7 @@ export class Game {
     if (p.onGround) {
       if (!wasOnGround) this.emit('land', { id: p.id, x: p.x + p.w / 2, y: p.y + p.h });
       p.jumpsLeft = PHYS.maxJumps;
+      p.airDashes = statsOf(p).airDashes;
     } else if (wasOnGround && !jumped) {
       // Saiu do chão sem pular (andou para fora da borda): perde o pulo do chão.
       p.jumpsLeft = Math.min(p.jumpsLeft, PHYS.maxJumps - 1);
@@ -568,6 +583,7 @@ export class Game {
     p.lastHitBy = null;
     p.inHazard = null;
     p.onWall = 0;
+    p.dashTime = 0;
 
     if (p.lives > 0) {
       p.state = 'respawning';
@@ -590,6 +606,8 @@ export class Game {
     p.state = 'alive';
     p.invuln = PLAYER.invulnTime;
     p.jumpsLeft = PHYS.maxJumps;
+    p.airDashes = statsOf(p).airDashes;
+    p.dashTime = 0;
     p.cooldown = 0;
     p.dropTimer = 0;
     p.onWall = 0;
@@ -600,6 +618,24 @@ export class Game {
 
   canHit(attacker, target) {
     return target !== attacker && target.state === 'alive' && target.invuln <= 0 && target.team !== attacker.team;
+  }
+
+  // Dash na direção segurada (8 direções); sem direção, vai para a frente.
+  startDash(p, input) {
+    let dx = (input.right ? 1 : 0) - (input.left ? 1 : 0);
+    const dy = (input.down ? 1 : 0) - (input.up ? 1 : 0);
+    if (dx === 0 && dy === 0) dx = p.facing;
+    if (p.onGround && dy > 0) return;   // não dá para "furar" o chão
+    const len = Math.hypot(dx, dy);
+    p.dashVx = (dx / len) * PHYS.dashSpeed;
+    p.dashVy = (dy / len) * PHYS.dashSpeed * 0.85;
+    p.dashTime = PHYS.dashTime;
+    p.dashCooldown = PHYS.dashCooldown;
+    if (dx !== 0) p.facing = Math.sign(dx);
+    if (!p.onGround) p.airDashes--;
+    p.onWall = 0;
+    p.attack = null;
+    this.emit('dash', { id: p.id, x: p.x + p.w / 2, y: p.y + p.h / 2, dx: dx / len, dy: dy / len });
   }
 
   startAttack(p) {
@@ -698,6 +734,9 @@ export class Game {
     target.lastHitBy = attacker.id;
     target.lastHitTime = this.time;
     target.jumpsLeft = Math.max(target.jumpsLeft, 1);
+    // Levou golpe: ganha o dash de volta para poder se recuperar
+    target.airDashes = statsOf(target).airDashes;
+    target.dashTime = 0;
     this.applyStatus(target, profile.status, attacker.id);
 
     this.emit('hit', {
@@ -894,6 +933,11 @@ function createPlayer(cfg, index, lives) {
     dropTimer: 0,
     onWall: 0,              // -1/1 = pendurado numa parede à esquerda/direita
     spikeTimer: 0,
+    dashTime: 0,
+    dashVx: 0,
+    dashVy: 0,
+    dashCooldown: 0,
+    airDashes: ELEMENTS[cfg.element]?.stats?.airDashes ?? PHYS.airDashes,
     wallHang: 0,
     wallJumpLock: 0,
     damage: 0,

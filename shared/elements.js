@@ -4,13 +4,14 @@
 //   speed  = multiplicador da velocidade de andar
 //   jump   = multiplicador da força do pulo
 //   weight = quanto mais pesado, menos voa ao apanhar (empurrão / weight)
+//   airDashes = quantos dashes no ar até pisar no chão (padrão 1)
 
 export const ELEMENTS = {
   fogo: {
     id: 'fogo', name: 'Fogo', enabled: true,
     color: '#ff6a1f', light: '#ffd25a', dark: '#8a2a05',
     description: 'Atravessa a lava. Morre na água.',
-    stats: { speed: 1, jump: 1, weight: 1 },
+    stats: { speed: 1, jump: 1, weight: 0.93 },
   },
   agua: {
     id: 'agua', name: 'Água', enabled: true,
@@ -27,8 +28,8 @@ export const ELEMENTS = {
   ar: {
     id: 'ar', name: 'Ar', enabled: true,
     color: '#bfe9e1', light: '#ffffff', dark: '#5e8f87',
-    description: 'O vento não o empurra. Rápido e pula alto, mas é leve.',
-    stats: { speed: 1.15, jump: 1.1, weight: 1 },
+    description: 'O vento não o empurra. Rápido, pula alto e tem 2 dashes no ar.',
+    stats: { speed: 1.15, jump: 1.1, weight: 1, airDashes: 2 },
   },
 };
 

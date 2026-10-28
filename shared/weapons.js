@@ -24,7 +24,7 @@ export const WEAPONS = {
     byElement: {
       fogo: {
         name: 'Lâmina Flamejante',
-        damage: 12, kbBase: 330, kbScale: 3.8,
+        damage: 12, kbBase: 315, kbScale: 3.6,
         status: { type: 'queimadura', duration: 2.5, dps: 4 },
       },
       agua: {
@@ -54,7 +54,7 @@ export const WEAPONS = {
     byElement: {
       fogo: {
         name: 'Bola de Fogo',
-        damage: 9, kbBase: 280, kbScale: 3.1,
+        damage: 9, kbBase: 255, kbScale: 2.85,
         explosion: { radius: 75, damage: 5 },
         status: { type: 'queimadura', duration: 2, dps: 3 },
       },

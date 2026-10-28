@@ -10,6 +10,7 @@ export const KEYMAP = {
   down: ['KeyS', 'ArrowDown'],
   attack: ['Mouse0', 'KeyJ', 'KeyZ'],
   throw: ['Mouse2', 'KeyK', 'KeyX'],
+  dash: ['ShiftLeft', 'ShiftRight', 'KeyL'],
 };
 
 export class KeyboardController {

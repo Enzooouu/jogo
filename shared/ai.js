@@ -48,6 +48,7 @@ export class BotController {
     const out = { ...EMPTY_INPUT };
     let dir = 0;
     let jump = false;
+    let dash = null;   // null ou { up: bool }
     const cx = me.x + me.w / 2;
     const feet = me.y + me.h;
     const stage = this.stage;
@@ -65,6 +66,12 @@ export class BotController {
       dir = cx < stage.centerX ? 1 : -1;
       if (me.onWall && me.wallHang <= 0.2) jump = true;
       else if (me.vy > -60 && feet > stage.top - 90 && me.jumpsLeft > 0) jump = true;
+      else if (me.jumpsLeft === 0 && me.airDashes > 0 && me.dashCooldown <= 0 && me.vy > 0 && feet > stage.top - 30) {
+        // Sem pulos: usa o dash para voltar. Perto da parede vai reto para
+        // cima (na diagonal cairia direto nas piscinas da borda).
+        const gap = cx < stage.left ? stage.left - cx : cx - stage.right;
+        dash = { up: true, straight: gap < 90 };
+      }
     } else if (this.idleTimer > 0) {
       this.idleTimer--;
     } else {
@@ -95,6 +102,11 @@ export class BotController {
     if (out.throw) this.wantThrow = false;
     out.down = this.wantDown ?? false;
     this.wantDown = false;
+    if (dash) {
+      out.dash = !this.lastOut.dash;
+      if (dash.up) out.up = true;
+      if (dash.up && dash.straight) out.left = out.right = false;
+    }
 
     this.lastOut = out;
     return out;
