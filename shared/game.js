@@ -101,7 +101,7 @@ export class Game {
       players: this.players.map((p) => ({
         id: p.id, x: p.x, y: p.y, vx: p.vx, vy: p.vy, facing: p.facing,
         damage: p.damage, lives: p.lives, state: p.state, invuln: p.invuln,
-        hitstun: p.hitstun, onGround: p.onGround,
+        hitstun: p.hitstun, onGround: p.onGround, onWall: p.onWall,
         weapon: p.weapon ? { ...p.weapon } : null,
         attack: p.attack ? { ...p.attack } : null,
         status: structuredClone(p.status),
@@ -201,6 +201,7 @@ export class Game {
     p.hitstun = Math.max(0, p.hitstun - DT);
     p.pickupCooldown = Math.max(0, p.pickupCooldown - DT);
     p.dropTimer = Math.max(0, p.dropTimer - DT);
+    p.wallJumpLock = Math.max(0, p.wallJumpLock - DT);
     this.updateStatus(p);
 
     const control = p.hitstun <= 0;
@@ -208,7 +209,9 @@ export class Game {
     let jumped = false;
 
     if (control) {
-      const dir = (input.right ? 1 : 0) - (input.left ? 1 : 0);
+      let dir = (input.right ? 1 : 0) - (input.left ? 1 : 0);
+      // Logo após um pulo de parede, o impulso vale mais que o direcional.
+      if (p.wallJumpLock > 0) dir = 0;
       if (dir !== 0 && !p.attack) p.facing = dir;
 
       let maxSpeed = PHYS.moveSpeed;
@@ -223,7 +226,25 @@ export class Game {
         p.vx = approach(p.vx, 0, friction * DT);
       }
 
-      if (pressed('up') && p.jumpsLeft > 0) {
+      // Parede: no ar, segurando para o lado dela = se pendura e escorrega.
+      const grabbing = !p.onGround && dir !== 0 && this.touchingWall(p, dir);
+      if (grabbing && p.onWall !== dir) {
+        p.wallHang = PHYS.wallHangTime;
+        this.emit('wallGrab', { id: p.id, side: dir, x: p.x + (dir > 0 ? p.w : 0), y: p.y + 20 });
+      }
+      p.onWall = grabbing ? dir : 0;
+
+      if (pressed('up') && p.onWall) {
+        // Pulo de parede: não gasta os pulos normais.
+        const away = -p.onWall;
+        p.vy = -PHYS.wallJumpSpeed;
+        p.vx = away * PHYS.wallJumpPush;
+        p.facing = away;
+        p.onWall = 0;
+        p.wallJumpLock = PHYS.wallJumpLock;
+        jumped = true;
+        this.emit('wallJump', { id: p.id, x: p.x + (away > 0 ? 0 : p.w), y: p.y + 30 });
+      } else if (pressed('up') && p.jumpsLeft > 0) {
         const fromGround = p.onGround;
         p.vy = -(fromGround ? PHYS.jumpSpeed : PHYS.doubleJumpSpeed);
         p.jumpsLeft--;
@@ -240,6 +261,7 @@ export class Game {
       if (pressed('attack') && p.cooldown <= 0 && !p.attack) this.startAttack(p);
       if (pressed('throw') && p.weapon) this.throwWeapon(p);
     } else {
+      p.onWall = 0;
       p.vx = approach(p.vx, 0, PHYS.hitstunDrag * DT);
     }
 
@@ -252,9 +274,19 @@ export class Game {
       if (p.attack && p.attack.t >= p.attack.duration) p.attack = null;
     }
 
-    const fastFalling = control && input.down && !p.onGround && p.vy > 0;
-    p.vy = Math.min(p.vy + PHYS.gravity * DT, fastFalling ? PHYS.fastFall : PHYS.maxFall);
-    if (fastFalling) p.vy = Math.max(p.vy, PHYS.maxFall * 0.8);
+    if (p.onWall && p.vy >= 0) {
+      // Pendurado: fica parado um instante e depois escorrega devagar.
+      if (p.wallHang > 0) {
+        p.wallHang -= DT;
+        p.vy = 0;
+      } else {
+        p.vy = Math.min(p.vy + PHYS.gravity * DT, PHYS.wallSlideSpeed);
+      }
+    } else {
+      const fastFalling = control && input.down && !p.onGround && p.vy > 0;
+      p.vy = Math.min(p.vy + PHYS.gravity * DT, fastFalling ? PHYS.fastFall : PHYS.maxFall);
+      if (fastFalling) p.vy = Math.max(p.vy, PHYS.maxFall * 0.8);
+    }
 
     this.moveAndCollide(p);
 
@@ -271,6 +303,12 @@ export class Game {
     this.checkBlastZone(p);
     if (p.state !== 'alive') return;
     this.checkPickup(p);
+  }
+
+  // Tem parede sólida encostada no lado `dir` (-1 esquerda, 1 direita)?
+  touchingWall(p, dir) {
+    const probe = { x: dir > 0 ? p.x + p.w : p.x - 2, y: p.y + 12, w: 2, h: p.h - 24 };
+    return this.map.solids.some((s) => rectsOverlap(probe, s));
   }
 
   moveAndCollide(p) {
@@ -417,6 +455,7 @@ export class Game {
     p.hitstun = 0;
     p.lastHitBy = null;
     p.inHazard = null;
+    p.onWall = 0;
 
     if (p.lives > 0) {
       p.state = 'respawning';
@@ -441,6 +480,7 @@ export class Game {
     p.jumpsLeft = PHYS.maxJumps;
     p.cooldown = 0;
     p.dropTimer = 0;
+    p.onWall = 0;
     this.emit('respawn', { id: p.id, x: s.x, y: s.y });
   }
 
@@ -736,6 +776,9 @@ function createPlayer(cfg, index, lives) {
     standingOn: null,
     jumpsLeft: PHYS.maxJumps,
     dropTimer: 0,
+    onWall: 0,              // -1/1 = pendurado numa parede à esquerda/direita
+    wallHang: 0,
+    wallJumpLock: 0,
     damage: 0,
     lives,
     state: 'alive',

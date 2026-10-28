@@ -37,7 +37,6 @@ export class BotController {
     }
     if (!this.stage) {
       this.stage = stageBounds(game.map);
-      this.stage.bottom = Math.max(...game.map.solids.map((s) => s.y + s.h));
     }
 
     this.thinkTimer--;
@@ -54,15 +53,18 @@ export class BotController {
     const stage = this.stage;
 
     const offStage = cx < stage.left - 2 || cx > stage.right + 2;
-    const underStage = me.y > stage.bottom - 4 && cx > stage.left && cx < stage.right;
+    // Cabeça abaixo do chão do palco (e fora das piscinas) = embaixo da ilha.
+    const underStage = !offStage && me.y > stage.top + 60;
 
     if (underStage) {
       // Preso embaixo do palco: sai pela borda mais próxima.
       dir = cx - stage.left < stage.right - cx ? -1 : 1;
     } else if (offStage) {
-      // Recuperação: volta para o palco usando os pulos.
+      // Recuperação: volta para o palco usando os pulos e a parede (segurar
+      // na direção do palco já faz o bot se pendurar; pular dali sobe).
       dir = cx < stage.centerX ? 1 : -1;
-      if (me.vy > -60 && feet > stage.top - 90 && me.jumpsLeft > 0) jump = true;
+      if (me.onWall && me.wallHang <= 0.2) jump = true;
+      else if (me.vy > -60 && feet > stage.top - 90 && me.jumpsLeft > 0) jump = true;
     } else if (this.idleTimer > 0) {
       this.idleTimer--;
     } else {

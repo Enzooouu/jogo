@@ -28,6 +28,17 @@ function computePose(p, vis, time) {
     return pose;
   }
 
+  if (p.onWall) {
+    // Pendurado: mãos na parede, pés apoiados, corpo um pouco afastado
+    const slide = Math.min(1, Math.max(0, p.vy) / 150);
+    pose.lean = -0.18;
+    pose.armF = [2.6 - slide * 0.3, 2.1];
+    pose.armB = [2.1, 1.5];
+    pose.legF = [1.0, 0.35];
+    pose.legB = [0.45, -0.3];
+    return pose;
+  }
+
   if (!p.onGround) {
     if (p.vy < 0) {
       pose.legF = [0.9, -1.1];

@@ -8,6 +8,7 @@
 //            na metade esquerda é de um time e na direita do outro. O código
 //            distribui quantos jogadores houver (4, 6, 8...).
 // blast:     sair desses limites = perder uma vida
+// decor:     enfeites só visuais (não colidem)
 
 export const MAPS = {
   caldeira: {
@@ -15,13 +16,16 @@ export const MAPS = {
     name: 'Caldeira',
     width: 1280,
     height: 720,
-    blast: { left: -180, right: 1460, top: -520, bottom: 860 },
+    blast: { left: -260, right: 1540, top: -560, bottom: 1000 },
+    // Ilha flutuante: as laterais (x=180 e x=1100) são paredes para se pendurar.
     solids: [
-      { x: 180, y: 540, w: 150, h: 80 },
-      { x: 330, y: 572, w: 140, h: 48 },   // fundo da piscina de lava
-      { x: 470, y: 540, w: 340, h: 80 },
-      { x: 810, y: 572, w: 140, h: 48 },   // fundo da piscina de água
-      { x: 950, y: 540, w: 150, h: 80 },
+      { x: 180, y: 540, w: 150, h: 160 },
+      { x: 330, y: 572, w: 140, h: 128 },  // fundo da piscina de lava
+      { x: 470, y: 540, w: 340, h: 160 },
+      { x: 810, y: 572, w: 140, h: 128 },  // fundo da piscina de água
+      { x: 950, y: 540, w: 150, h: 160 },
+      { x: 250, y: 700, w: 780, h: 50 },   // base da ilha
+      { x: 380, y: 750, w: 520, h: 45 },
     ],
     platforms: [
       { x: 250, y: 420, w: 220 },
@@ -43,6 +47,15 @@ export const MAPS = {
       { x: 580, y: 160 }, { x: 700, y: 160 }, { x: 640, y: 110 },
     ],
     itemSpawn: { minX: 220, maxX: 1060, y: -40 },
+    decor: [
+      { type: 'braseiro', x: 200, y: 540 },
+      { type: 'obsidiana', x: 300, y: 540 },
+      { type: 'runa', x: 640, y: 540 },
+      { type: 'cristal', x: 985, y: 540 },
+      { type: 'fonte', x: 1078, y: 540 },
+      { type: 'cascata', hazard: 'lava', x: 420, y: 795 },
+      { type: 'cascata', hazard: 'agua', x: 862, y: 795 },
+    ],
     theme: { skyTop: '#140a24', skyBottom: '#3d1630', haze: '#ff7a3c' },
   },
 };

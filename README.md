@@ -28,6 +28,8 @@ Abra **http://localhost:3000** no navegador.
 | Andar | `A` `D` ou `←` `→` |
 | Pular (2x no ar) | `W`, `↑` ou `Espaço` |
 | Descer da plataforma / cair rápido | `S` ou `↓` |
+| Se pendurar na parede (no ar) | segurar a direção da parede |
+| Pulo de parede | pular enquanto pendurado |
 | Atacar | `J` ou `Z` |
 | Arremessar a arma | `K` ou `X` |
 | Pausar | `Esc` ou `P` |
@@ -39,6 +41,8 @@ Abra **http://localhost:3000** no navegador.
 - Partida **Time vs Time**: você + 1 bot contra 2 bots (dá para escolher 3v3 e 4v4).
 - Cada jogador tem 3 vidas. Perde uma vida quem **cai do mapa** ou **toca num perigo mortal**.
 - Cada golpe aumenta o dano (%) do alvo; quanto mais dano, mais longe ele voa.
+- Foi arremessado? Segure na direção da ilha para se pendurar na parede e pule para subir.
+- A câmera se afasta sozinha quando alguém sai da área principal.
 - Vence o time que eliminar o outro. Se o tempo (4 min) acabar, vence quem tem mais vidas.
 
 **Elementos e perigos**

@@ -5,6 +5,7 @@ import { ELEMENTS } from '/shared/elements.js';
 import { weaponProfile } from '/shared/weapons.js';
 import { StageRenderer, roundRect } from './stage.js';
 import { Particles } from './particles.js';
+import { Camera } from './camera.js';
 import { drawFighter, drawSword, drawStaff, hexA } from './fighter.js';
 
 export const VIEW_W = 1280;
@@ -20,6 +21,7 @@ export class Renderer {
     this.localId = localPlayerId;
     this.debug = debug;
     this.stage = new StageRenderer(game.map);
+    this.camera = new Camera(VIEW_W, VIEW_H, { x: 0, y: 0, w: game.map.width, h: game.map.height });
     this.particles = new Particles();
     this.vis = new Map(game.players.map((p) => [p.id, { runPhase: 0 }]));
     this.time = 0;
@@ -63,6 +65,13 @@ export class Renderer {
           break;
         case 'jump':
           if (e.double) P.add({ type: 'ring', x: e.x, y: e.y, size: 6, grow: 90, life: 0.3, color: 'rgba(255,255,255,0.8)' });
+          break;
+        case 'wallGrab':
+          P.burst(e.x, e.y, { count: 5, speed: 80, life: 0.3, size: 2.5, color: 'rgba(220,200,210,0.7)', gravity: 200 });
+          break;
+        case 'wallJump':
+          P.add({ type: 'ring', x: e.x, y: e.y, size: 6, grow: 110, life: 0.25, color: 'rgba(255,255,255,0.8)' });
+          P.burst(e.x, e.y, { count: 6, speed: 140, life: 0.3, size: 2.5, color: 'rgba(220,200,210,0.7)', gravity: 300 });
           break;
         case 'land':
           P.burst(e.x, e.y, { count: 5, speed: 90, angle: -Math.PI / 2, spread: Math.PI, life: 0.3, size: 2.5, color: 'rgba(220,200,210,0.7)', gravity: 200 });
@@ -175,12 +184,16 @@ export class Renderer {
       if (this.shakeTime <= 0) this.shakePower = 0;
     }
 
-    ctx.setTransform(this.scale, 0, 0, this.scale, 0, 0);
-    ctx.fillStyle = '#0b0610';
-    ctx.fillRect(0, 0, VIEW_W, VIEW_H);
-    ctx.setTransform(this.scale, 0, 0, this.scale, sx * this.scale, sy * this.scale);
+    const cam = this.camera;
+    cam.update(dt, this.game.players.filter((p) => p.state === 'alive').map((p) => ({
+      x: p.px + (p.x - p.px) * alpha, y: p.py + (p.y - p.py) * alpha, w: p.w, h: p.h,
+    })));
+    this.stage.drawBackground(ctx, cam, this.time, { x: sx, y: sy });
 
-    this.stage.drawStatic(ctx);
+    // Mundo: a câmera decide o centro e o zoom
+    const z = this.scale * cam.zoom;
+    ctx.setTransform(z, 0, 0, z, (VIEW_W / 2 - cam.x * cam.zoom + sx) * this.scale, (VIEW_H / 2 - cam.y * cam.zoom + sy) * this.scale);
+    this.stage.drawTerrain(ctx, this.time);
     this.stage.drawHazards(ctx, this.time, false);
     this.drawItems(ctx);
     this.drawProjectiles(ctx);
@@ -199,6 +212,18 @@ export class Renderer {
     const g = this.game;
     const chance = (rate) => Math.random() < rate * dt;
 
+    // Brasas e cinzas no ar (lado do fogo) e gotículas de névoa (lado da água)
+    if (chance(6)) {
+      P.add({ x: -100 + Math.random() * 700, y: 760, vx: 20 + Math.random() * 30, vy: -50 - Math.random() * 50, life: 5, size: 1.6, color: Math.random() < 0.6 ? '#ff9a3c' : '#ffd25a', drag: 0.1 });
+    }
+    if (chance(4)) {
+      P.add({ x: 700 + Math.random() * 700, y: -20 + Math.random() * 300, vx: -15, vy: 25 + Math.random() * 20, life: 5, size: 1.4, color: 'rgba(180,225,255,0.7)' });
+    }
+    for (const d of g.map.decor ?? []) {
+      if (d.type === 'braseiro' && chance(10)) {
+        P.add({ x: d.x + (Math.random() - 0.5) * 16, y: d.y - 50, vx: (Math.random() - 0.5) * 30, vy: -70 - Math.random() * 50, life: 0.9, size: 1.8, grow: -1.5, color: Math.random() < 0.5 ? '#ffd25a' : '#ff6a1f' });
+      }
+    }
     for (const h of g.map.hazards) {
       if (h.type === 'lava' && chance(5)) {
         P.add({ x: h.x + Math.random() * h.w, y: h.y, vx: (Math.random() - 0.5) * 20, vy: -40 - Math.random() * 60, life: 1.4, size: 1.8, color: '#ffb347', gravity: -10 });
@@ -207,6 +232,9 @@ export class Renderer {
     for (const p of g.players) {
       if (p.state !== 'alive') continue;
       const cx = p.x + p.w / 2;
+      if (p.onWall && p.vy > 40 && chance(25)) {
+        P.add({ x: p.onWall > 0 ? p.x + p.w : p.x, y: p.y + 14, vx: -p.onWall * 30, vy: -20, life: 0.35, size: 2.2, color: 'rgba(220,200,210,0.75)', gravity: 150 });
+      }
       if (p.element === 'fogo' && chance(18)) {
         P.add({ x: cx + (Math.random() - 0.5) * 10, y: p.y - 4, vx: (Math.random() - 0.5) * 30, vy: -60 - Math.random() * 40, life: 0.5, size: 2.2, grow: -3, color: Math.random() < 0.5 ? '#ffd25a' : '#ff6a1f' });
       }
@@ -350,8 +378,7 @@ export class Renderer {
   drawOffscreen(ctx, alpha) {
     for (const p of this.game.players) {
       if (p.state !== 'alive') continue;
-      const x = p.px + (p.x - p.px) * alpha + p.w / 2;
-      const y = p.py + (p.y - p.py) * alpha + p.h / 2;
+      const { x, y } = this.camera.toScreen(p.px + (p.x - p.px) * alpha + p.w / 2, p.py + (p.y - p.py) * alpha + p.h / 2);
       const out = x < 0 || x > VIEW_W || y < 0 || y > VIEW_H;
       if (!out) continue;
       const bx = Math.max(28, Math.min(VIEW_W - 28, x));

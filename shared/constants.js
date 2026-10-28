@@ -18,6 +18,11 @@ export const PHYS = {
   jumpSpeed: 800,
   doubleJumpSpeed: 720,
   maxJumps: 2,            // pulo + pulo duplo
+  wallHangTime: 0.35,     // tempo parado ao se pendurar na parede
+  wallSlideSpeed: 150,    // velocidade máxima escorregando na parede
+  wallJumpSpeed: 740,     // pulo de parede (para cima)
+  wallJumpPush: 300,      // pulo de parede (para longe da parede)
+  wallJumpLock: 0.14,     // tempo em que o impulso vale mais que o direcional
 };
 
 export const PLAYER = {

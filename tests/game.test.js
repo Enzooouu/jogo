@@ -373,3 +373,63 @@ test('comando compacta e descompacta sem perder nada', () => {
   const input = makeInput({ left: true, attack: true, down: true });
   assert.deepEqual(decodeInput(encodeInput(input)), input);
 });
+
+test('parede: se pendura, escorrega devagar e pula para longe dela', () => {
+  const g = newGame();
+  park(g, 2, 3, 4);
+  const p = g.playerById(1);
+  // Ao lado da parede esquerda da ilha (x = 180), no ar, segurando para a direita.
+  p.x = 180 - p.w - 1;
+  p.y = 560;
+  p.vx = 0;
+  p.vy = 400;
+  const hold = { 1: makeInput({ right: true }) };
+  run(g, 2, hold);
+  assert.equal(p.onWall, 1, 'pendurou');
+  run(g, 10, hold);
+  assert.equal(p.vy, 0, 'fica parado um instante');
+  const y0 = p.y;
+  run(g, 40, hold);
+  assert.ok(p.y > y0, 'escorrega');
+  assert.ok(p.vy <= 150, 'escorrega devagar');
+
+  const jumps = p.jumpsLeft;
+  run(g, 1, { 1: makeInput({ right: true, up: true }) });
+  assert.ok(p.vy < -600, 'pulo de parede vai para cima');
+  assert.ok(p.vx < 0, 'e para longe da parede');
+  assert.equal(p.jumpsLeft, jumps, 'não gasta os pulos normais');
+});
+
+test('sem segurar para a parede, só cai', () => {
+  const g = newGame();
+  park(g, 2, 3, 4);
+  const p = g.playerById(1);
+  p.x = 180 - p.w - 1;
+  p.y = 560;
+  p.vy = 400;
+  run(g, 10);
+  assert.equal(p.onWall, 0);
+  assert.ok(p.vy > 400);
+});
+
+test('bot derrubado para fora se recupera pela parede', () => {
+  let recovered = 0;
+  for (let seed = 1; seed <= 6; seed++) {
+    const players = [
+      { id: 1, name: 'A', element: 'fogo', team: 'A', isBot: true },
+      { id: 2, name: 'B', element: 'agua', team: 'B', isBot: true },
+    ];
+    const g = new Game({ players, seed });
+    while (g.phase === 'countdown') g.step({});
+    const bot = new BotController(1, { difficulty: 'normal', seed });
+    const p = g.playerById(1);
+    p.x = 120;
+    p.y = 600;   // abaixo do topo da ilha, ao lado da parede esquerda
+    p.vy = 0;
+    p.jumpsLeft = 0;
+    place(g.playerById(2), 1050, 540);
+    for (let i = 0; i < FPS * 4 && p.state === 'alive'; i++) g.step({ 1: bot.getInput(g) });
+    if (p.state === 'alive' && p.y + p.h <= 540) recovered++;
+  }
+  assert.ok(recovered >= 5, `recuperou ${recovered} de 6`);
+});
