@@ -156,12 +156,14 @@ function drawModeTiles() {
   });
 }
 
-function chooseMode(teamSize) {
+function chooseMode(teamSize, mode = 'times') {
   state.teamSize = teamSize;
-  state.mode = 'times';
-  savePref('tamanho', String(teamSize));
+  state.mode = mode;
+  if (mode === 'times') savePref('tamanho', String(teamSize));
   show('cards');
-  $('#cards-mode').textContent = `Modo ${teamSize} × ${teamSize} · o time inteiro usa o elemento da carta`;
+  $('#cards-mode').textContent = mode === 'ffa'
+    ? 'Todos contra todos · cada jogador tem um elemento diferente'
+    : `Modo ${teamSize} × ${teamSize} · o time inteiro usa o elemento da carta`;
   $(`.el-card[data-element="${state.element}"]`)?.focus();
 }
 
@@ -174,7 +176,9 @@ function buildCards() {
     const reactions = HAZARD_REACTION[el.id] ?? {};
     const imune = Object.keys(reactions).filter((h) => reactions[h] === 'imune').map((h) => HAZARDS[h].name).join(', ');
     const morre = Object.keys(reactions).filter((h) => reactions[h] === 'morre').map((h) => HAZARDS[h].name).join(', ');
+    const machuca = Object.keys(reactions).filter((h) => reactions[h] === 'dano').map((h) => HAZARDS[h].name).join(', ');
     const rows = [['Imune', imune || '—'], ['Morre', morre || '—']];
+    if (machuca) rows.push(['Machuca', machuca]);
     for (const id of Object.keys(WEAPONS)) {
       if (WEAPONS[id].byElement?.[el.id]) rows.push([WEAPONS[id].name, weaponProfile(id, el.id).name]);
     }
@@ -186,7 +190,8 @@ function buildCards() {
     card.style.setProperty('--c1', el.color);
     card.style.setProperty('--c2', el.dark);
     card.innerHTML = `<div class="top"><span class="n"></span>${el.enabled ? '<i class="sel" hidden>SELECIONADO</i>' : '<i>EM BREVE</i>'}</div>
-      <canvas aria-hidden="true"></canvas><dl></dl>`;
+      <canvas aria-hidden="true"></canvas><dl></dl><p class="desc"></p>`;
+    card.querySelector('.desc').textContent = el.description;
     card.querySelector('.n').textContent = el.name.toUpperCase();
     const dl = card.querySelector('dl');
     for (const [k, v] of rows) {
@@ -224,7 +229,7 @@ function startCardAnimation() {
       const { ctx, w, h } = fitCanvas(card.querySelector('canvas'));
       const on = card.classList.contains('on');
       const el = card.dataset.element;
-      const weapon = el === 'fogo' ? 'espada' : el === 'agua' ? 'cajado' : null;
+      const weapon = { fogo: 'espada', agua: 'cajado', terra: 'espada', ar: 'cajado' }[el];
       drawPortrait(ctx, el, w / 2, h - 10, Math.min(1.85, h / 94), {
         time: on ? t : 0,
         extra: weapon ? { weapon: { id: weapon } } : {},
@@ -250,16 +255,18 @@ function goVersus() {
   const theirs = setup.players.filter((p) => p.team !== me.team);
   const a = ELEMENTS[mine[0].element];
   const b = ELEMENTS[theirs[0].element];
+  const ffa = setup.mode === 'ffa';
 
   const title = $('#vs-title');
   title.innerHTML = '<span class="a"></span> × <span class="b"></span>';
   title.querySelector('.a').textContent = a.name.toUpperCase();
   title.querySelector('.a').style.color = a.light;
-  title.querySelector('.b').textContent = b.name.toUpperCase();
-  title.querySelector('.b').style.color = b.light;
+  title.querySelector('.b').textContent = ffa ? 'TODOS' : b.name.toUpperCase();
+  title.querySelector('.b').style.color = ffa ? '#e9d8ff' : b.light;
 
-  fillSide($('#vs-left'), 'SEU TIME', a, mine, me.id);
-  fillSide($('#vs-right'), 'ADVERSÁRIO', b, theirs, me.id);
+  fillSide($('#vs-left'), ffa ? 'VOCÊ' : 'SEU TIME', a, mine, me.id);
+  if (ffa) fillRivals($('#vs-right'), theirs);
+  else fillSide($('#vs-right'), 'ADVERSÁRIO', b, theirs, me.id);
   setChips('#diff-seg', state.difficulty);
   show('versus');
   versus.start(setup);
@@ -268,8 +275,9 @@ function goVersus() {
 
 function fillSide(box, tag, el, members, myId) {
   const reactions = HAZARD_REACTION[el.id] ?? {};
-  const imune = Object.keys(reactions).find((h) => reactions[h] === 'imune');
-  const morre = Object.keys(reactions).find((h) => reactions[h] === 'morre');
+  const names = (kind) => Object.keys(reactions).filter((h) => reactions[h] === kind).map((h) => HAZARDS[h].name).join(', ');
+  const imune = names('imune');
+  const morre = names('morre');
   box.innerHTML = '<span class="tag"></span><h2></h2><ul></ul><div class="names"></div>';
   const tagEl = box.querySelector('.tag');
   tagEl.textContent = tag;
@@ -279,14 +287,35 @@ function fillSide(box, tag, el, members, myId) {
   h2.textContent = el.name.toUpperCase();
   h2.style.color = el.light;
   const ul = box.querySelector('ul');
-  const effect = { fogo: 'Armas queimam o alvo', agua: 'Armas deixam o alvo lento' }[el.id];
-  for (const line of [imune && `Imune: ${HAZARDS[imune].name}`, morre && `Morre: ${HAZARDS[morre].name}`, effect]) {
+  const effect = {
+    fogo: 'Armas queimam o alvo',
+    agua: 'Armas deixam o alvo lento',
+    terra: 'Armas atordoam o alvo',
+    ar: 'Tornado puxa os inimigos',
+  }[el.id];
+  for (const line of [imune && `Imune: ${imune}`, morre && `Morre: ${morre}`, effect]) {
     if (!line) continue;
     const li = document.createElement('li');
     li.textContent = line;
     ul.appendChild(li);
   }
   box.querySelector('.names').textContent = members.map((p) => (p.id === myId ? `${p.name} (você)` : p.name)).join(' · ');
+}
+
+// Todos contra todos: lista os 3 rivais, cada um com seu elemento
+function fillRivals(box, rivals) {
+  box.innerHTML = '<span class="tag">ADVERSÁRIOS</span><h2>TODOS</h2><ul></ul>';
+  const tagEl = box.querySelector('.tag');
+  tagEl.style.background = 'rgba(255,255,255,.14)';
+  tagEl.style.color = '#e9d8ff';
+  box.querySelector('h2').style.color = '#e9d8ff';
+  const ul = box.querySelector('ul');
+  for (const p of rivals) {
+    const li = document.createElement('li');
+    li.textContent = `${p.name} · ${ELEMENTS[p.element].name}`;
+    li.style.color = ELEMENTS[p.element].light;
+    ul.appendChild(li);
+  }
 }
 
 function setChips(selector, value) {
@@ -327,7 +356,9 @@ async function startMatch(setup) {
   runner.start();
 
   // Avisa o servidor que a partida começou (só para quem está logado).
-  const teamSize = setup.players.filter((p) => p.team === setup.players[0].team).length;
+  const teamSize = setup.mode === 'ffa'
+    ? setup.players.length / 2
+    : setup.players.filter((p) => p.team === setup.players[0].team).length;
   state.matchTicket = state.user
     ? api.startMatch({ mode: setup.mode, element: setup.players[0].element, teamSize }).catch((err) => ({ error: err }))
     : null;
@@ -503,6 +534,7 @@ function init() {
   for (const tile of document.querySelectorAll('.mode-tile[data-size]')) {
     tile.addEventListener('click', () => chooseMode(Number(tile.dataset.size)));
   }
+  $('.mode-tile[data-mode="ffa"]').addEventListener('click', () => chooseMode(1, 'ffa'));
   $('#cards-next').addEventListener('click', goVersus);
   $('#diff-seg').addEventListener('click', (e) => {
     const btn = e.target.closest('button');

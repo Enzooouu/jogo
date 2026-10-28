@@ -9,11 +9,16 @@
 
 import { DT, PHYS, PLAYER, MATCH, ITEMS, MODES } from './constants.js';
 import { getMap } from './maps.js';
-import { ELEMENTS, hazardReaction, teamElementsError } from './elements.js';
+import { ELEMENTS, HAZARDS, hazardReaction, teamElementsError } from './elements.js';
 import { WEAPONS, WEAPON_IDS, weaponProfile } from './weapons.js';
 import { EMPTY_INPUT } from './input.js';
 import { createRng } from './rng.js';
 import { rectsOverlap, circleRectOverlap, approach } from './geometry.js';
+
+const NO_STATS = { speed: 1, jump: 1, weight: 1 };
+const statsOf = (p) => ({ ...NO_STATS, ...ELEMENTS[p.element].stats });
+// Quanto cada elemento sente o vento (Ar é imune pela tabela de perigos)
+const WIND_FACTOR = { terra: 0.5 };
 
 const THROWN = { damage: 10, kbBase: 300, kbScale: 3.4, angle: 0.65, speed: 820, gravity: 1100 };
 const EXPLOSION_KB = { kbBase: 220, kbScale: 2.2, angle: 0.75 };
@@ -51,6 +56,8 @@ export class Game {
     this.projectiles = [];
     this.nextEntityId = 1;
     this.nextItemIn = ITEMS.firstSpawn;
+    this.winds = [];
+    this.nextWindIn = this.map.wind ? this.map.wind.first : Infinity;
     this.respawnIndex = 0;
 
     const seen = new Set();
@@ -105,12 +112,13 @@ export class Game {
       players: this.players.map((p) => ({
         id: p.id, x: p.x, y: p.y, vx: p.vx, vy: p.vy, facing: p.facing,
         damage: p.damage, lives: p.lives, state: p.state, invuln: p.invuln,
-        hitstun: p.hitstun, onGround: p.onGround, onWall: p.onWall,
+        hitstun: p.hitstun, onGround: p.onGround, onWall: p.onWall, windVx: p.windVx,
         weapon: p.weapon ? { ...p.weapon } : null,
         attack: p.attack ? { ...p.attack } : null,
         status: structuredClone(p.status),
       })),
       items: this.items.map((i) => ({ ...i })),
+      winds: this.winds.map((w) => ({ ...w })),
       projectiles: this.projectiles.map((pr) => ({ ...pr, hitIds: [...pr.hitIds] })),
       result: this.result,
     };
@@ -148,6 +156,7 @@ export class Game {
     }
 
     this.time += DT;
+    this.updateWinds();
     for (const p of this.players) this.updatePlayer(p, inputs[p.id] ?? EMPTY_INPUT);
     this.updateProjectiles();
     this.updateItems();
@@ -217,7 +226,8 @@ export class Game {
     p.wallJumpLock = Math.max(0, p.wallJumpLock - DT);
     this.updateStatus(p);
 
-    const control = p.hitstun <= 0;
+    const control = p.hitstun <= 0 && !p.status.atordoado;
+    const st = statsOf(p);
     const wasOnGround = p.onGround;
     let jumped = false;
 
@@ -227,8 +237,9 @@ export class Game {
       if (p.wallJumpLock > 0) dir = 0;
       if (dir !== 0 && !p.attack) p.facing = dir;
 
-      let maxSpeed = PHYS.moveSpeed;
-      if (p.status.encharcado) maxSpeed *= 1 - p.status.encharcado.slow;
+      let maxSpeed = PHYS.moveSpeed * st.speed;
+      // Encharcado deixa lento só no chão (no ar ainda dá para voltar para a ilha)
+      if (p.status.encharcado && p.onGround) maxSpeed *= 1 - p.status.encharcado.slow;
       if (p.attack && p.onGround) maxSpeed *= 0.5;
 
       if (dir !== 0) {
@@ -259,7 +270,7 @@ export class Game {
         this.emit('wallJump', { id: p.id, x: p.x + (away > 0 ? 0 : p.w), y: p.y + 30 });
       } else if (pressed('up') && p.jumpsLeft > 0) {
         const fromGround = p.onGround;
-        p.vy = -(fromGround ? PHYS.jumpSpeed : PHYS.doubleJumpSpeed);
+        p.vy = -(fromGround ? PHYS.jumpSpeed : PHYS.doubleJumpSpeed) * st.jump;
         p.jumpsLeft--;
         p.onGround = false;
         jumped = true;
@@ -301,6 +312,7 @@ export class Game {
       if (fastFalling) p.vy = Math.max(p.vy, PHYS.maxFall * 0.8);
     }
 
+    this.applyWind(p);
     this.moveAndCollide(p);
 
     if (p.onGround) {
@@ -327,12 +339,14 @@ export class Game {
   moveAndCollide(p) {
     const { solids, platforms } = this.map;
 
-    p.x += p.vx * DT;
+    const mvx = p.vx + p.windVx;
+    p.x += mvx * DT;
     for (const s of solids) {
       if (!rectsOverlap(p, s)) continue;
-      if (p.vx > 0) p.x = s.x - p.w;
-      else if (p.vx < 0) p.x = s.x + s.w;
+      if (mvx > 0) p.x = s.x - p.w;
+      else if (mvx < 0) p.x = s.x + s.w;
       p.vx = 0;
+      p.windVx = 0;
     }
 
     const prevBottom = p.y + p.h;
@@ -380,10 +394,11 @@ export class Game {
       burn.time -= DT;
       if (burn.time <= 0) p.status.queimadura = null;
     }
-    const wet = p.status.encharcado;
-    if (wet) {
-      wet.time -= DT;
-      if (wet.time <= 0) p.status.encharcado = null;
+    for (const key of ['encharcado', 'atordoado']) {
+      const st = p.status[key];
+      if (!st) continue;
+      st.time -= DT;
+      if (st.time <= 0) p.status[key] = null;
     }
   }
 
@@ -392,10 +407,73 @@ export class Game {
     // Fogo não queima quem é de fogo; água não encharca quem é de água.
     if (status.type === 'queimadura' && target.element === 'fogo') return;
     if (status.type === 'encharcado' && target.element === 'agua') return;
+    // Terra é firme demais para ficar atordoado.
+    if (status.type === 'atordoado' && target.element === 'terra') return;
     // Água apaga a queimadura e vice-versa.
     if (status.type === 'encharcado') target.status.queimadura = null;
     if (status.type === 'queimadura') target.status.encharcado = null;
     target.status[status.type] = { ...status, time: status.duration, source: sourceId };
+  }
+
+  // ------------------------------------------------ vento
+  // Rajadas aparecem em lugares aleatórios: primeiro um aviso, depois
+  // empurram para fora da ilha (para o lado mais perto da borda).
+
+  updateWinds() {
+    const cfg = this.map.wind;
+    if (!cfg) return;
+    for (const w of this.winds) {
+      w.time -= DT;
+      if (w.state === 'aviso' && w.time <= 0) {
+        w.state = 'ativo';
+        w.time = cfg.active;
+        this.emit('windStart', { windId: w.id });
+      }
+    }
+    const before = this.winds.length;
+    this.winds = this.winds.filter((w) => w.state === 'aviso' || w.time > 0);
+    if (this.winds.length < before) this.emit('windEnd');
+
+    this.nextWindIn -= DT;
+    if (this.nextWindIn > 0) return;
+    this.nextWindIn = this.rng.range(cfg.every[0], cfg.every[1]);
+    if (this.winds.length >= cfg.max) return;
+    const surface = this.rng.pick(cfg.surfaces);
+    const x = Math.round(this.rng.range(surface.x0, Math.max(surface.x0, surface.x1 - cfg.w)));
+    const zone = {
+      id: this.nextEntityId++,
+      x, y: surface.y - cfg.h, w: cfg.w, h: cfg.h,
+      dir: x + cfg.w / 2 < this.map.width / 2 ? -1 : 1,
+      state: 'aviso',
+      time: cfg.warn,
+    };
+    this.winds.push(zone);
+    this.emit('windWarn', { windId: zone.id, x: zone.x, y: zone.y, w: zone.w, h: zone.h, dir: zone.dir });
+  }
+
+  applyWind(p) {
+    let target = 0;
+    const cfg = this.map.wind;
+    if (cfg && hazardReaction(p.element, 'vento') !== 'imune') {
+      for (const w of this.winds) {
+        if (w.state === 'ativo' && rectsOverlap(p, w)) target += w.dir * cfg.strength * (WIND_FACTOR[p.element] ?? 1);
+      }
+    }
+    p.windVx = approach(p.windVx, target, 1800 * DT);
+  }
+
+  // Tornado: puxa os inimigos que estão por perto
+  pullTowards(pr, owner) {
+    const profile = weaponProfile(pr.weapon, pr.element);
+    if (!profile.pull) return;
+    const { radius, strength } = profile.pull;
+    for (const t of this.players) {
+      if (!this.canHit(owner, t)) continue;
+      const dx = pr.x - (t.x + t.w / 2);
+      const dy = pr.y - (t.y + t.h / 2);
+      if (dx * dx + dy * dy > radius * radius) continue;
+      t.vx = approach(t.vx, Math.sign(dx) * 260, strength * DT);
+    }
   }
 
   checkHazards(p) {
@@ -403,7 +481,16 @@ export class Game {
     for (const h of this.map.hazards) {
       // Margem de 4px para não morrer por encostar um pixel na borda.
       if (!rectsOverlap(p, h, 4)) continue;
-      if (hazardReaction(p.element, h.type) === 'imune') {
+      const reaction = hazardReaction(p.element, h.type);
+      if (reaction === 'dano') {
+        // Espinhos: não matam, mas somam dano enquanto você fica em cima.
+        const dmg = (HAZARDS[h.type].dps ?? 0) * DT;
+        p.damage += dmg;
+        p.stats.damageTaken += dmg;
+        p.inHazard = h.type;
+        continue;
+      }
+      if (reaction === 'imune') {
         p.inHazard = h.type;
         // Elemento imune "lava" o status contrário (fogo na lava não fica encharcado).
         if (h.type === 'lava') p.status.encharcado = null;
@@ -463,7 +550,8 @@ export class Game {
 
     p.weapon = null;
     p.attack = null;
-    p.status = { queimadura: null, encharcado: null };
+    p.status = { queimadura: null, encharcado: null, atordoado: null };
+    p.windVx = 0;
     p.damage = 0;
     p.vx = 0;
     p.vy = 0;
@@ -591,7 +679,7 @@ export class Game {
     attacker.stats.damageDealt += damage;
     attacker.stats.hits++;
 
-    const kb = (profile.kbBase + target.damage * profile.kbScale) * (scale.kb ?? 1);
+    const kb = ((profile.kbBase + target.damage * profile.kbScale) * (scale.kb ?? 1)) / statsOf(target).weight;
     const angle = profile.angle;
     target.vx = dirX * kb * Math.cos(angle);
     target.vy = Math.min(-kb * Math.sin(angle), -180);
@@ -620,6 +708,7 @@ export class Game {
       let alive = pr.life > 0;
 
       const owner = this.playerById(pr.owner);
+      if (alive && pr.kind === 'magia') this.pullTowards(pr, owner);
       if (alive) {
         for (const t of this.players) {
           if (pr.hitIds.includes(t.id) || !this.canHit(owner, t)) continue;
@@ -807,7 +896,8 @@ function createPlayer(cfg, index, lives) {
     attack: null,
     weapon: null,
     pickupCooldown: 0,
-    status: { queimadura: null, encharcado: null },
+    status: { queimadura: null, encharcado: null, atordoado: null },
+    windVx: 0,              // empurrão do vento (somado ao andar)
     inHazard: null,
     lastHitBy: null,
     lastHitTime: -Infinity,

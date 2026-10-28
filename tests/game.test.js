@@ -315,7 +315,7 @@ test('ninguém nasce ao lado do perigo que o mata', () => {
     const g = newGame(elements);
     for (const p of g.players) {
       for (const h of g.map.hazards) {
-        if (hazardReaction(p.element, h.type) === 'imune') continue;
+        if (hazardReaction(p.element, h.type) !== 'morre') continue;
         const cx = p.x + p.w / 2;
         const distance = cx < h.x ? h.x - cx : cx - (h.x + h.w);
         assert.ok(distance > 100 || p.y + p.h < h.y - 80, `${p.element} nasceu a ${distance}px de ${h.type}`);
@@ -468,4 +468,131 @@ test('placar conta dano causado, dano recebido, golpes e armas pegas', () => {
   g.forfeit(2);
   const row = g.result.players.find((p) => p.id === 2);
   assert.equal(row.damageTaken, 6);
+});
+
+// ------------------------------------------------------------ Terra e Ar
+
+function duel(a, b, opts = {}) {
+  const g = new Game({ players: [{ id: 1, element: a, team: 'A' }, { id: 2, element: b, team: 'B' }], seed: 3, ...opts });
+  while (g.phase === 'countdown') g.step({});
+  g.drainEvents();
+  return g;
+}
+
+test('espinhos não matam: somam 6% por segundo, e Terra é imune', () => {
+  for (const [el, expected] of [['fogo', 6], ['ar', 6], ['terra', 0]]) {
+    const g = duel(el, el === 'fogo' ? 'agua' : 'fogo');
+    const p = g.playerById(1);
+    place(g.playerById(2), 1050, 540);
+    g.nextWindIn = Infinity;
+    place(p, 640, 315);           // em cima dos espinhos
+    run(g, FPS);
+    assert.equal(p.state, 'alive', `${el} continua vivo`);
+    assert.ok(Math.abs(p.damage - expected) < 0.2, `${el}: ${p.damage}`);
+  }
+});
+
+test('vento empurra para fora; Ar é imune e Terra sente metade', () => {
+  const pushed = {};
+  for (const el of ['fogo', 'terra', 'ar']) {
+    const g = duel(el, el === 'fogo' ? 'agua' : 'fogo');
+    const p = g.playerById(1);
+    place(g.playerById(2), 1050, 540);
+    g.nextWindIn = Infinity;
+    place(p, 300, 540);
+    g.winds.push({ id: 99, x: 200, y: 380, w: 250, h: 160, dir: -1, state: 'ativo', time: 5 });
+    const x0 = p.x;
+    run(g, 30);
+    pushed[el] = x0 - p.x;
+  }
+  assert.ok(pushed.fogo > 80, `fogo empurrado ${pushed.fogo}`);
+  assert.ok(pushed.terra > 20 && pushed.terra < pushed.fogo * 0.7, `terra ${pushed.terra}`);
+  assert.ok(Math.abs(pushed.ar) < 1, `ar ${pushed.ar}`);
+});
+
+test('rajadas de vento aparecem sozinhas com aviso antes', () => {
+  const g = duel('fogo', 'agua');
+  g.nextWindIn = 0;
+  run(g, 1);
+  assert.equal(g.winds.length, 1);
+  assert.equal(g.winds[0].state, 'aviso');
+  run(g, Math.ceil(g.map.wind.warn * FPS) + 1);
+  assert.equal(g.winds[0].state, 'ativo');
+  const ev = g.drainEvents().map((e) => e.type);
+  assert.ok(ev.includes('windStart'));
+});
+
+test('espadão de Terra atordoa; Terra não fica atordoado', () => {
+  const g = duel('terra', 'fogo');
+  const a = g.playerById(1);
+  const b = g.playerById(2);
+  place(a, 600, 540);
+  place(b, 650, 540);
+  a.facing = 1;
+  a.weapon = { id: 'espada', uses: 5 };
+  run(g, 2);
+  run(g, 1, { 1: makeInput({ attack: true }) });
+  run(g, 10);
+  assert.ok(b.status.atordoado, 'fogo atordoado');
+  g.applyStatus(a, { type: 'atordoado', duration: 1 }, 2);
+  assert.equal(a.status.atordoado, null);
+});
+
+test('tornado do Ar puxa o inimigo para perto', () => {
+  const g = duel('ar', 'fogo');
+  const a = g.playerById(1);
+  const b = g.playerById(2);
+  place(a, 500, 540);
+  place(b, 760, 540);
+  a.facing = 1;
+  a.weapon = { id: 'cajado', uses: 5 };
+  run(g, 2);
+  run(g, 1, { 1: makeInput({ attack: true }) });
+  let pulled = false;
+  for (let i = 0; i < 60 && !pulled; i++) {
+    run(g, 1);
+    if (b.vx < -20) pulled = true;
+  }
+  assert.ok(pulled, 'foi puxado na direção do tornado');
+});
+
+test('Ar é mais rápido que Terra', () => {
+  const g = duel('ar', 'terra');
+  const a = g.playerById(1);
+  const t = g.playerById(2);
+  place(a, 520, 540);
+  place(t, 520, 540);
+  g.nextWindIn = Infinity;
+  run(g, 30, { 1: makeInput({ right: true }), 2: makeInput({ right: true }) });
+  assert.ok(a.x > t.x + 20);
+});
+
+test('todos contra todos com os 4 elementos termina', () => {
+  const players = ['fogo', 'agua', 'terra', 'ar'].map((element, i) => ({ id: i + 1, element, name: element, isBot: true }));
+  const g = new Game({ players, mode: 'ffa', seed: 11 });
+  const bots = players.map((p) => new BotController(p.id, { seed: p.id }));
+  let n = 0;
+  while (g.phase !== 'ended' && n < FPS * 300) {
+    const inputs = {};
+    for (const b of bots) inputs[b.playerId] = b.getInput(g);
+    g.step(inputs);
+    n++;
+  }
+  assert.equal(g.phase, 'ended');
+});
+
+test('times de Terra e de Ar também terminam a partida', () => {
+  for (const [a, b] of [['terra', 'ar'], ['fogo', 'terra'], ['ar', 'agua']]) {
+    const players = [[a, 'A'], [a, 'A'], [b, 'B'], [b, 'B']].map(([element, team], i) => ({ id: i + 1, element, team, isBot: true }));
+    const g = new Game({ players, seed: 21 });
+    const bots = players.map((p) => new BotController(p.id, { seed: p.id * 7 }));
+    let n = 0;
+    while (g.phase !== 'ended' && n < FPS * 300) {
+      const inputs = {};
+      for (const bot of bots) inputs[bot.playerId] = bot.getInput(g);
+      g.step(inputs);
+      n++;
+    }
+    assert.equal(g.phase, 'ended', `${a} x ${b}`);
+  }
 });

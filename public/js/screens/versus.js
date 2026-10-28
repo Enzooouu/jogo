@@ -9,6 +9,7 @@ const PALETTE = {
   agua: { inner: '#0b3f8a', mid: '#0a1d3f', outer: '#05080f', fx: 'chuva' },
   terra: { inner: '#5a3a18', mid: '#2a1a0a', outer: '#0d0804', fx: 'brasas' },
   ar: { inner: '#3c6e66', mid: '#1a302c', outer: '#070d0c', fx: 'chuva' },
+  misto: { inner: '#4a2a6a', mid: '#1f1030', outer: '#09050f', fx: 'brasas' },
 };
 
 export class VersusScreen {
@@ -41,7 +42,7 @@ export class VersusScreen {
     const mid = w / 2;
     const slant = Math.min(90, w * 0.07);
     const leftEl = this.left[0].element;
-    const rightEl = this.right[0].element;
+    const rightEl = this.setup.mode === 'ffa' ? 'misto' : this.right[0].element;
 
     this.half(ctx, w, h, leftEl, [[0, 0], [mid + slant, 0], [mid - slant, h], [0, h]], w * 0.25, t, 0);
     this.half(ctx, w, h, rightEl, [[mid + slant, 0], [w, 0], [w, h], [mid - slant, h]], w * 0.75, t, mid - slant);
@@ -75,7 +76,7 @@ export class VersusScreen {
     ctx.strokeText('VS', 0, 0);
     const g = ctx.createLinearGradient(-size * 0.6, 0, size * 0.6, 0);
     g.addColorStop(0, ELEMENTS[leftEl].light);
-    g.addColorStop(1, ELEMENTS[rightEl].light);
+    g.addColorStop(1, ELEMENTS[rightEl]?.light ?? '#e9d8ff');
     ctx.fillStyle = g;
     ctx.fillText('VS', 0, 0);
     ctx.restore();

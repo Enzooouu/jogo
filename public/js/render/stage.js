@@ -116,6 +116,7 @@ export class StageRenderer {
     for (const h of this.map.hazards) {
       if (h.type === 'lava') drawLava(ctx, h, time, front);
       else if (h.type === 'agua') drawWater(ctx, h, time, front);
+      else if (h.type === 'espinhos' && !front) drawSpikes(ctx, h, time);
     }
   }
 }
@@ -773,6 +774,37 @@ function drawWater(ctx, h, time, front) {
     wavyLine(ctx, h, time * 2.8, 2, 0.09);
     ctx.stroke();
   }
+  ctx.restore();
+}
+
+// Espinhos de pedra com pontas avermelhadas
+function drawSpikes(ctx, h, time) {
+  ctx.save();
+  const base = h.y + h.h;
+  const n = Math.max(3, Math.round(h.w / 11));
+  const sw = h.w / n;
+  for (let i = 0; i < n; i++) {
+    const x = h.x + i * sw;
+    const tall = h.h + 8 + ((i * 7) % 3) * 3;
+    const g = ctx.createLinearGradient(0, base - tall, 0, base);
+    g.addColorStop(0, '#ff8a7a');
+    g.addColorStop(0.25, '#c9b8c4');
+    g.addColorStop(1, '#4a3a50');
+    ctx.fillStyle = g;
+    ctx.strokeStyle = '#140a14';
+    ctx.lineWidth = 1.5;
+    ctx.beginPath();
+    ctx.moveTo(x + 1, base);
+    ctx.lineTo(x + sw / 2, base - tall);
+    ctx.lineTo(x + sw - 1, base);
+    ctx.closePath();
+    ctx.fill();
+    ctx.stroke();
+  }
+  // brilho de alerta pulsando
+  ctx.globalAlpha = 0.25 + Math.sin(time * 4) * 0.12;
+  ctx.fillStyle = '#ff4d4d';
+  ctx.fillRect(h.x, base - 2, h.w, 2);
   ctx.restore();
 }
 

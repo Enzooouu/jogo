@@ -24,7 +24,7 @@ Abra **http://localhost:3000** no navegador.
 ## Como jogar
 
 Na tela inicial (com uma partida de demonstração rodando ao fundo), clique em
-**Jogar** → escolha o modo (**1×1, 2×2 ou 3×3**) → escolha a **carta** do
+**Jogar** → escolha o modo (**1×1, 2×2, 3×3 ou Todos contra todos**) → escolha a **carta** do
 elemento do seu time → confira os times na tela **Versus** e clique em **Lutar**.
 
 
@@ -44,8 +44,9 @@ elemento do seu time → confira os times na tela **Versus** e clique em **Lutar
 
 **Regras**
 
-- Partida **Time vs Time**: 1×1, 2×2 ou 3×3 contra bots. Todos contra todos chega junto com Terra e Ar.
-- Cada time é de um elemento só, e dois times nunca têm o mesmo elemento (hoje: Fogo contra Água).
+- **Time vs Time**: 1×1, 2×2 ou 3×3 contra bots.
+- **Todos contra todos**: 4 jogadores, um de cada elemento.
+- Cada time é de um elemento só, e dois times nunca têm o mesmo elemento.
 - Cada jogador tem 3 vidas. Perde uma vida quem **cai do mapa** ou **toca num perigo mortal**.
 - Cada golpe aumenta o dano (%) do alvo; quanto mais dano, mais longe ele voa.
 - Foi arremessado? Segure na direção da ilha para se pendurar na parede e pule para subir.
@@ -54,19 +55,23 @@ elemento do seu time → confira os times na tela **Versus** e clique em **Lutar
 
 **Elementos e perigos**
 
-| Elemento | Imune a | Morre em |
-| --- | --- | --- |
-| Fogo | Lava | Água |
-| Água | Água | Lava |
-| Terra *(em breve)* | Espinhos | Vento |
-| Ar *(em breve)* | Vento | Espinhos |
+| Elemento | Imune a | Morre em | Machuca (+6%/s) | Jeito de jogar |
+| --- | --- | --- | --- | --- |
+| Fogo | Lava | Água | Espinhos | equilibrado; armas queimam |
+| Água | Água | Lava | Espinhos | equilibrado; armas deixam lento (no chão) |
+| Terra | Espinhos | Lava, Água | — | mais lento e pesado (voa menos, vento empurra metade), não fica atordoado; armas atordoam |
+| Ar | Vento | Lava, Água | Espinhos | mais rápido e pula mais alto; tornado puxa os inimigos |
+
+- **Espinhos** (em cima da plataforma do meio) não matam: somam 6% de dano por segundo.
+- **Vento**: rajadas aparecem em lugares aleatórios (com 1 s de aviso piscando) e
+  empurram para fora da ilha. Ande contra o vento para resistir.
 
 **Armas** caem do céu de paraquedas. Encoste para pegar. O efeito muda com o seu elemento:
 
-| Arma | Com Fogo | Com Água |
-| --- | --- | --- |
-| Espada | Lâmina Flamejante: mais dano e queima o alvo | Lâmina da Maré: empurra mais e deixa o alvo lento |
-| Cajado | Bola de Fogo: explode em área e queima | Jato d'Água: atravessa inimigos e empurra muito |
+| Arma | Fogo | Água | Terra | Ar |
+| --- | --- | --- | --- | --- |
+| Espada | Lâmina Flamejante: queima | Lâmina da Maré: empurra mais e deixa lento | Espadão de Pedra: dano alto, atordoa | Lâmina do Vento: rápida e longa |
+| Cajado | Bola de Fogo: explode e queima | Jato d'Água: atravessa e empurra | Pedrada: arco, atordoa | Tornado: lento, atravessa e puxa |
 
 ## Contas e estatísticas
 

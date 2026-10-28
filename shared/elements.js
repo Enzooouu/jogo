@@ -1,49 +1,55 @@
 // Elementos e perigos do mapa.
 //
-// Para adicionar Terra e Ar: troque `enabled` para true e confira a tabela
-// HAZARD_REACTION. As armas também precisam de uma entrada para o elemento
-// em shared/weapons.js (senão usam o efeito padrão).
+// stats: jeito de jogar de cada elemento
+//   speed  = multiplicador da velocidade de andar
+//   jump   = multiplicador da força do pulo
+//   weight = quanto mais pesado, menos voa ao apanhar (empurrão / weight)
 
 export const ELEMENTS = {
   fogo: {
     id: 'fogo', name: 'Fogo', enabled: true,
     color: '#ff6a1f', light: '#ffd25a', dark: '#8a2a05',
     description: 'Atravessa a lava. Morre na água.',
+    stats: { speed: 1, jump: 1, weight: 1 },
   },
   agua: {
     id: 'agua', name: 'Água', enabled: true,
     color: '#2f8cff', light: '#9fe3ff', dark: '#0b3b8a',
     description: 'Nada na água. Morre na lava.',
+    stats: { speed: 1, jump: 1, weight: 1 },
   },
   terra: {
-    id: 'terra', name: 'Terra', enabled: false,
+    id: 'terra', name: 'Terra', enabled: true,
     color: '#9a6b3a', light: '#d8b27a', dark: '#4a2f14',
-    description: 'Em breve.',
+    description: 'Pisa nos espinhos. Pesado: o vento e os golpes empurram menos.',
+    stats: { speed: 0.88, jump: 1, weight: 1.08 },
   },
   ar: {
-    id: 'ar', name: 'Ar', enabled: false,
+    id: 'ar', name: 'Ar', enabled: true,
     color: '#bfe9e1', light: '#ffffff', dark: '#5e8f87',
-    description: 'Em breve.',
+    description: 'O vento não o empurra. Rápido e pula alto, mas é leve.',
+    stats: { speed: 1.15, jump: 1.1, weight: 1 },
   },
 };
 
 export const HAZARDS = {
   lava: { id: 'lava', name: 'Lava' },
   agua: { id: 'agua', name: 'Água' },
-  espinhos: { id: 'espinhos', name: 'Espinhos' },   // fase futura
-  vento: { id: 'vento', name: 'Vento' },             // fase futura
+  espinhos: { id: 'espinhos', name: 'Espinhos', dps: 6 },  // +6% de dano por segundo
+  vento: { id: 'vento', name: 'Vento' },                    // rajadas que empurram para fora
 };
 
 // O que acontece quando um elemento toca num perigo:
-//   'imune' -> nada acontece
-//   'morre' -> perde uma vida na hora
-// Combinação não listada -> 'morre' (perigo é perigo).
-// Linhas de terra/ar são provisórias, só para mostrar onde configurar.
+//   'imune'   -> nada acontece
+//   'morre'   -> perde uma vida na hora
+//   'dano'    -> soma dano (%) a cada segundo (espinhos)
+//   'empurra' -> é empurrado (vento)
+// Combinação não listada -> 'morre'.
 export const HAZARD_REACTION = {
-  fogo: { lava: 'imune', agua: 'morre' },
-  agua: { agua: 'imune', lava: 'morre' },
-  terra: { espinhos: 'imune', vento: 'morre' },
-  ar: { vento: 'imune', espinhos: 'morre' },
+  fogo: { lava: 'imune', agua: 'morre', espinhos: 'dano', vento: 'empurra' },
+  agua: { agua: 'imune', lava: 'morre', espinhos: 'dano', vento: 'empurra' },
+  terra: { espinhos: 'imune', lava: 'morre', agua: 'morre', vento: 'empurra' },
+  ar: { vento: 'imune', lava: 'morre', agua: 'morre', espinhos: 'dano' },
 };
 
 export function hazardReaction(elementId, hazardId) {

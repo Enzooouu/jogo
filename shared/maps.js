@@ -9,6 +9,8 @@
 //            distribui quantos jogadores houver (4, 6, 8...).
 // blast:     sair desses limites = perder uma vida
 // decor:     enfeites só visuais (não colidem)
+// wind:      rajadas de vento que aparecem em lugares aleatórios
+//            (surfaces = chãos onde podem nascer; dir = sempre para fora)
 
 export const MAPS = {
   caldeira: {
@@ -35,17 +37,28 @@ export const MAPS = {
     hazards: [
       { type: 'lava', x: 330, y: 550, w: 140, h: 22 },
       { type: 'agua', x: 810, y: 550, w: 140, h: 22 },
+      { type: 'espinhos', x: 600, y: 303, w: 80, h: 12 },   // em cima da plataforma do meio
     ],
     // near = perigo ao lado do ponto (quem morre nele nasce em outro lugar)
     spawns: [
       { x: 230, y: 540, near: 'lava' }, { x: 1050, y: 540, near: 'agua' },
       { x: 590, y: 540 }, { x: 690, y: 540 },
       { x: 360, y: 420, near: 'lava' }, { x: 920, y: 420, near: 'agua' },
-      { x: 590, y: 315 }, { x: 690, y: 315 },
+      { x: 565, y: 315, near: 'espinhos' }, { x: 715, y: 315, near: 'espinhos' },
     ],
     respawns: [
-      { x: 580, y: 160 }, { x: 700, y: 160 }, { x: 640, y: 110 },
+      { x: 560, y: 150 }, { x: 720, y: 150 }, { x: 400, y: 150 }, { x: 880, y: 150 },
     ],
+    wind: {
+      first: 8, every: [7, 11], warn: 1.2, active: 3, max: 2,
+      w: 190, h: 150, strength: 320,
+      surfaces: [
+        { y: 540, x0: 190, x1: 1090 },
+        { y: 420, x0: 250, x1: 470 },
+        { y: 420, x0: 810, x1: 1030 },
+        { y: 315, x0: 540, x1: 740 },
+      ],
+    },
     itemSpawn: { minX: 220, maxX: 1060, y: -40 },
     decor: [
       { type: 'braseiro', x: 200, y: 540 },

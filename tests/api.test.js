@@ -143,7 +143,7 @@ test('partida não pode ser registrada duas vezes nem com números impossíveis'
   const steal = await other('POST', `/api/matches/${start.body.matchId}/finish`, { result: 'vitoria', kills: 1, deaths: 0 });
   assert.equal(steal.status, 404, 'não dá para finalizar a partida de outra conta');
 
-  assert.equal((await call('POST', '/api/matches', { mode: 'times', element: 'terra', teamSize: 2 })).status, 400, 'Terra ainda não liberado');
+  assert.equal((await call('POST', '/api/matches', { mode: 'times', element: 'gelo', teamSize: 2 })).status, 400, 'elemento que não existe');
   const guest = client();
   assert.equal((await guest('POST', '/api/matches', { mode: 'times', element: 'fogo', teamSize: 2 })).status, 401);
 });

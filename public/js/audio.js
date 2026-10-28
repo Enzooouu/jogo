@@ -107,6 +107,12 @@ export function playEvents(events, localId) {
       case 'explosion':
         noise({ dur: 0.3, vol: 0.4, freq: 700 });
         break;
+      case 'windWarn':
+        tone({ freq: 300, to: 500, dur: 0.25, type: 'sine', vol: 0.08 });
+        break;
+      case 'windStart':
+        noise({ dur: 0.9, vol: 0.2, freq: 500 });
+        break;
       case 'start':
         tone({ freq: 880, dur: 0.35, type: 'square', vol: 0.18 });
         break;

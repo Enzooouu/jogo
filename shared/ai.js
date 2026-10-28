@@ -78,6 +78,12 @@ export class BotController {
       jump = jump || safety.jump;
     }
 
+    // Dentro de uma rajada de vento: anda contra ela para não ser jogado fora.
+    if (!offStage && this.rng.chance(this.cfg.reflex)) {
+      const gust = game.winds.find((w) => w.state === 'ativo' && rectsOverlap(me, w));
+      if (gust && hazardReaction(me.element, 'vento') !== 'imune') dir = -gust.dir;
+    }
+
     if (dir < 0) out.left = true;
     if (dir > 0) out.right = true;
 

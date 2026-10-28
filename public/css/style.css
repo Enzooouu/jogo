@@ -185,6 +185,7 @@ kbd {
 .el-card dl { display: grid; grid-template-columns: 62px 1fr; gap: 4px 6px; margin: 10px 0 0; font-size: 12.5px; }
 .el-card dt { opacity: .7; font-weight: 700; }
 .el-card dd { margin: 0; }
+.el-card .desc { margin: auto 0 0; padding-top: 8px; font-size: 11.5px; line-height: 1.35; opacity: .85; }
 .el-card:not(:disabled):hover { transform: translateY(-6px); }
 .el-card.on { transform: translateY(-16px) scale(1.05); border-color: #ffd25a; box-shadow: 0 0 0 3px rgba(255,210,90,.35), 0 26px 60px rgba(255,120,40,.35); }
 .el-card:disabled { filter: grayscale(.9) brightness(.55); }

@@ -196,6 +196,7 @@ export class Renderer {
     ctx.setTransform(z, 0, 0, z, (VIEW_W / 2 - cam.x * cam.zoom + sx) * this.scale, (VIEW_H / 2 - cam.y * cam.zoom + sy) * this.scale);
     this.stage.drawTerrain(ctx, this.time);
     this.stage.drawHazards(ctx, this.time, false);
+    this.drawWinds(ctx);
     this.drawItems(ctx);
     this.drawProjectiles(ctx);
     this.drawPlayers(ctx, alpha);
@@ -240,6 +241,15 @@ export class Renderer {
       if (p.element === 'fogo' && chance(18)) {
         P.add({ x: cx + (Math.random() - 0.5) * 10, y: p.y - 4, vx: (Math.random() - 0.5) * 30, vy: -60 - Math.random() * 40, life: 0.5, size: 2.2, grow: -3, color: Math.random() < 0.5 ? '#ffd25a' : '#ff6a1f' });
       }
+      if (p.element === 'terra' && p.onGround && Math.abs(p.vx) > 60 && chance(14)) {
+        P.add({ x: cx - Math.sign(p.vx) * 10, y: p.y + p.h - 2, vx: -p.vx * 0.1, vy: -30, life: 0.4, size: 3, grow: 4, color: 'rgba(170,140,100,0.6)' });
+      }
+      if (p.element === 'ar' && chance(10)) {
+        P.add({ x: cx + (Math.random() - 0.5) * 20, y: p.y + p.h - 4, vx: -p.facing * 60, vy: -10, life: 0.5, size: 1.6, color: 'rgba(200,255,245,0.8)' });
+      }
+      if (p.inHazard === 'espinhos' && chance(12)) {
+        P.add({ x: cx + (Math.random() - 0.5) * 20, y: p.y + p.h - 6, vx: (Math.random() - 0.5) * 60, vy: -80, life: 0.3, size: 2, color: '#ff6a6a', gravity: 400 });
+      }
       if (p.element === 'agua' && chance(4)) {
         P.add({ x: cx + (Math.random() - 0.5) * 16, y: p.y + 10, vx: 0, vy: 20, life: 0.6, size: 1.8, color: '#9fe3ff', gravity: 500 });
       }
@@ -249,7 +259,7 @@ export class Renderer {
       if (p.status.encharcado && chance(16)) {
         P.add({ x: cx + (Math.random() - 0.5) * 22, y: p.y + 10 + Math.random() * 40, vx: 0, vy: 30, life: 0.5, size: 2.2, color: '#5ab4ff', gravity: 600 });
       }
-      if (p.inHazard && chance(20)) {
+      if ((p.inHazard === 'lava' || p.inHazard === 'agua') && chance(20)) {
         const color = p.inHazard === 'lava' ? '#ffd25a' : '#e0f7ff';
         P.add({ x: cx + (Math.random() - 0.5) * 30, y: p.y + p.h - 18, vx: (Math.random() - 0.5) * 60, vy: -120, life: 0.4, size: 2.5, color, gravity: 500 });
       }
@@ -275,6 +285,58 @@ export class Renderer {
         teamColor: this.teamColor.get(p.team),
         isLocal: p.id === this.localId,
       });
+      if (p.status.atordoado) this.drawStunStars(ctx, x + p.w / 2, y - 6);
+    }
+  }
+
+  // Rajadas de vento: aviso (contorno piscando) e depois linhas correndo
+  drawWinds(ctx) {
+    for (const w of this.game.winds) {
+      ctx.save();
+      if (w.state === 'aviso') {
+        const blink = 0.35 + Math.abs(Math.sin(this.time * 9)) * 0.45;
+        ctx.globalAlpha = blink;
+        ctx.strokeStyle = '#bff7ec';
+        ctx.setLineDash([10, 8]);
+        ctx.lineWidth = 2;
+        ctx.strokeRect(w.x, w.y, w.w, w.h);
+        ctx.setLineDash([]);
+        ctx.fillStyle = 'rgba(191,247,236,0.08)';
+        ctx.fillRect(w.x, w.y, w.w, w.h);
+        // setas mostrando para onde vai empurrar
+        ctx.fillStyle = '#e0fff8';
+        for (let i = 0; i < 3; i++) {
+          const cx = w.x + w.w / 2 + (i - 1) * 40;
+          const cy = w.y + w.h / 2;
+          ctx.beginPath();
+          ctx.moveTo(cx + w.dir * 14, cy);
+          ctx.lineTo(cx - w.dir * 6, cy - 11);
+          ctx.lineTo(cx - w.dir * 6, cy + 11);
+          ctx.closePath();
+          ctx.fill();
+        }
+      } else {
+        const g = ctx.createLinearGradient(w.x, 0, w.x + w.w, 0);
+        g.addColorStop(w.dir > 0 ? 0 : 1, 'rgba(191,247,236,0)');
+        g.addColorStop(w.dir > 0 ? 1 : 0, 'rgba(191,247,236,0.22)');
+        ctx.fillStyle = g;
+        ctx.fillRect(w.x, w.y, w.w, w.h);
+        ctx.strokeStyle = 'rgba(235,255,250,0.75)';
+        ctx.lineWidth = 2;
+        ctx.lineCap = 'round';
+        for (let i = 0; i < 9; i++) {
+          const k = (this.time * 1.6 + i * 0.37) % 1;
+          const x = w.dir > 0 ? w.x + k * w.w : w.x + w.w - k * w.w;
+          const y = w.y + 12 + ((i * 53) % (w.h - 24));
+          const len = 26 + (i % 3) * 10;
+          ctx.globalAlpha = Math.sin(k * Math.PI);
+          ctx.beginPath();
+          ctx.moveTo(x, y);
+          ctx.quadraticCurveTo(x - w.dir * len * 0.5, y - 4, x - w.dir * len, y);
+          ctx.stroke();
+        }
+      }
+      ctx.restore();
     }
   }
 
@@ -333,6 +395,30 @@ export class Renderer {
       else drawStaff(ctx, neutral, this.time);
       ctx.restore();
     }
+  }
+
+  // Estrelinhas girando em cima de quem está atordoado
+  drawStunStars(ctx, cx, cy) {
+    ctx.save();
+    for (let i = 0; i < 3; i++) {
+      const a = this.time * 6 + (i * Math.PI * 2) / 3;
+      const x = cx + Math.cos(a) * 14;
+      const y = cy + Math.sin(a) * 4;
+      ctx.fillStyle = '#ffe066';
+      ctx.strokeStyle = '#140a14';
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      for (let k = 0; k < 10; k++) {
+        const r = k % 2 ? 2 : 5;
+        const ang = (k * Math.PI) / 5 - Math.PI / 2;
+        if (k === 0) ctx.moveTo(x + Math.cos(ang) * r, y + Math.sin(ang) * r);
+        else ctx.lineTo(x + Math.cos(ang) * r, y + Math.sin(ang) * r);
+      }
+      ctx.closePath();
+      ctx.fill();
+      ctx.stroke();
+    }
+    ctx.restore();
   }
 
   drawProjectiles(ctx) {

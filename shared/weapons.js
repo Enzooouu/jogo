@@ -4,6 +4,8 @@
 // Efeitos de status suportados (ver game.js -> applyStatus):
 //   queimadura: { duration, dps }        dano contínuo
 //   encharcado: { duration, slow }       reduz a velocidade (0.4 = 40% mais lento)
+//   atordoado:  { duration }             fica sem controle por um instante
+// Projétil com `pull` puxa os inimigos próximos: { radius, strength }
 
 export const UNARMED = {
   id: 'soco', name: 'Soco', kind: 'melee',
@@ -22,13 +24,24 @@ export const WEAPONS = {
     byElement: {
       fogo: {
         name: 'Lâmina Flamejante',
-        damage: 12,
+        damage: 12, kbBase: 330, kbScale: 3.8,
         status: { type: 'queimadura', duration: 2.5, dps: 4 },
       },
       agua: {
         name: 'Lâmina da Maré',
-        kbBase: 370, kbScale: 4.2,
-        status: { type: 'encharcado', duration: 2.2, slow: 0.45 },
+        kbBase: 340, kbScale: 3.9,
+        status: { type: 'encharcado', duration: 2.2, slow: 0.35 },
+      },
+      terra: {
+        name: 'Espadão de Pedra',
+        damage: 13, cooldown: 0.55, startup: 0.14, duration: 0.36, reach: 86,
+        kbBase: 340, kbScale: 3.6,
+        status: { type: 'atordoado', duration: 0.5 },
+      },
+      ar: {
+        name: 'Lâmina do Vento',
+        damage: 7, cooldown: 0.26, startup: 0.06, duration: 0.22, reach: 96,
+        kbBase: 340, kbScale: 3.9,
       },
     },
   },
@@ -41,15 +54,27 @@ export const WEAPONS = {
     byElement: {
       fogo: {
         name: 'Bola de Fogo',
-        damage: 9,
+        damage: 9, kbBase: 280, kbScale: 3.1,
         explosion: { radius: 75, damage: 5 },
         status: { type: 'queimadura', duration: 2, dps: 3 },
       },
       agua: {
         name: "Jato d'Água",
-        damage: 4, kbBase: 380, kbScale: 4.6, angle: 0.35,
+        damage: 4, kbBase: 340, kbScale: 4.0, angle: 0.35,
         projectile: { speed: 900, radius: 13, life: 1.0, gravity: 0, pierce: true },
-        status: { type: 'encharcado', duration: 1.5, slow: 0.35 },
+        status: { type: 'encharcado', duration: 1.5, slow: 0.25 },
+      },
+      terra: {
+        name: 'Pedrada',
+        damage: 11, kbBase: 300, kbScale: 3.4, angle: 0.55, cooldown: 0.7,
+        projectile: { speed: 640, radius: 12, life: 1.6, gravity: 700, pierce: false },
+        status: { type: 'atordoado', duration: 0.7 },
+      },
+      ar: {
+        name: 'Tornado',
+        damage: 3, kbBase: 260, kbScale: 2.4, angle: 1.15,
+        projectile: { speed: 380, radius: 18, life: 1.8, gravity: 0, pierce: true },
+        pull: { radius: 120, strength: 3600 },
       },
     },
   },
