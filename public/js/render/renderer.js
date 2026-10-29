@@ -641,6 +641,17 @@ export class Renderer {
     ctx.lineWidth = 2.5;
     ctx.stroke();
 
+    // Aviso de que o modo ADM (testes) está ligado
+    if (p.admin) {
+      ctx.fillStyle = '#e8263a';
+      roundRect(ctx, x + 10, y + h + 6, 132, 20, 10);
+      ctx.fill();
+      ctx.font = '800 11px system-ui, sans-serif';
+      ctx.textAlign = 'center';
+      ctx.fillStyle = '#ffffff';
+      ctx.fillText('MODO ADM · 999%', x + 76, y + h + 20);
+    }
+
     // Retrato (cabeça do lutador)
     ctx.save();
     ctx.beginPath();

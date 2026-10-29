@@ -16,8 +16,9 @@ const BOT_NAMES = {
  * @param {number} opts.teamSize jogadores por time (2 = 2v2)
  * @param {string} opts.mode 'times' | 'ffa'
  * @param {string} opts.difficulty dificuldade dos bots
+ * @param {boolean} opts.admin modo ADM (testes): seus golpes dão 999%
  */
-export function buildLocalSetup({ element, name, teamSize = 2, mode = 'times', difficulty = 'normal' }) {
+export function buildLocalSetup({ element, name, teamSize = 2, mode = 'times', difficulty = 'normal', admin = false }) {
   const elements = enabledElements().map((e) => e.id);
   const usedNames = new Set();
   const pick = (list) => list[Math.floor(Math.random() * list.length)];
@@ -28,7 +29,7 @@ export function buildLocalSetup({ element, name, teamSize = 2, mode = 'times', d
     return n;
   };
 
-  const players = [{ id: 1, name, element, team: 'A', isBot: false }];
+  const players = [{ id: 1, name, element, team: 'A', isBot: false, admin }];
   let id = 2;
   // Todos contra todos: um jogador de cada elemento.
   const total = mode === 'ffa' ? elements.length : teamSize * 2;

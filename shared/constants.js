@@ -37,6 +37,7 @@ export const PLAYER = {
   invulnTime: 2.0,        // invencibilidade após reaparecer
   killCreditTime: 6,      // até quantos segundos depois do último golpe a kill conta
   pickupCooldown: 0.4,    // tempo sem pegar arma depois de arremessar
+  adminDamage: 999,       // dano de cada golpe no modo ADM (testes)
 };
 
 export const MATCH = {

@@ -74,6 +74,10 @@ elemento do seu time → confira os times na tela **Versus** e clique em **Lutar
 | Espada | Lâmina Flamejante: queima | Lâmina da Maré: empurra mais e deixa lento | Espadão de Pedra: dano alto, atordoa | Lâmina do Vento: rápida e longa |
 | Cajado | Bola de Fogo: explode e queima | Jato d'Água: atravessa e empurra | Pedrada: arco, atordoa | Tornado: lento, atravessa e puxa |
 
+**Modo ADM (testes):** em Configurações, ligue "Modo ADM (testes)". Cada golpe seu
+passa a dar 999% de dano (bom para testar comemorações e o fim da partida). Os
+bots continuam normais e essas partidas não contam nas estatísticas da conta.
+
 ## Contas e estatísticas
 
 - Cadastro e login com usuário e senha (botões no canto do menu).

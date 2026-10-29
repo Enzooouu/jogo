@@ -160,6 +160,37 @@ test('soco acerta o inimigo (dano + empurrão) e não acerta o aliado', () => {
   assert.equal(ally.damage, 0, 'aliado não leva dano');
 });
 
+test('modo ADM: cada golpe do jogador ADM dá 999%, o dos outros não', () => {
+  const players = [
+    { id: 1, name: 'Adm', element: 'fogo', team: 'fogo', admin: true },
+    { id: 2, name: 'Bot', element: 'agua', team: 'agua' },
+  ];
+  const g = new Game({ players, seed: 42 });
+  while (g.phase === 'countdown') g.step({});
+  const adm = g.playerById(1);
+  const bot = g.playerById(2);
+  place(adm, 600, 540);
+  place(bot, 640, 540);
+  adm.facing = 1;
+  bot.facing = -1;
+  run(g, 2);
+  run(g, 1, { 2: makeInput({ attack: true }) });
+  run(g, 10);
+  assert.ok(adm.damage > 0 && adm.damage < 50, 'o golpe do bot continua normal');
+  // volta para perto e o ADM bate
+  run(g, 60);
+  place(adm, 600, 540);
+  place(bot, 640, 540);
+  adm.facing = 1;
+  run(g, 2);
+  run(g, 1, { 1: makeInput({ attack: true }) });
+  run(g, 10);
+  assert.equal(PLAYER.adminDamage, 999);
+  assert.equal(bot.damage, PLAYER.adminDamage);
+  run(g, 120);
+  assert.equal(bot.lives, PLAYER.lives - 1, 'voou para fora do mapa');
+});
+
 test('quanto mais dano, maior o empurrão', () => {
   const kbAt = (damage) => {
     const g = newGame(['fogo', 'agua', 'fogo', 'agua']);

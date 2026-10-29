@@ -23,6 +23,7 @@ const state = {
   mode: 'times',
   difficulty: loadPref('dificuldade', 'normal'),
   demo: loadPref('demo', '1') === '1',
+  admin: loadPref('adm', '0') === '1', // modo ADM (testes): golpes dão 999%
   runner: null,
   pendingSetup: null,  // times montados na tela Versus
   lastSetup: null,
@@ -122,6 +123,7 @@ function togglePanel(id) {
   if (id === '#settings-panel') {
     $('#opt-sound').checked = !isMuted();
     $('#opt-demo').checked = state.demo;
+    $('#opt-admin').checked = state.admin;
   }
 }
 
@@ -335,6 +337,7 @@ function newSetup() {
     teamSize: state.teamSize,
     mode: state.mode,
     difficulty: state.difficulty,
+    admin: state.admin,
   });
 }
 
@@ -359,7 +362,9 @@ async function startMatch(setup) {
   const teamSize = setup.mode === 'ffa'
     ? setup.players.length / 2
     : setup.players.filter((p) => p.team === setup.players[0].team).length;
-  state.matchTicket = state.user
+  // Partida no modo ADM não conta nas estatísticas.
+  const admin = setup.players.some((p) => p.admin);
+  state.matchTicket = state.user && !admin
     ? api.startMatch({ mode: setup.mode, element: setup.players[0].element, teamSize }).catch((err) => ({ error: err }))
     : null;
   if (DEBUG) window.__brawl = { runner, state };
@@ -393,6 +398,10 @@ async function saveResult(setup, result, outcome) {
   const note = $('#result-save');
   const ticket = state.matchTicket;
   state.matchTicket = null;
+  if (setup.players.some((p) => p.admin)) {
+    note.textContent = 'Modo ADM ligado: esta partida não conta nas estatísticas.';
+    return;
+  }
   if (!ticket) {
     note.textContent = 'Partida de convidado: entre na sua conta para salvar suas estatísticas.';
     return;
@@ -530,6 +539,10 @@ function init() {
     savePref('demo', state.demo ? '1' : '0');
     if (state.demo) demo.start();
     else demo.stop();
+  });
+  $('#opt-admin').addEventListener('change', (e) => {
+    state.admin = e.target.checked;
+    savePref('adm', state.admin ? '1' : '0');
   });
   for (const tile of document.querySelectorAll('.mode-tile[data-size]')) {
     tile.addEventListener('click', () => chooseMode(Number(tile.dataset.size)));

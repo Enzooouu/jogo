@@ -718,7 +718,7 @@ export class Game {
   }
 
   applyHit(attacker, target, profile, dirX, scale = {}) {
-    const damage = profile.damage * (scale.damage ?? 1);
+    const damage = attacker.admin ? PLAYER.adminDamage : profile.damage * (scale.damage ?? 1);
     target.damage += damage;
     target.stats.damageTaken += damage;
     attacker.stats.damageDealt += damage;
@@ -922,6 +922,7 @@ function createPlayer(cfg, index, lives) {
     element: cfg.element,
     team: cfg.team,
     isBot: Boolean(cfg.isBot),
+    admin: Boolean(cfg.admin), // modo ADM (testes): cada golpe dá PLAYER.adminDamage
     slot: index,
     x: 0, y: 0, px: 0, py: 0,
     w: PLAYER.width, h: PLAYER.height,
