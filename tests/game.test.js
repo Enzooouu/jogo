@@ -188,6 +188,9 @@ test('modo ADM: cada golpe do jogador ADM dá 999%', () => {
 
 test('plataforma do balão só balança quando alguém anda em cima (Pico dos Ventos)', () => {
   const g = newGame(['fogo', 'agua', 'agua', 'fogo'], { mapId: 'pico' });
+  // sem vento neste teste (o vento também balança a plataforma)
+  g.nextWindIn = Infinity;
+  g.nextStreamIn = Infinity;
   for (const id of [2, 3, 4]) place(g.playerById(id), 640, 520);
   const p = g.playerById(1);
   const pl = g.platforms[0];
@@ -205,9 +208,26 @@ test('plataforma do balão só balança quando alguém anda em cima (Pico dos Ve
   assert.equal(p.standingOn, 'platform', 'continua em cima');
   assert.ok(Math.abs(p.y + p.h - pl.y) < 1, 'pés em cima da plataforma');
 
-  // parou de andar: volta devagar para o lugar
-  run(g, 300);
+  // parou de andar: volta devagar para o lugar (como um balanço de verdade)
+  run(g, 1000);
   assert.ok(Math.abs(pl.x - x0) < 3, 'voltou para o lugar');
+});
+
+test('corrente de vento atravessa o mapa e empurra a plataforma do balão', () => {
+  const g = newGame(['fogo', 'agua', 'agua', 'fogo'], { mapId: 'pico' });
+  g.nextWindIn = Infinity;
+  g.nextStreamIn = 0;
+  for (const id of [1, 2, 3, 4]) place(g.playerById(id), 640, 520);
+  run(g, 1);
+  const stream = g.winds.find((w) => w.stream);
+  assert.ok(stream, 'a corrente apareceu');
+  assert.ok(stream.x <= -200 && stream.x + stream.w >= 1480, 'vai de ponta a ponta');
+  // põe a corrente na altura das plataformas de baixo
+  stream.y = 262;
+  const pl = g.platforms[0];
+  const x0 = pl.x;
+  run(g, 140);
+  assert.ok(Math.abs(pl.x - x0) > 20, 'a plataforma balançou com o vento');
 });
 
 test('na Caldeira as plataformas ficam paradas', () => {

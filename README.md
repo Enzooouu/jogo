@@ -75,8 +75,9 @@ elemento do seu time → confira os times na tela **Versus** e clique em **Lutar
 | Cajado | Bola de Fogo: explode e queima | Jato d'Água: atravessa e empurra | Pedrada: arco, atordoa | Tornado: lento, atravessa e puxa |
 
 **Mapas:** na tela antes da luta (Versus) escolha **Caldeira** ou **Pico dos Ventos**
-(ilhas no céu com muito vento, plataformas penduradas em balões que balançam
-quando alguém anda em cima, lava, lago e espinhos no meio).
+(ilhas no céu, plataformas penduradas em balões que balançam em arco quando
+alguém anda em cima ou o vento bate, correntes de vento que atravessam o mapa
+de ponta a ponta além das rajadas comuns, lava, lago e espinhos no meio).
 
 **Modo ADM (testes):** em Configurações, ligue "Modo ADM (testes)". Cada golpe seu
 passa a dar 999% de dano e o seu lutador fica intangível: nenhum golpe, lava,

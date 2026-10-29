@@ -60,6 +60,7 @@ export class Game {
     this.nextItemIn = ITEMS.firstSpawn;
     this.winds = [];
     this.nextWindIn = this.map.wind ? this.map.wind.first : Infinity;
+    this.nextStreamIn = this.map.wind?.stream ? this.map.wind.stream.first : Infinity;
     this.respawnIndex = 0;
     // Plataformas com posição atual (algumas balançam presas a um balão)
     this.platforms = this.map.platforms.map((pl) => ({ ...pl, baseX: pl.x, baseY: pl.y, px: pl.x, py: pl.y, dx: 0, dy: 0 }));
@@ -192,6 +193,11 @@ export class Game {
       let push = 0;
       for (const p of this.players) {
         if (p.state === 'alive' && p.onGround && p.standingOn === 'platform' && p.platform === i) push += p.vx;
+      }
+      // o vento também empurra a plataforma
+      const box = { x: pl.x, y: pl.y - 20, w: pl.w, h: 40 };
+      for (const w of this.winds) {
+        if (w.state === 'ativo' && rectsOverlap(box, w)) push += w.dir * (w.strength ?? this.map.wind.strength) * sw.wind;
       }
       const accel = (-sw.gravity * Math.sin(pl.angle) + push * sw.push) / sw.length - sw.damping * pl.spin;
       pl.spin += accel * DT;
@@ -495,7 +501,7 @@ export class Game {
       w.time -= DT;
       if (w.state === 'aviso' && w.time <= 0) {
         w.state = 'ativo';
-        w.time = cfg.active;
+        w.time = w.stream ? cfg.stream.active : cfg.active;
         this.emit('windStart', { windId: w.id });
       }
     }
@@ -503,10 +509,12 @@ export class Game {
     this.winds = this.winds.filter((w) => w.state === 'aviso' || w.time > 0);
     if (this.winds.length < before) this.emit('windEnd');
 
+    if (cfg.stream) this.updateStream(cfg.stream);
+
     this.nextWindIn -= DT;
     if (this.nextWindIn > 0) return;
     this.nextWindIn = this.rng.range(cfg.every[0], cfg.every[1]);
-    if (this.winds.length >= cfg.max) return;
+    if (this.winds.filter((w) => !w.stream).length >= cfg.max) return;
     const surface = this.rng.pick(cfg.surfaces);
     const x = Math.round(this.rng.range(surface.x0, Math.max(surface.x0, surface.x1 - cfg.w)));
     const zone = {
@@ -520,12 +528,34 @@ export class Game {
     this.emit('windWarn', { windId: zone.id, x: zone.x, y: zone.y, w: zone.w, h: zone.h, dir: zone.dir });
   }
 
+  // Corrente de vento: uma faixa que atravessa o mapa inteiro, de ponta a
+  // ponta, numa das alturas da lista (uma de cada vez)
+  updateStream(sc) {
+    this.nextStreamIn -= DT;
+    if (this.nextStreamIn > 0) return;
+    this.nextStreamIn = this.rng.range(sc.every[0], sc.every[1]);
+    if (this.winds.some((w) => w.stream)) return;
+    const { left, right } = this.map.blast;
+    const y = this.rng.pick(sc.bands);
+    const zone = {
+      id: this.nextEntityId++,
+      x: left, y, w: right - left, h: sc.h,
+      dir: this.rng.chance(0.5) ? 1 : -1,
+      state: 'aviso',
+      time: sc.warn,
+      stream: true,
+      strength: sc.strength,
+    };
+    this.winds.push(zone);
+    this.emit('windWarn', { windId: zone.id, x: zone.x, y: zone.y, w: zone.w, h: zone.h, dir: zone.dir, stream: true });
+  }
+
   applyWind(p) {
     let target = 0;
     const cfg = this.map.wind;
     if (cfg && !p.admin && hazardReaction(p.element, 'vento') !== 'imune') {
       for (const w of this.winds) {
-        if (w.state === 'ativo' && rectsOverlap(p, w)) target += w.dir * cfg.strength * (WIND_FACTOR[p.element] ?? 1);
+        if (w.state === 'ativo' && rectsOverlap(p, w)) target += w.dir * (w.strength ?? cfg.strength) * (WIND_FACTOR[p.element] ?? 1);
       }
     }
     p.windVx = approach(p.windVx, target, 1800 * DT);

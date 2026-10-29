@@ -371,8 +371,12 @@ export class Renderer {
         ctx.fillRect(w.x, w.y, w.w, w.h);
         // setas mostrando para onde vai empurrar
         ctx.fillStyle = '#e0fff8';
-        for (let i = 0; i < 3; i++) {
-          const cx = w.x + w.w / 2 + (i - 1) * 40;
+        // rajada: 3 setas no meio; corrente: grupos de setas pela faixa toda
+        const groups = w.stream ? Math.floor(w.w / 260) : 1;
+        for (let i = 0; i < 3 * groups; i++) {
+          const g = Math.floor(i / 3);
+          const mid = w.stream ? w.x + (g + 0.5) * (w.w / groups) : w.x + w.w / 2;
+          const cx = mid + ((i % 3) - 1) * 40;
           const cy = w.y + w.h / 2;
           ctx.beginPath();
           ctx.moveTo(cx + w.dir * 14, cy);
@@ -382,24 +386,45 @@ export class Renderer {
           ctx.fill();
         }
       } else {
-        const g = ctx.createLinearGradient(w.x, 0, w.x + w.w, 0);
-        g.addColorStop(w.dir > 0 ? 0 : 1, 'rgba(191,247,236,0)');
-        g.addColorStop(w.dir > 0 ? 1 : 0, 'rgba(191,247,236,0.22)');
-        ctx.fillStyle = g;
-        ctx.fillRect(w.x, w.y, w.w, w.h);
-        ctx.strokeStyle = 'rgba(235,255,250,0.75)';
-        ctx.lineWidth = 2;
+        if (w.stream) {
+          // corrente: faixa clara no mapa todo com bordas marcadas
+          const g = ctx.createLinearGradient(0, w.y, 0, w.y + w.h);
+          g.addColorStop(0, 'rgba(120,225,210,0)');
+          g.addColorStop(0.5, 'rgba(120,225,210,0.16)');
+          g.addColorStop(1, 'rgba(120,225,210,0)');
+          ctx.fillStyle = g;
+          ctx.fillRect(w.x, w.y, w.w, w.h);
+        } else {
+          const g = ctx.createLinearGradient(w.x, 0, w.x + w.w, 0);
+          g.addColorStop(w.dir > 0 ? 0 : 1, 'rgba(191,247,236,0)');
+          g.addColorStop(w.dir > 0 ? 1 : 0, 'rgba(191,247,236,0.22)');
+          ctx.fillStyle = g;
+          ctx.fillRect(w.x, w.y, w.w, w.h);
+        }
+        ctx.strokeStyle = w.stream ? 'rgba(70,175,170,0.85)' : 'rgba(235,255,250,0.75)';
+        ctx.lineWidth = w.stream ? 3 : 2;
         ctx.lineCap = 'round';
-        for (let i = 0; i < 9; i++) {
-          const k = (this.time * 1.6 + i * 0.37) % 1;
+        // riscos de vento correndo na direção do empurrão (mais riscos se a
+        // faixa for comprida)
+        const count = Math.max(9, Math.round(w.w / 40));
+        for (let i = 0; i < count; i++) {
+          const k = ((this.time * 340) / w.w + i * 0.37 + i / count) % 1;
           const x = w.dir > 0 ? w.x + k * w.w : w.x + w.w - k * w.w;
-          const y = w.y + 12 + ((i * 53) % (w.h - 24));
-          const len = 26 + (i % 3) * 10;
-          ctx.globalAlpha = Math.sin(k * Math.PI);
+          const y = w.y + 12 + ((i * 37) % (w.h - 24));
+          const len = (w.stream ? 60 : 26) + (i % 3) * (w.stream ? 22 : 10);
+          ctx.globalAlpha = w.stream ? 0.4 + 0.6 * Math.sin(((i * 0.61) % 1) * Math.PI) : Math.sin(k * Math.PI);
           ctx.beginPath();
           ctx.moveTo(x, y);
-          ctx.quadraticCurveTo(x - w.dir * len * 0.5, y - 4, x - w.dir * len, y);
+          ctx.quadraticCurveTo(x - w.dir * len * 0.5, y - 5, x - w.dir * len, y);
           ctx.stroke();
+          if (w.stream) {
+            // brilho branco por cima do risco
+            ctx.strokeStyle = 'rgba(255,255,255,0.8)';
+            ctx.lineWidth = 1.2;
+            ctx.stroke();
+            ctx.strokeStyle = 'rgba(70,175,170,0.85)';
+            ctx.lineWidth = 3;
+          }
         }
       }
       ctx.restore();

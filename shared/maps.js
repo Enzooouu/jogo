@@ -13,7 +13,7 @@
 //            (surfaces = chãos onde podem nascer; dir = sempre para fora)
 
 // Plataforma pendurada em balão (Pico dos Ventos)
-const SWING = { length: 130, push: 1.3, gravity: 900, damping: 1.4, maxAngle: 0.6 };
+const SWING = { length: 130, push: 3.2, wind: 0.9, gravity: 620, damping: 0.6, maxAngle: 1.15 };
 
 export const MAPS = {
   caldeira: {
@@ -118,10 +118,12 @@ export const MAPS = {
     respawns: [
       { x: 560, y: 150 }, { x: 720, y: 150 }, { x: 400, y: 150 }, { x: 880, y: 150 },
     ],
-    // bem mais vento que na Caldeira
+    // bem mais vento que na Caldeira: correntes que atravessam o mapa de
+    // ponta a ponta (stream) e, junto, uma rajada comum por vez
     wind: {
-      first: 3, every: [2.5, 4.5], warn: 1.1, active: 3.2, max: 4,
+      first: 3, every: [2.5, 4.5], warn: 1.1, active: 3.2, max: 1,
       w: 210, h: 160, strength: 380,
+      stream: { first: 6, every: [9, 12], warn: 1.5, active: 4, h: 130, strength: 320, bands: [390, 262, 140] },
       surfaces: [
         { y: 520, x0: 370, x1: 910 },
         { y: 450, x0: 85, x1: 295 },
