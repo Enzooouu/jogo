@@ -26,7 +26,7 @@ export const PHYS = {
   dashSpeed: 820,         // velocidade do dash
   dashTime: 0.16,         // duração do dash (sem gravidade)
   dashCooldown: 0.55,     // intervalo mínimo entre dashes
-  airDashes: 1,           // dashes no ar até pisar no chão / parede / levar golpe
+  airDashes: 1,           // dashes no ar até pisar no chão ou se pendurar na parede
 };
 
 export const PLAYER = {

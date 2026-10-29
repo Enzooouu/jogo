@@ -50,7 +50,7 @@ elemento do seu time → confira os times na tela **Versus** e clique em **Lutar
 - Cada time é de um elemento só, e dois times nunca têm o mesmo elemento.
 - Cada jogador tem 3 vidas. Perde uma vida quem **cai do mapa** ou **toca num perigo mortal**.
 - Cada golpe aumenta o dano (%) do alvo; quanto mais dano, mais longe ele voa.
-- Foi arremessado? Use o **dash** (1 no ar; recarrega ao pisar no chão, se pendurar ou levar golpe; o Ar tem 2) e se pendure na parede para subir.
+- Foi arremessado? Use o **dash** (1 no ar; recarrega ao pisar no chão ou se pendurar na parede; o Ar tem 2) e se pendure na parede para subir.
 - A câmera se afasta sozinha quando alguém sai da área principal.
 - Vence o time que eliminar o outro. Se o tempo (4 min) acabar, vence quem tem mais vidas.
 

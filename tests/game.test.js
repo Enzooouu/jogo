@@ -671,3 +671,31 @@ test('bots usam o dash quando acabam os pulos fora da ilha', () => {
   }
   assert.ok(dashed >= 5, `dash em ${dashed} de 6`);
 });
+
+test('levar golpe no ar não devolve o dash', () => {
+  const g = duel('fogo', 'agua');
+  g.nextWindIn = Infinity;
+  const a = g.playerById(1);
+  const b = g.playerById(2);
+  place(a, 600, 540);
+  b.x = 640; b.y = 300; b.vx = 0; b.vy = 0;
+  run(g, 1);
+  run(g, 1, { 2: makeInput({ dash: true, up: true }) });
+  assert.equal(b.airDashes, 0, 'gastou o dash');
+  run(g, 12);
+  b.x = a.x + 40; b.y = a.y; a.facing = 1;
+  run(g, 1, { 1: makeInput({ attack: true }) });
+  run(g, 8);
+  assert.ok(b.damage > 0, 'levou o golpe');
+  assert.equal(b.airDashes, 0, 'continua sem dash');
+});
+
+test('um aperto de dash gasta só um dos 2 dashes do Ar', () => {
+  const g = duel('ar', 'fogo');
+  g.nextWindIn = Infinity;
+  const p = g.playerById(1);
+  p.x = 640; p.y = 100; p.vy = 0;
+  run(g, 1);
+  run(g, 6, { 1: makeInput({ dash: true, right: true }) });
+  assert.equal(p.airDashes, 1);
+});

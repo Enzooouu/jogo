@@ -686,8 +686,12 @@ export class Renderer {
     ctx.font = '800 10px system-ui, sans-serif';
     ctx.fillStyle = 'rgba(255,255,255,0.6)';
     ctx.fillText('DASH', x + 88, y + 86);
+    // Cada seta é um dash: apagada = gasta; meio apagada = esperando o intervalo
+    const available = out ? 0 : p.onGround ? maxDash : p.airDashes;
     for (let i = 0; i < maxDash; i++) {
-      const on = !out && (p.onGround || i < p.airDashes) && p.dashCooldown <= 0;
+      const has = i < available;
+      ctx.globalAlpha = (out ? 0.55 : 1) * (has && p.dashCooldown > 0 ? 0.4 : 1);
+      const on = has;
       const ax = x + 124 + i * 20;
       const ay = y + 82;
       ctx.fillStyle = on ? el.light : 'rgba(255,255,255,0.15)';
@@ -701,6 +705,7 @@ export class Renderer {
       ctx.closePath();
       ctx.fill();
     }
+    ctx.globalAlpha = out ? 0.55 : 1;
 
     // Dano
     if (!out) {

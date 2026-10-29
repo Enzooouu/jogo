@@ -29,7 +29,7 @@ export const ELEMENTS = {
     id: 'ar', name: 'Ar', enabled: true,
     color: '#bfe9e1', light: '#ffffff', dark: '#5e8f87',
     description: 'O vento não o empurra. Rápido, pula alto e tem 2 dashes no ar.',
-    stats: { speed: 1.15, jump: 1.1, weight: 1, airDashes: 2 },
+    stats: { speed: 1.15, jump: 1.1, weight: 0.93, airDashes: 2 },
   },
 };
 

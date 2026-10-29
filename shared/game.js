@@ -734,8 +734,7 @@ export class Game {
     target.lastHitBy = attacker.id;
     target.lastHitTime = this.time;
     target.jumpsLeft = Math.max(target.jumpsLeft, 1);
-    // Levou golpe: ganha o dash de volta para poder se recuperar
-    target.airDashes = statsOf(target).airDashes;
+    // Levar golpe interrompe o dash, mas não devolve dashes gastos.
     target.dashTime = 0;
     this.applyStatus(target, profile.status, attacker.id);
 
