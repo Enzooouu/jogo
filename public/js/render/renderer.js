@@ -240,6 +240,7 @@ export class Renderer {
     drawCelebration(ctx, this.celebration, 'front');
     this.stage.drawHazards(ctx, this.time, true);
     if (this.debug) this.drawDebug(ctx);
+    this.stage.drawVignette(ctx);
 
     ctx.setTransform(this.scale, 0, 0, this.scale, 0, 0);
     this.drawOffscreen(ctx, alpha);

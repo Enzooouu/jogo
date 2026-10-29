@@ -66,6 +66,8 @@ export const MAPS = {
       { type: 'runa', x: 640, y: 540 },
       { type: 'cristal', x: 985, y: 540 },
       { type: 'fonte', x: 1078, y: 540 },
+      { type: 'tocha', x: 255, y: 618 },
+      { type: 'tocha', x: 1025, y: 618, cold: true },
       { type: 'cascata', hazard: 'lava', x: 420, y: 795 },
       { type: 'cascata', hazard: 'agua', x: 862, y: 795 },
     ],
