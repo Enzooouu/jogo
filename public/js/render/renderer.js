@@ -9,6 +9,7 @@ import { Camera } from './camera.js';
 import { startCelebration, updateCelebration, drawCelebration, CELEBRATION_TIME } from './celebrations.js';
 import { drawFighter, drawSword, drawStaff, hexA } from './fighter.js';
 import { drawSwordArt, drawStaffArt, drawShot } from './weapons-art.js';
+import { drawUniversalSword, drawUniversalStaff, prismColor } from './universal-art.js';
 
 export const VIEW_W = 1280;
 export const VIEW_H = 720;
@@ -150,6 +151,11 @@ export class Renderer {
           break;
         case 'itemLand':
           P.burst(e.x, e.y, { count: 8, speed: 120, angle: -Math.PI / 2, spread: Math.PI, life: 0.4, size: 3, color: 'rgba(210,190,170,0.7)', gravity: 300 });
+          break;
+        case 'itemLost':
+          // arma caída afundou na lava/água
+          P.burst(e.x, e.y, { count: 10, speed: 140, angle: -Math.PI / 2, spread: 1.4, life: 0.6, size: 6, grow: 14, color: 'rgba(230,230,240,0.5)' });
+          P.add({ type: 'text', text: 'afundou!', x: e.x, y: e.y - 30, vy: -40, life: 0.9, size: 14, color: '#dddddd' });
           break;
         case 'weaponBreak':
           P.burst(e.x, e.y, { type: 'spark', count: 12, speed: 260, life: 0.4, size: 2.5, color: '#cccccc', gravity: 600 });
@@ -434,6 +440,10 @@ export class Renderer {
   drawItems(ctx) {
     for (const item of this.game.items) {
       if (item.landed && item.life < 3 && Math.floor(this.time * 8) % 2 === 0) continue;
+      if (item.dropped) {
+        this.drawDroppedWeapon(ctx, item);
+        continue;
+      }
       const cx = item.x + item.w / 2;
       ctx.save();
       if (!item.landed) {
@@ -489,6 +499,43 @@ export class Renderer {
   }
 
   // Estrelinhas girando em cima de quem está atordoado
+  // Arma arremessada que caiu no chão: espada ou cajado universal (sem ser de
+  // time nenhum), flutuando de leve, com brilho e as cargas que sobraram
+  drawDroppedWeapon(ctx, item) {
+    const cx = item.x + item.w / 2;
+    const ground = item.y + item.h;
+    const t = this.time + item.id;
+    ctx.save();
+    if (item.landed) {
+      ctx.globalAlpha = 0.45 + Math.sin(t * 4) * 0.15;
+      ctx.fillStyle = prismColor(t);
+      ctx.beginPath();
+      ctx.ellipse(cx, ground, 32, 7, 0, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.globalAlpha = 1;
+      // cargas que sobraram
+      const n = item.uses ?? 0;
+      for (let i = 0; i < n; i++) {
+        ctx.fillStyle = '#ffffff';
+        ctx.strokeStyle = 'rgba(11,7,16,0.8)';
+        ctx.lineWidth = 1.5;
+        ctx.beginPath();
+        ctx.arc(cx - (n - 1) * 4.5 + i * 9, ground + 12, 3, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.stroke();
+      }
+    }
+    const bob = item.landed ? Math.sin(t * 2.5) * 3 : 0;
+    ctx.translate(cx, ground - 30 + bob);
+    // caindo: gira; no chão: fica inclinada
+    ctx.rotate(item.landed ? (item.weapon === 'espada' ? -0.6 : 0.5) : t * 10);
+    ctx.scale(1.3, 1.3);
+    ctx.translate(0, 18);
+    if (item.weapon === 'espada') drawUniversalSword(ctx, t);
+    else drawUniversalStaff(ctx, t);
+    ctx.restore();
+  }
+
   drawStunStars(ctx, cx, cy) {
     ctx.save();
     for (let i = 0; i < 3; i++) {

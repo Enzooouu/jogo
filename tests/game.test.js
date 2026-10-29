@@ -261,6 +261,62 @@ test('modo ADM: o jogador ADM é intangível (golpes e perigos não pegam)', () 
   assert.equal(adm.lives, PLAYER.lives);
 });
 
+test('arma arremessada que não acerta ninguém fica no chão e volta com as mesmas cargas', () => {
+  const g = newGame(['fogo', 'agua', 'agua', 'fogo']);
+  // os outros ficam longe, do outro lado (senão pegariam a arma)
+  [2, 3, 4].forEach((id, i) => place(g.playerById(id), 230 + i * 30, 540));
+  g.nextItemIn = Infinity;
+  const p = g.playerById(1);
+  place(p, 600, 540);
+  p.facing = 1;
+  p.weapon = { id: 'espada', uses: 3 };
+  run(g, 2);
+  run(g, 1, { 1: makeInput({ throw: true }) });
+  assert.equal(p.weapon, null);
+  run(g, 120);
+  const item = g.items.find((i) => i.dropped);
+  assert.ok(item, 'a arma ficou no chão');
+  assert.ok(item.landed, 'pousou');
+  assert.equal(item.uses, 3);
+  // vai até ela e pega de volta
+  place(p, item.x + item.w / 2, item.y + item.h);
+  p.pickupCooldown = 0;
+  run(g, 2);
+  assert.deepEqual(p.weapon, { id: 'espada', uses: 3 });
+  assert.ok(!g.items.includes(item), 'saiu do chão');
+});
+
+test('arma arremessada que acerta alguém não volta', () => {
+  const g = newGame(['fogo', 'agua', 'agua', 'fogo']);
+  park(g, 3, 4);
+  g.nextItemIn = Infinity;
+  const p = g.playerById(1);
+  const enemy = g.playerById(2);
+  place(p, 600, 540);
+  place(enemy, 700, 540);
+  p.facing = 1;
+  p.weapon = { id: 'espada', uses: 2 };
+  run(g, 2);
+  run(g, 1, { 1: makeInput({ throw: true }) });
+  run(g, 60);
+  assert.ok(enemy.damage > 0, 'acertou');
+  assert.equal(g.items.filter((i) => i.dropped).length, 0);
+});
+
+test('arma arremessada para fora do mapa se perde', () => {
+  const g = newGame(['fogo', 'agua', 'agua', 'fogo']);
+  park(g, 2, 3, 4);
+  g.nextItemIn = Infinity;
+  const p = g.playerById(1);
+  place(p, 1060, 540);
+  p.facing = 1;
+  p.weapon = { id: 'cajado', uses: 4 };
+  run(g, 2);
+  run(g, 1, { 1: makeInput({ throw: true }) });
+  run(g, 240);
+  assert.equal(g.items.filter((i) => i.dropped).length, 0);
+});
+
 test('quanto mais dano, maior o empurrão', () => {
   const kbAt = (damage) => {
     const g = newGame(['fogo', 'agua', 'fogo', 'agua']);

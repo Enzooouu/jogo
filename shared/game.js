@@ -535,11 +535,14 @@ export class Game {
     if (this.nextStreamIn > 0) return;
     this.nextStreamIn = this.rng.range(sc.every[0], sc.every[1]);
     if (this.winds.some((w) => w.stream)) return;
+    // vai bem além das bordas do mapa, para não acabar "no meio do nada"
+    // quando a câmera se afasta
     const { left, right } = this.map.blast;
+    const extra = 1400;
     const y = this.rng.pick(sc.bands);
     const zone = {
       id: this.nextEntityId++,
-      x: left, y, w: right - left, h: sc.h,
+      x: left - extra, y, w: right - left + extra * 2, h: sc.h,
       dir: this.rng.chance(0.5) ? 1 : -1,
       state: 'aviso',
       time: sc.warn,
@@ -620,7 +623,7 @@ export class Game {
     for (let i = 0; i < this.items.length; i++) {
       const item = this.items[i];
       if (!rectsOverlap(p, item)) continue;
-      p.weapon = { id: item.weapon, uses: WEAPONS[item.weapon].uses };
+      p.weapon = { id: item.weapon, uses: item.uses ?? WEAPONS[item.weapon].uses };
       this.items.splice(i, 1);
       p.stats.pickups++;
       const profile = weaponProfile(item.weapon, p.element);
@@ -777,6 +780,7 @@ export class Game {
 
   throwWeapon(p) {
     const weaponId = p.weapon.id;
+    const uses = p.weapon.uses;
     p.weapon = null;
     p.attack = null;
     p.pickupCooldown = PLAYER.pickupCooldown;
@@ -787,6 +791,7 @@ export class Game {
       team: p.team,
       element: p.element,
       weapon: weaponId,
+      uses,
       x: p.x + p.w / 2 + p.facing * 20,
       y: p.y + 22,
       vx: p.facing * THROWN.speed + p.vx * 0.3,
@@ -853,6 +858,7 @@ export class Game {
           }
           if (!pr.pierce) {
             alive = false;
+            pr.hitSomeone = true;
             break;
           }
         }
@@ -861,16 +867,46 @@ export class Game {
       if (alive && this.map.solids.some((s) => circleRectOverlap(pr.x, pr.y, pr.r * 0.6, s))) alive = false;
 
       const b = this.map.blast;
-      if (pr.x < b.left || pr.x > b.right || pr.y > b.bottom) alive = false;
+      const outside = pr.x < b.left || pr.x > b.right || pr.y > b.bottom;
+      if (outside) alive = false;
 
       if (alive) {
         keep.push(pr);
       } else {
         if (pr.kind === 'magia') this.explodeProjectile(pr, owner);
+        // arma arremessada que não acertou ninguém nem saiu do mapa cai no
+        // chão e pode ser pega de novo, com as mesmas cargas
+        if (pr.kind === 'arremesso' && !pr.hitSomeone && !outside) this.dropWeapon(pr);
         this.emit('projectileEnd', { kind: pr.kind, element: pr.element, weapon: pr.weapon, x: pr.x, y: pr.y });
       }
     }
     this.projectiles = keep;
+  }
+
+  // Arma caída (sem ser de time nenhum): cai rápido até o chão
+  dropWeapon(pr) {
+    let x = pr.x;
+    let y = pr.y;
+    // se entrou na parede, volta um pouco para fora dela
+    for (const s of this.map.solids) {
+      if (!circleRectOverlap(x, y, pr.r * 0.6, s)) continue;
+      if (y < s.y + 14) y = s.y - 16;
+      else x -= Math.sign(pr.vx || 1) * 24;
+    }
+    const item = {
+      id: this.nextEntityId++,
+      weapon: pr.weapon,
+      uses: pr.uses ?? WEAPONS[pr.weapon].uses,
+      dropped: true,
+      x: Math.round(x - 17),
+      y: Math.round(y - 15),
+      w: 34,
+      h: 30,
+      landed: false,
+      life: ITEMS.lifetime,
+    };
+    this.items.push(item);
+    this.emit('weaponDrop', { itemId: item.id, weapon: item.weapon, x, y });
   }
 
   explodeProjectile(pr, owner) {
@@ -892,7 +928,7 @@ export class Game {
     this.nextItemIn -= DT;
     if (this.nextItemIn > 0) return;
     this.nextItemIn = this.rng.range(ITEMS.spawnMin, ITEMS.spawnMax);
-    if (this.items.length >= ITEMS.maxOnMap) return;
+    if (this.items.filter((i) => !i.dropped).length >= ITEMS.maxOnMap) return;
     const { minX, maxX, y } = this.map.itemSpawn;
     const item = {
       id: this.nextEntityId++,
@@ -913,7 +949,8 @@ export class Game {
     for (const item of this.items) {
       if (!item.landed) {
         const prevBottom = item.y + item.h;
-        item.y += ITEMS.fallSpeed * DT;
+        // caixote desce de paraquedas; arma caída despenca
+        item.y += (item.dropped ? ITEMS.dropSpeed : ITEMS.fallSpeed) * DT;
         const bottom = item.y + item.h;
         const surfaces = [...this.map.solids, ...this.platforms];
         for (const s of surfaces) {
@@ -934,7 +971,10 @@ export class Game {
           item.y += pl.dy;
         }
       }
-      if (item.life > 0 && item.y < this.map.blast.bottom) keep.push(item);
+      // arma caída na lava ou na água se perde
+      const sunk = item.dropped && item.landed && this.map.hazards.some((h) => (h.type === 'lava' || h.type === 'agua') && rectsOverlap(item, h));
+      if (sunk) this.emit('itemLost', { itemId: item.id, x: item.x + item.w / 2, y: item.y + item.h / 2 });
+      else if (item.life > 0 && item.y < this.map.blast.bottom) keep.push(item);
     }
     this.items = keep;
   }

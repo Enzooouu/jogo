@@ -52,6 +52,7 @@ export const ITEMS = {
   firstSpawn: 3,
   maxOnMap: 3,
   fallSpeed: 150,         // queda lenta (caixote com paraquedas)
+  dropSpeed: 520,         // arma arremessada que caiu no chão (sem paraquedas)
   lifetime: 15,           // some se ninguém pegar
 };
 

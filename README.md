@@ -67,7 +67,10 @@ elemento do seu time → confira os times na tela **Versus** e clique em **Lutar
 - **Vento**: rajadas aparecem em lugares aleatórios (com 1 s de aviso piscando) e
   empurram para fora da ilha. Ande contra o vento para resistir.
 
-**Armas** caem do céu de paraquedas. Encoste para pegar. O efeito muda com o seu elemento:
+**Armas** caem do céu de paraquedas. Encoste para pegar. O efeito muda com o seu elemento.
+Se você arremessar a arma e ela não acertar ninguém (nem cair para fora do mapa,
+na lava ou na água), ela fica no chão como uma espada ou cajado universal, sem
+time, e quem pegar recebe ela com as mesmas cargas que tinha:
 
 | Arma | Fogo | Água | Terra | Ar |
 | --- | --- | --- | --- | --- |
