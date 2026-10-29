@@ -27,6 +27,10 @@ Na tela inicial (com uma partida de demonstração rodando ao fundo), clique em
 **Jogar** → escolha o modo (**1×1, 2×2, 3×3 ou Todos contra todos**) → escolha a **carta** do
 elemento do seu time → confira os times na tela **Versus** e clique em **Lutar**.
 
+Você perde uma vida quando **cai lá embaixo** (para fora da ilha) ou num perigo
+que mata o seu elemento. Para os lados e para cima não tem limite: quem é
+arremessado longe continua voando e só perde a vida se cair.
+
 
 | Ação | Teclas |
 | --- | --- |
@@ -85,7 +89,7 @@ de ponta a ponta além das rajadas comuns, lava, lago e espinhos no meio).
 **Modo ADM (testes):** em Configurações, ligue "Modo ADM (testes)". Cada golpe seu
 passa a dar 999% de dano, você tem pulos e dashes no ar infinitos e o seu
 lutador fica intangível: nenhum golpe, lava,
-água, espinho ou vento pega nele (cair para fora do mapa ainda tira vida). Os
+água, espinho ou vento pega nele (cair lá embaixo ainda tira vida). Os
 bots continuam normais e essas partidas não contam nas estatísticas da conta.
 
 ## Contas e estatísticas

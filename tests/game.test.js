@@ -182,8 +182,8 @@ test('modo ADM: cada golpe do jogador ADM dá 999%', () => {
   run(g, 10);
   assert.equal(PLAYER.adminDamage, 999);
   assert.equal(bot.damage, PLAYER.adminDamage);
-  run(g, 120);
-  assert.equal(bot.lives, PLAYER.lives - 1, 'voou para fora do mapa');
+  run(g, 900);
+  assert.equal(bot.lives, PLAYER.lives - 1, 'voou longe e caiu');
 });
 
 test('plataforma do balão só balança quando alguém anda em cima (Pico dos Ventos)', () => {
@@ -344,6 +344,23 @@ test('modo ADM: pulos e dashes no ar infinitos', () => {
   }
 });
 
+test('só cair lá embaixo tira vida (lados e cima não têm limite)', () => {
+  const g = newGame();
+  const p = g.playerById(1);
+  for (const [x, y] of [[-3000, 300], [4000, 300], [640, -3000]]) {
+    p.x = x;
+    p.y = y;
+    p.vx = 0;
+    p.vy = 0;
+    run(g, 1);
+    assert.equal(p.lives, PLAYER.lives, `não morreu em (${x}, ${y})`);
+  }
+  p.x = 640;
+  p.y = g.map.blast.bottom + 10;
+  run(g, 1);
+  assert.equal(p.lives, PLAYER.lives - 1, 'caiu lá embaixo e perdeu uma vida');
+});
+
 test('quanto mais dano, maior o empurrão', () => {
   const kbAt = (damage) => {
     const g = newGame(['fogo', 'agua', 'fogo', 'agua']);
@@ -468,7 +485,7 @@ test('vence o time que eliminar o outro', () => {
   const g = newGame(['fogo', 'agua', 'agua', 'fogo']);
   for (const p of g.players.filter((q) => q.team === 'agua')) {
     p.lives = 1;
-    p.x = -1000;     // fora do mapa
+    p.y = 2000;      // caiu lá embaixo
   }
   run(g, 2);
   assert.equal(g.phase, 'ending');

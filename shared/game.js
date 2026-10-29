@@ -616,11 +616,10 @@ export class Game {
     }
   }
 
+  // Só cair lá embaixo tira vida: para os lados e para cima não tem limite
+  // (quem é arremessado para o lado continua voando e acaba caindo)
   checkBlastZone(p) {
-    const b = this.map.blast;
-    if (p.x + p.w < b.left || p.x > b.right || p.y > b.bottom || p.y + p.h < b.top) {
-      this.knockOut(p, 'queda');
-    }
+    if (p.y > this.map.blast.bottom) this.knockOut(p, 'queda');
   }
 
   checkPickup(p) {
