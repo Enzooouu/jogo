@@ -164,7 +164,7 @@ export class Renderer {
             const el = ELEMENTS[winner.element];
             const of = { fogo: 'DO FOGO', agua: 'DA ÁGUA', terra: 'DA TERRA', ar: 'DO AR' }[winner.element] ?? el.name.toUpperCase();
             this.banner = { text: `VITÓRIA ${of}!`, time: CELEBRATION_TIME, max: CELEBRATION_TIME, color: el.light };
-            this.celebration = startCelebration(winner.element);
+            this.celebration = startCelebration(winner.element, this.game.map);
           } else {
             this.banner = { text: 'EMPATE', time: 2.2, max: 2.2, color: '#ffffff' };
           }

@@ -8,10 +8,68 @@
 //   'back'  -> atrás da ilha     'mid' -> entre a ilha e os lutadores
 //   'front' -> na frente de tudo (menos o placar)
 
+import { getMap } from '/shared/maps.js';
+
 export const CELEBRATION_TIME = 4;
 
-export function startCelebration(element) {
+// Chão do mapa onde a comemoração acontece (calculado do mapa da partida, para
+// funcionar em qualquer mapa):
+//   surfaces: trechos de chão de cima onde dá para pisar (sem as piscinas)
+//   islands:  ilhas (blocos que se encostam), com topo e fundo
+//   main:     a maior ilha
+let STAGE = null;
+
+export function startCelebration(element, map) {
+  if (map) setStage(map);
   return { element, t: 0, seed: 1 };
+}
+
+function setStage(map) {
+  const pools = map.hazards.filter((h) => h.type === 'lava' || h.type === 'agua');
+  const surfaces = [];
+  for (const s of map.solids) {
+    // fundo de piscina não conta (fica embaixo da lava/água)
+    if (pools.some((h) => h.x < s.x + s.w && h.x + h.w > s.x && h.y + h.h <= s.y + 1)) continue;
+    // só o topo de cima (blocos tampados por outro não contam)
+    if (map.solids.some((o) => o !== s && o.y < s.y && o.x < s.x + s.w && o.x + o.w > s.x)) continue;
+    surfaces.push({ x0: s.x, x1: s.x + s.w, y: s.y });
+  }
+  const sorted = [...map.solids].sort((a, b) => a.x - b.x);
+  const islands = [];
+  for (const s of sorted) {
+    const last = islands[islands.length - 1];
+    if (last && s.x <= last.x1 + 1) {
+      last.x1 = Math.max(last.x1, s.x + s.w);
+      last.top = Math.min(last.top, s.y);
+      last.bottom = Math.max(last.bottom, s.y + s.h);
+    } else {
+      islands.push({ x0: s.x, x1: s.x + s.w, top: s.y, bottom: s.y + s.h });
+    }
+  }
+  const main = islands.reduce((a, b) => (b.x1 - b.x0 > a.x1 - a.x0 ? b : a));
+  main.cx = (main.x0 + main.x1) / 2;
+  STAGE = { surfaces, islands, main, pools, length: surfaces.reduce((n, sf) => n + sf.x1 - sf.x0, 0) };
+  buildFire();
+  buildQuake();
+}
+
+// Um ponto de chão: u (0..1) percorre todos os trechos de chão em sequência
+function groundPoint(u, margin = 18) {
+  let d = u * STAGE.length;
+  for (const sf of STAGE.surfaces) {
+    const len = sf.x1 - sf.x0;
+    if (d <= len) return { x: Math.max(sf.x0 + margin, Math.min(sf.x1 - margin, sf.x0 + d)), y: sf.y };
+    d -= len;
+  }
+  const last = STAGE.surfaces[STAGE.surfaces.length - 1];
+  return { x: last.x1 - margin, y: last.y };
+}
+
+// Altura do chão num x (ou null se não tem chão ali)
+function groundAt(x) {
+  let best = null;
+  for (const sf of STAGE.surfaces) if (x >= sf.x0 && x <= sf.x1 && (best === null || sf.y < best)) best = sf.y;
+  return best;
 }
 
 // Efeitos que não são desenho direto: partículas e tremor de tela.
@@ -98,17 +156,27 @@ function rand(i, k = 0) {
 // Chuva de meteoros: riscos ao longe, meteoros menores que acertam a ilha
 // e deixam crateras pegando fogo, e um meteoro gigante que cai atrás da
 // ilha e sobe um cogumelo de fogo.
-const ISLAND_TOP = 540;
 const HERO = { x: 980, y: 565, t0: 0.9, t1: 2.2, dx: 1250, dy: 950, r: 44 };
+let ISLAND_TOP = 540;
 
-// [quando bate, x] — fora das poças de lava e água
-const METEORS = [
-  [0.4, 520], [0.65, 1040], [0.9, 250], [1.1, 760], [1.4, 610], [1.65, 1000],
-  [1.9, 300], [2.75, 700], [2.95, 1060], [3.15, 215], [3.3, 560],
-].map(([at, x], i) => ({ at, x, r: 9 + rand(i, 4) * 7, vx: 380 + rand(i, 1) * 160, vy: 1000 + rand(i, 2) * 200 }));
+// Quando cada meteoro menor bate (o lugar sai do chão do mapa, fora das poças)
+const METEOR_TIMES = [0.4, 0.65, 0.9, 1.1, 1.4, 1.65, 1.9, 2.75, 2.95, 3.15, 3.3];
+let METEORS = [];
+
+// O gigante cai atrás da ponta direita da maior ilha
+function buildFire() {
+  const { main } = STAGE;
+  ISLAND_TOP = main.top;
+  HERO.x = main.x1 - 120;
+  HERO.y = main.top + 25;
+  METEORS = METEOR_TIMES.map((at, i) => {
+    const g = groundPoint((i * 0.618 + 0.13) % 1);
+    return { at, x: g.x, y: g.y, r: 9 + rand(i, 4) * 7, vx: 380 + rand(i, 1) * 160, vy: 1000 + rand(i, 2) * 200 };
+  });
+}
 
 // Momentos das batidas (o som usa)
-export const FIRE_IMPACTS = { small: METEORS.map((m) => m.at), bigStart: HERO.t0, big: HERO.t1 };
+export const FIRE_IMPACTS = { small: METEOR_TIMES, bigStart: HERO.t0, big: HERO.t1 };
 
 function heroPos(t) {
   const k = Math.min(1, Math.max(0, (t - HERO.t0) / (HERO.t1 - HERO.t0)));
@@ -118,7 +186,7 @@ function heroPos(t) {
 
 function meteorPos(m, t) {
   const left = m.at - t;
-  return { x: m.x - m.vx * left, y: ISLAND_TOP - m.vy * left };
+  return { x: m.x - m.vx * left, y: m.y - m.vy * left };
 }
 
 function updateFire(cel, dt, renderer) {
@@ -141,7 +209,7 @@ function updateFire(cel, dt, renderer) {
   METEORS.forEach((m, i) => {
     if (t < m.at || cel.hit.has(i)) return;
     cel.hit.add(i);
-    const y = ISLAND_TOP - 2;
+    const y = m.y - 2;
     P.burst(m.x, y, { count: 16, speed: 520, angle: -Math.PI / 2, spread: 2.2, type: 'spark', size: 2.5, color: '#ffc65a', gravity: 1300, life: 0.7 });
     P.burst(m.x, y, { count: 5, speed: 420, angle: -Math.PI / 2, spread: 1.6, size: 3 + m.r * 0.2, color: '#2e1a12', gravity: 1500, life: 0.9 });
     P.burst(m.x, y - 10, { count: 3, speed: 70, angle: -Math.PI / 2, spread: 1.5, size: 5, grow: 22, color: 'rgba(70,50,45,0.3)', life: 1 });
@@ -289,26 +357,27 @@ function bigBlast(ctx, t) {
   if (e < 0) return;
   const heat = Math.max(0, 1 - e / 1.5);
   const R = 250 + e * 700;
-  const g = ctx.createRadialGradient(HERO.x, 480, 0, HERO.x, 480, R);
+  const T = ISLAND_TOP;
+  const g = ctx.createRadialGradient(HERO.x, T - 60, 0, HERO.x, T - 60, R);
   g.addColorStop(0, `rgba(255,220,140,${0.7 * heat})`);
   g.addColorStop(0.4, `rgba(255,100,30,${0.35 * heat})`);
   g.addColorStop(1, 'rgba(255,60,20,0)');
   ctx.fillStyle = g;
-  ctx.fillRect(HERO.x - R, 480 - R, R * 2, R * 2);
+  ctx.fillRect(HERO.x - R, T - 60 - R, R * 2, R * 2);
 
   const rise = 1 - Math.pow(1 - Math.min(1, e / 1.1), 3);
-  const capY = 500 - 290 * rise;
+  const capY = T - 40 - 290 * rise;
   const capR = 55 + 95 * rise;
   const cx = HERO.x;
   const puffs = [];
   // coluna afinando para cima
   for (let k = 0; k <= 8; k++) {
     const u = k / 8;
-    const y = 590 + (capY + capR * 0.3 - 590) * u;
+    const y = T + 50 + (capY + capR * 0.3 - T - 50) * u;
     puffs.push([cx + Math.sin(k * 1.7 + e * 4) * 6, y, (48 - u * 18) * (0.6 + 0.4 * rise)]);
   }
   // saia de poeira na base
-  for (let j = -2; j <= 2; j++) puffs.push([cx + j * 26 * (0.5 + rise), 562 - Math.abs(j) * 4, 34 * (0.5 + 0.5 * rise)]);
+  for (let j = -2; j <= 2; j++) puffs.push([cx + j * 26 * (0.5 + rise), T + 22 - Math.abs(j) * 4, 34 * (0.5 + 0.5 * rise)]);
   // chapéu do cogumelo girando devagar
   for (let j = 0; j < 12; j++) {
     const a = (j / 12) * Math.PI * 2 + e * 0.5;
@@ -353,24 +422,24 @@ function fireMid(ctx, t) {
     // marca queimada e fogo na cratera
     ctx.fillStyle = 'rgba(20,8,5,0.6)';
     ctx.beginPath();
-    ctx.ellipse(m.x, ISLAND_TOP + 1, m.r * 2.6, 4, 0, 0, Math.PI * 2);
+    ctx.ellipse(m.x, m.y + 1, m.r * 2.6, 4, 0, 0, Math.PI * 2);
     ctx.fill();
     const grow = Math.min(1, e / 0.25);
     for (let f = 0; f < 3; f++) {
       const fx = m.x + (f - 1) * m.r * 0.9;
       const h = m.r * (f === 1 ? 3.2 : 2.2) * grow * (0.8 + 0.2 * Math.sin(t * 17 + f * 2 + i));
-      flame(ctx, fx, ISLAND_TOP, h, m.r * 0.7, t + f + i);
+      flame(ctx, fx, m.y, h, m.r * 0.7, t + f + i);
     }
     // estouro da batida
     if (e < 0.45) {
       const k = e / 0.45;
       const R = m.r * 6 * (0.4 + k);
-      const g = ctx.createRadialGradient(m.x, ISLAND_TOP, 0, m.x, ISLAND_TOP, R);
+      const g = ctx.createRadialGradient(m.x, m.y, 0, m.x, m.y, R);
       g.addColorStop(0, `rgba(255,245,200,${1 - k})`);
       g.addColorStop(0.4, `rgba(255,130,40,${0.8 * (1 - k)})`);
       g.addColorStop(1, 'rgba(255,60,20,0)');
       ctx.fillStyle = g;
-      ctx.fillRect(m.x - R, ISLAND_TOP - R, R * 2, R * 2);
+      ctx.fillRect(m.x - R, m.y - R, R * 2, R * 2);
     }
   }
 
@@ -565,24 +634,25 @@ function tsunami(ctx, t) {
 // Lâmina de água com espuma escorrendo por cima da ilha depois da crista
 function islandWash(ctx, t) {
   const fx = tsunamiFront(t);
-  const right = Math.min(1100, fx + 40);
-  if (right <= 180) return;
+  const { x0: left, x1, top } = STAGE.main;
+  const right = Math.min(x1, fx + 40);
+  if (right <= left) return;
   const fade = Math.max(0, Math.min(1, (3.7 - t) / 0.8));
   ctx.save();
   ctx.globalAlpha *= 0.6 * fade;
   ctx.fillStyle = '#4fb2f0';
   ctx.beginPath();
-  ctx.moveTo(180, 548);
-  for (let x = 180; x <= right; x += 12) ctx.lineTo(x, 532 + Math.sin(x * 0.05 + t * 8) * 4);
-  ctx.lineTo(right, 548);
+  ctx.moveTo(left, top + 8);
+  for (let x = left; x <= right; x += 12) ctx.lineTo(x, top - 8 + Math.sin(x * 0.05 + t * 8) * 4);
+  ctx.lineTo(right, top + 8);
   ctx.closePath();
   ctx.fill();
   ctx.strokeStyle = '#eafcff';
   ctx.lineWidth = 3;
   ctx.beginPath();
-  for (let x = 180; x <= right; x += 12) {
-    const y = 532 + Math.sin(x * 0.05 + t * 8) * 4;
-    if (x === 180) ctx.moveTo(x, y);
+  for (let x = left; x <= right; x += 12) {
+    const y = top - 8 + Math.sin(x * 0.05 + t * 8) * 4;
+    if (x === left) ctx.moveTo(x, y);
     else ctx.lineTo(x, y);
   }
   ctx.stroke();
@@ -809,7 +879,7 @@ function tornado(ctx, t) {
 // Terremoto: o chão treme e racha, pilares de basalto sobem do abismo atrás
 // da ilha, e no golpe final uma fileira de espinhos de pedra rasga o chão
 // enquanto pedregulhos caem do céu e se quebram.
-const GROUND = 540;
+let GROUND = 540;
 const RISE_TIME = 0.55;
 const SLAM = 2.3;
 
@@ -819,39 +889,60 @@ const PILLARS = [
   [880, 90, 260, 1.45], [120, 70, 300, 1.65], [1160, 80, 320, 1.85],
 ].map(([x, w, top, at]) => ({ x, w, top, at }));
 
-// [x, altura] — espinhos que rasgam o chão no golpe final (fora das poças)
-const SPIKES = [[225, 70], [290, 55], [505, 85], [560, 60], [745, 65], [790, 90], [1000, 75], [1060, 55]]
-  .map(([x, h]) => ({ x, h, at: SLAM + Math.abs(x - 640) * 0.0004 }));
+// Espinhos, pedregulhos e rachaduras saem do chão do mapa (buildQuake)
+let SPIKES = [];
+let BOULDERS = [];
+let QUAKE_CRACKS = [];
 
-// Pedregulhos caindo do céu
-const BOULDERS = Array.from({ length: 16 }, (_, i) => {
-  const at = 0.4 + i * 0.17;
-  const x = 200 + rand(i, 8) * 880;
-  const s = 10 + rand(i, 9) * 14;
-  // tempo até encostar no chão da ilha (queda com gravidade 1600)
-  const fall = Math.sqrt((2 * (GROUND - s * 0.6 + 80)) / 1600);
-  return { at, x, s, land: at + fall, spin: 4 + rand(i, 10) * 4 };
-});
-
-// Rachaduras na parede da ilha: descem do chão em zigue-zague, com galhos
-const QUAKE_CRACKS = [210, 300, 400, 520, 640, 760, 880, 1000, 1070].map((x0, i) => {
-  const pts = [[x0, GROUND + 1]];
-  let x = x0;
-  let y = GROUND + 1;
-  const bottom = 610 + rand(i, 50) * 85;
-  while (y < bottom) {
-    y += 9 + rand(i, y) * 12;
-    x += (rand(i, y + 1) - 0.5) * 26;
-    pts.push([x, Math.min(y, bottom)]);
+function buildQuake() {
+  const { main, surfaces, islands, pools } = STAGE;
+  GROUND = main.top;
+  // espinhos rasgando o chão: a cada ~65 px em cada trecho de chão
+  SPIKES = [];
+  let n = 0;
+  for (const sf of surfaces) {
+    for (let x = sf.x0 + 26; x <= sf.x1 - 22; x += 62 + rand(n, 3) * 14) {
+      SPIKES.push({ x, y: sf.y, h: 55 + rand(n, 7) * 35, at: SLAM + Math.abs(x - main.cx) * 0.0004 });
+      n++;
+    }
   }
-  const b = Math.floor(pts.length / 2);
-  const branch = [pts[b]];
-  for (let k = 1; k <= 3; k++) {
-    const [px, py] = branch[k - 1];
-    branch.push([px + (rand(i, k + 70) < 0.5 ? -1 : 1) * (10 + rand(i, k + 80) * 14), py + 12 + rand(i, k + 90) * 10]);
+  // pedregulhos caindo do céu (batem no chão, ou passam direto se não tem chão)
+  BOULDERS = Array.from({ length: 16 }, (_, i) => {
+    const at = 0.4 + i * 0.17;
+    const x = main.x0 + 20 + rand(i, 8) * (main.x1 - main.x0 - 40);
+    const s = 10 + rand(i, 9) * 14;
+    const gy = groundAt(x) ?? 1200;
+    const fall = Math.sqrt((2 * (gy - s * 0.6 + 80)) / 1600);
+    return { at, x, s, gy, land: at + fall, spin: 4 + rand(i, 10) * 4 };
+  });
+  // rachaduras descendo pela parede das ilhas, em zigue-zague e com galhos
+  QUAKE_CRACKS = [];
+  let i = 0;
+  for (const isl of islands) {
+    const step = 110;
+    for (let x0 = isl.x0 + 30; x0 <= isl.x1 - 30; x0 += step) {
+      if (pools.some((h) => x0 > h.x - 6 && x0 < h.x + h.w + 6)) continue;
+      const top = groundAt(x0) ?? isl.top;
+      const pts = [[x0, top + 1]];
+      let x = x0;
+      let y = top + 1;
+      const bottom = top + Math.min(160, isl.bottom - top) * (0.45 + rand(i, 50) * 0.5);
+      while (y < bottom) {
+        y += 9 + rand(i, y) * 12;
+        x += (rand(i, y + 1) - 0.5) * 26;
+        pts.push([x, Math.min(y, bottom)]);
+      }
+      const b = Math.floor(pts.length / 2);
+      const branch = [pts[b]];
+      for (let k = 1; k <= 3; k++) {
+        const [px, py] = branch[k - 1];
+        branch.push([px + (rand(i, k + 70) < 0.5 ? -1 : 1) * (10 + rand(i, k + 80) * 14), py + 12 + rand(i, k + 90) * 10]);
+      }
+      QUAKE_CRACKS.push({ pts, branch, at: 0.35 + rand(i, 60) * 0.9 });
+      i++;
+    }
   }
-  return { pts, branch, at: 0.35 + rand(i, 60) * 0.9 };
-});
+}
 
 // Momentos das pancadas (o som usa)
 export const QUAKE_HITS = { pillars: PILLARS.map((p) => p.at), slam: SLAM };
@@ -868,13 +959,15 @@ function updateQuake(cel, dt, renderer) {
   renderer.shake(2 + 3 * k, 0.1);
   // pedrinhas pulando no chão e poeira caindo do alto
   if (Math.random() < dt * 30 * k) {
-    P.add({ x: 190 + Math.random() * 900, y: GROUND - 2, vx: (Math.random() - 0.5) * 80, vy: -150 - Math.random() * 180, life: 0.5, size: 1.5 + Math.random() * 2, color: '#6e5236', gravity: 1500 });
+    const g = groundPoint(Math.random());
+    P.add({ x: g.x, y: g.y - 2, vx: (Math.random() - 0.5) * 80, vy: -150 - Math.random() * 180, life: 0.5, size: 1.5 + Math.random() * 2, color: '#6e5236', gravity: 1500 });
   }
   if (Math.random() < dt * 18) {
     P.add({ x: -100 + Math.random() * 1480, y: -30, vx: (Math.random() - 0.5) * 20, vy: 80 + Math.random() * 80, life: 2.5, size: 1.4, color: 'rgba(200,170,120,0.8)', gravity: 200 });
   }
   if (Math.random() < dt * 20 * k) {
-    P.add({ x: 180 + Math.random() * 920, y: GROUND, vx: (Math.random() - 0.5) * 40, vy: -40 - Math.random() * 60, life: 1, size: 5, grow: 16, color: 'rgba(150,120,90,0.2)' });
+    const g = groundPoint(Math.random());
+    P.add({ x: g.x, y: g.y, vx: (Math.random() - 0.5) * 40, vy: -40 - Math.random() * 60, life: 1, size: 5, grow: 16, color: 'rgba(150,120,90,0.2)' });
   }
   cel.done = cel.done ?? new Set();
   const once = (key) => !cel.done.has(key) && cel.done.add(key);
@@ -883,29 +976,31 @@ function updateQuake(cel, dt, renderer) {
     if (t < p.at || !once(`p${i}`)) return;
     renderer.shake(7, 0.3);
     P.burst(p.x, Math.min(GROUND, p.top + 80), { count: 10, speed: 380, angle: -Math.PI / 2, spread: 2.4, size: 3, color: '#5a4029', gravity: 1500, life: 1.1 });
-    if (p.x > 180 && p.x < 1100) {
-      P.burst(p.x, GROUND - 6, { count: 5, speed: 160, angle: -Math.PI / 2, spread: 2.6, size: 8, grow: 28, color: 'rgba(160,130,95,0.25)', life: 1 });
+    const gy = groundAt(p.x);
+    if (gy !== null) {
+      P.burst(p.x, gy - 6, { count: 5, speed: 160, angle: -Math.PI / 2, spread: 2.6, size: 8, grow: 28, color: 'rgba(160,130,95,0.25)', life: 1 });
     }
   });
   // golpe final: espinhos rasgando o chão
   SPIKES.forEach((s, i) => {
     if (t < s.at || !once(`s${i}`)) return;
-    P.burst(s.x, GROUND - 4, { count: 10, speed: 420, angle: -Math.PI / 2, spread: 1.8, size: 2.5, color: '#6e5236', gravity: 1500, life: 0.8 });
-    P.burst(s.x, GROUND - 8, { count: 3, speed: 120, angle: -Math.PI / 2, spread: 2.6, size: 6, grow: 24, color: 'rgba(170,140,100,0.25)', life: 0.9 });
+    P.burst(s.x, s.y - 4, { count: 10, speed: 420, angle: -Math.PI / 2, spread: 1.8, size: 2.5, color: '#6e5236', gravity: 1500, life: 0.8 });
+    P.burst(s.x, s.y - 8, { count: 3, speed: 120, angle: -Math.PI / 2, spread: 2.6, size: 6, grow: 24, color: 'rgba(170,140,100,0.25)', life: 0.9 });
   });
   if (t >= SLAM && once('slam')) {
     renderer.shake(15, 0.6);
     // poeira rolando pelo chão para os dois lados
     for (let i = 0; i < 24; i++) {
       const dir = i % 2 ? 1 : -1;
-      P.add({ x: 640 + dir * Math.random() * 60, y: GROUND - 6 - Math.random() * 14, vx: dir * (300 + Math.random() * 500), vy: -20 - Math.random() * 40, life: 1, size: 7, grow: 22, drag: 1.5, color: 'rgba(180,150,110,0.25)' });
+      P.add({ x: STAGE.main.cx + dir * Math.random() * 60, y: GROUND - 6 - Math.random() * 14, vx: dir * (300 + Math.random() * 500), vy: -20 - Math.random() * 40, life: 1, size: 7, grow: 22, drag: 1.5, color: 'rgba(180,150,110,0.25)' });
     }
   }
   // pedregulhos que batem no chão se quebram
   BOULDERS.forEach((b, i) => {
     if (t < b.land || !once(`b${i}`)) return;
-    P.burst(b.x, GROUND - 4, { count: 7, speed: 300, angle: -Math.PI / 2, spread: 2.2, size: 2 + b.s * 0.15, color: '#7a5a3a', gravity: 1600, life: 0.7 });
-    P.burst(b.x, GROUND - 6, { count: 2, speed: 60, angle: -Math.PI / 2, spread: 2, size: 8, grow: 24, color: 'rgba(160,130,95,0.3)', life: 0.8 });
+    if (b.gy > 1000) return;
+    P.burst(b.x, b.gy - 4, { count: 7, speed: 300, angle: -Math.PI / 2, spread: 2.2, size: 2 + b.s * 0.15, color: '#7a5a3a', gravity: 1600, life: 0.7 });
+    P.burst(b.x, b.gy - 6, { count: 2, speed: 60, angle: -Math.PI / 2, spread: 2, size: 8, grow: 24, color: 'rgba(160,130,95,0.3)', life: 0.8 });
   });
 }
 
@@ -1028,18 +1123,18 @@ function quakeMid(ctx, t) {
   }
   ctx.shadowBlur = 0;
 
-  // espinhos saindo do chão (cortados na linha do chão)
-  ctx.save();
-  ctx.beginPath();
-  ctx.rect(-2000, -2000, 5000, 2000 + GROUND + 4);
-  ctx.clip();
+  // espinhos saindo do chão (cortados na linha do chão de cada um)
   for (const s of SPIKES) {
     const e = t - s.at;
     if (e < 0) continue;
     const k = Math.min(1, e / 0.22);
-    drawSpike(ctx, s.x, GROUND + 4, s.h * easeOutBack(k), Math.sign(s.x - 640));
+    ctx.save();
+    ctx.beginPath();
+    ctx.rect(s.x - 200, -2000, 400, 2000 + s.y + 4);
+    ctx.clip();
+    drawSpike(ctx, s.x, s.y + 4, s.h * easeOutBack(k), Math.sign(s.x - STAGE.main.cx));
+    ctx.restore();
   }
-  ctx.restore();
 
   const e = t - SLAM;
   if (e >= 0 && e < 0.7) {
@@ -1048,7 +1143,7 @@ function quakeMid(ctx, t) {
     ctx.strokeStyle = `rgba(216,178,122,${0.9 * (1 - k)})`;
     ctx.lineWidth = 10 * (1 - k) + 2;
     ctx.beginPath();
-    ctx.ellipse(640, GROUND - 4, rx, rx * 0.1, 0, Math.PI, Math.PI * 2);
+    ctx.ellipse(STAGE.main.cx, GROUND - 4, rx, rx * 0.1, 0, Math.PI, Math.PI * 2);
     ctx.stroke();
   }
 }
@@ -1098,7 +1193,7 @@ function quakeFront(ctx, t) {
   ctx.fillRect(-1200, -900, 3700, 2400);
   for (const b of BOULDERS) {
     const life = t - b.at;
-    if (life < 0 || t >= b.land) continue;
+    if (life < 0 || t >= b.land || life > 2) continue;
     const y = -80 + 0.5 * 1600 * life * life;
     drawBoulder(ctx, b.x, y, b.s, life * b.spin);
   }
@@ -1128,3 +1223,6 @@ function drawBoulder(ctx, x, y, s, rot) {
   ctx.stroke();
   ctx.restore();
 }
+
+// Até a primeira partida, usa o mapa padrão
+setStage(getMap());
