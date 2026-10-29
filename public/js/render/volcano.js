@@ -1,23 +1,7 @@
 // Vulcão do fundo da Caldeira (camada distante) e a lava que continua pelos
 // morros da frente (camada do meio).
-//
-// Três estilos para escolher (só no modo de teste: ?debug&vulcao=a|b|c):
-//   a: "Montanha de fogo"  montanha recortada, rios de lava irregulares
-//   b: "Caldeira quebrada" cratera larga e desmoronada, lava em cascatas
-//   c: "Noite escura"      vulcão quase preto, rios de crosta com fissuras,
-//                          erupção de cinzas com raios
 
 import { glowSprite } from './stage-util.js';
-
-const STYLE = (() => {
-  try {
-    const q = new URLSearchParams(globalThis.location?.search ?? '');
-    const s = q.has('debug') ? q.get('vulcao') : null;
-    return ['a', 'b', 'c'].includes(s) ? s : 'a';
-  } catch {
-    return 'a';
-  }
-})();
 
 const ERUPT_EVERY = 8;
 
@@ -29,7 +13,7 @@ const RIVERS = [
   { w0: 20, w1: 36, pts: [[132, 198], [148, 272], [154, 360], [172, 450], [192, 545], [216, 645], [236, 765], [252, 905], [258, 1060]] },
 ];
 
-// Rios finos (só nos estilos a e c)
+// Rios finos
 const THIN = [
   [[70, 192], [30, 250], [-30, 330], [-90, 420], [-160, 520]],
   [[150, 194], [210, 260], [270, 330], [330, 430]],
@@ -106,55 +90,31 @@ function alongDense(dense, u) {
 }
 
 // ======================================================================
-// Silhuetas de cada estilo
+// Silhueta, chaminé, cratera e cores
 
-const OUTLINE = {
-  a: [
-    [-760, 1380], [-560, 820], [-470, 700], [-430, 650], [-360, 596], [-300, 524], [-250, 486],
-    [-196, 424], [-150, 384], [-108, 334], [-70, 302], [-40, 262], [-12, 230], [10, 196], [24, 168],
-    [34, 148], [44, 156], [54, 172], [66, 180], [108, 186], [150, 182], [160, 166], [176, 152],
-    [190, 166], [206, 190], [234, 220], [256, 246], [276, 258], [290, 250], [304, 256], [316, 250],
-    [330, 270], [352, 306], [372, 338], [400, 372], [430, 420], [470, 488], [522, 576], [582, 690],
-    [660, 860], [820, 1380],
-  ],
-  b: [
-    [-760, 1380], [-600, 860], [-500, 720], [-400, 610], [-300, 500], [-220, 400], [-150, 320],
-    [-96, 262], [-60, 228], [-40, 232], [-24, 212], [-8, 222], [8, 204], [22, 214], [36, 200],
-    [54, 214], [70, 226], [92, 230], [130, 230], [150, 226], [168, 212], [186, 220], [200, 206],
-    [218, 216], [236, 204], [252, 224], [290, 264], [340, 330], [400, 420], [470, 530], [560, 690],
-    [660, 880], [820, 1380],
-  ],
-  c: [
-    [-760, 1380], [-540, 800], [-430, 660], [-330, 560], [-250, 470], [-190, 400], [-130, 340],
-    [-80, 280], [-40, 230], [-10, 196], [12, 160], [26, 128], [36, 112], [48, 132], [60, 160],
-    [72, 178], [108, 184], [146, 180], [160, 158], [170, 136], [182, 124], [194, 146], [212, 176],
-    [240, 210], [262, 236], [282, 242], [296, 232], [310, 240], [328, 266], [356, 310], [410, 400],
-    [490, 540], [580, 710], [680, 900], [820, 1380],
-  ],
-};
+const OUTLINE = [
+  [-760, 1380], [-560, 820], [-470, 700], [-430, 650], [-360, 596], [-300, 524], [-250, 486],
+  [-196, 424], [-150, 384], [-108, 334], [-70, 302], [-40, 262], [-12, 230], [10, 196], [24, 168],
+  [34, 148], [44, 156], [54, 172], [66, 180], [108, 186], [150, 182], [160, 166], [176, 152],
+  [190, 166], [206, 190], [234, 220], [256, 246], [276, 258], [290, 250], [304, 256], [316, 250],
+  [330, 270], [352, 306], [372, 338], [400, 372], [430, 420], [470, 488], [522, 576], [582, 690],
+  [660, 860], [820, 1380],
+];
 
 // Chaminé no ombro da encosta (solta vapor)
-const VENT = { a: [298, 254], b: null, c: [296, 236] };
+const VENT = [298, 254];
 
-const CRATER = {
-  a: { x: 108, y: 188, rx: 44, ry: 6 },
-  b: { x: 110, y: 250, rx: 104, ry: 9 },
-  c: { x: 109, y: 186, rx: 38, ry: 5 },
-};
+const CRATER = { x: 108, y: 188, rx: 44, ry: 6 };
 
-const COLORS = {
-  a: { top: '#4a1a2e', mid: '#32122a', bottom: '#170914', lit: 'rgba(255,140,110,0.09)', shade: 'rgba(8,2,12,0.32)' },
-  b: { top: '#4a1d2c', mid: '#331427', bottom: '#170914', lit: 'rgba(255,150,120,0.08)', shade: 'rgba(8,2,12,0.3)' },
-  c: { top: '#24101e', mid: '#180a15', bottom: '#0c050b', lit: 'rgba(170,150,230,0.06)', shade: 'rgba(0,0,0,0.35)' },
-};
+const COLORS = { top: '#4a1a2e', mid: '#32122a', bottom: '#170914', lit: 'rgba(255,140,110,0.09)', shade: 'rgba(8,2,12,0.32)' };
 
 // ======================================================================
 // Desenho parado (vai para a camada distante)
 
 export function drawVolcano(ctx, rand) {
-  const outline = OUTLINE[STYLE];
-  const col = COLORS[STYLE];
-  const crater = CRATER[STYLE];
+  const outline = OUTLINE;
+  const col = COLORS;
+  const crater = CRATER;
   const body = new Path2D();
   outline.forEach(([x, y], i) => (i ? body.lineTo(x, y) : body.moveTo(x, y)));
   body.closePath();
@@ -168,18 +128,16 @@ export function drawVolcano(ctx, rand) {
   ctx.save();
   ctx.clip(body);
   facets(ctx, crater, col, rand);
-  if (STYLE === 'b') terraces(ctx, rand);
-  if (STYLE === 'c') fissures(ctx, rand);
   // calor da cratera batendo na pedra
-  const heat = ctx.createRadialGradient(crater.x, crater.y, 10, crater.x, crater.y, STYLE === 'c' ? 200 : 300);
-  heat.addColorStop(0, STYLE === 'c' ? 'rgba(255,90,40,0.22)' : 'rgba(255,110,40,0.3)');
+  const heat = ctx.createRadialGradient(crater.x, crater.y, 10, crater.x, crater.y, 300);
+  heat.addColorStop(0, 'rgba(255,110,40,0.3)');
   heat.addColorStop(1, 'rgba(255,110,40,0)');
   ctx.fillStyle = heat;
   ctx.fillRect(crater.x - 300, crater.y - 300, 600, 600);
   ctx.restore();
 
   // luz da lua contornando o lado direito
-  ctx.strokeStyle = STYLE === 'c' ? 'rgba(200,180,255,0.45)' : 'rgba(190,160,230,0.3)';
+  ctx.strokeStyle = 'rgba(190,160,230,0.3)';
   ctx.lineWidth = 2;
   ctx.beginPath();
   const peak = outline.reduce((best, p, i) => (p[1] < outline[best][1] ? i : best), 0);
@@ -187,7 +145,7 @@ export function drawVolcano(ctx, rand) {
   ctx.stroke();
 
   // rios de lava
-  if (STYLE !== 'b') for (const t of THIN) thinFlow(ctx, t, rand);
+  for (const t of THIN) thinFlow(ctx, t, rand);
   RIVERS.forEach((r, i) => river(ctx, r.pts, (u) => r.w0 + (r.w1 - r.w0) * u, i * 7.3 + 1, rand));
 
   drawCrater(ctx, body, crater);
@@ -199,7 +157,7 @@ function facets(ctx, crater, col, rand) {
   const top = crater.y - 10;
   const ridges = [];
   for (const [x0, x1] of [[20, -560], [50, -330], [80, -120], [105, 60], [135, 260], [165, 420], [195, 640]]) {
-    const pts = [[x0, top + (STYLE === 'b' ? 10 : 0)]];
+    const pts = [[x0, top]];
     let x = x0;
     let y = top;
     const steps = 9;
@@ -234,78 +192,35 @@ function facets(ctx, crater, col, rand) {
     ctx.fillStyle = 'rgba(0,0,0,0.3)';
     poly(ctx, [[x - s, y], [x - s * 0.2, y - s * 1.1], [x + s * 0.4, y - s * 0.5], [x + s, y]]);
     ctx.fill();
-    ctx.fillStyle = STYLE === 'c' ? 'rgba(180,160,230,0.08)' : 'rgba(255,150,120,0.1)';
+    ctx.fillStyle = 'rgba(255,150,120,0.1)';
     poly(ctx, [[x - s, y], [x - s * 0.2, y - s * 1.1], [x - s * 0.1, y]]);
     ctx.fill();
   }
 }
 
-// Estilo b: degraus de pedra (a lava cai de um para o outro)
-function terraces(ctx, rand) {
-  for (const y of [330, 450, 580, 720, 880]) {
-    const half = (y - 200) * 1.05 + 60;
-    ctx.fillStyle = 'rgba(0,0,0,0.35)';
-    ctx.beginPath();
-    ctx.moveTo(110 - half, y);
-    for (let x = 110 - half; x <= 110 + half; x += 40) ctx.lineTo(x, y + (rand() - 0.5) * 6);
-    ctx.lineTo(110 + half, y + 12);
-    ctx.lineTo(110 - half, y + 12);
-    ctx.closePath();
-    ctx.fill();
-    ctx.strokeStyle = 'rgba(255,150,120,0.14)';
-    ctx.lineWidth = 2;
-    ctx.beginPath();
-    ctx.moveTo(110 - half, y - 1);
-    ctx.lineTo(110 + half, y - 1);
-    ctx.stroke();
-  }
-}
 
-// Estilo c: rachaduras finas brilhando pela encosta
-function fissures(ctx, rand) {
-  ctx.lineCap = 'round';
-  for (let i = 0; i < 16; i++) {
-    let x = -200 + rand() * 600;
-    let y = 260 + rand() * 600;
-    const pts = [[x, y]];
-    for (let k = 0; k < 6; k++) {
-      x += (rand() - 0.5) * 40;
-      y += 10 + rand() * 22;
-      pts.push([x, y]);
-    }
-    for (const [w, c] of [[5, 'rgba(255,80,20,0.18)'], [1.6, 'rgba(255,170,80,0.85)']]) {
-      ctx.strokeStyle = c;
-      ctx.lineWidth = w;
-      ctx.beginPath();
-      pts.forEach(([px, py], k) => (k ? ctx.lineTo(px, py) : ctx.moveTo(px, py)));
-      ctx.stroke();
-    }
-  }
-}
 
 function thinFlow(ctx, pts, rand) {
   const dense = densify(pts, 8);
   const r = ribbon(dense, (u) => 6 - u * 2.5, 1.2, pts[0][0]);
-  ctx.fillStyle = STYLE === 'c' ? 'rgba(60,15,10,0.9)' : 'rgba(150,40,12,0.95)';
+  ctx.fillStyle = 'rgba(150,40,12,0.95)';
   fillRibbon(ctx, r);
-  ctx.strokeStyle = STYLE === 'c' ? 'rgba(255,150,70,0.7)' : 'rgba(255,190,90,0.85)';
+  ctx.strokeStyle = 'rgba(255,190,90,0.85)';
   ctx.lineWidth = 1.2;
   ctx.beginPath();
   dense.forEach(([x, y], i) => (i ? ctx.lineTo(x, y) : ctx.moveTo(x, y)));
   ctx.stroke();
 }
 
-// Rio de lava grande, no jeito de cada estilo
+// Rio de lava grande
 function river(ctx, pts, width, seed, rand) {
   const dense = densify(pts, 7);
-  if (STYLE === 'a') riverA(ctx, dense, width, seed, rand);
-  else if (STYLE === 'b') riverB(ctx, dense, width, seed, rand);
-  else riverC(ctx, dense, width, seed, rand);
+  lavaRiver(ctx, dense, width, seed, rand);
 }
 
-// a: lava viva com beirada irregular, crosta nas margens, miolo que muda de
+// Lava viva com beirada irregular, crosta nas margens, miolo que muda de
 // largura e placas escuras boiando
-function riverA(ctx, dense, width, seed, rand) {
+function lavaRiver(ctx, dense, width, seed, rand) {
   const glow = ribbon(dense, (u) => width(u) * 2.2, 6, seed);
   ctx.fillStyle = 'rgba(255,80,20,0.12)';
   fillRibbon(ctx, glow);
@@ -351,84 +266,7 @@ function riverA(ctx, dense, width, seed, rand) {
   }
 }
 
-// b: a lava cai em cascatas pelos degraus (partes íngremes claras e lisas,
-// poças largas em cada degrau)
-function riverB(ctx, dense, width, seed, rand) {
-  const glow = ribbon(dense, (u) => width(u) * 2, 5, seed);
-  ctx.fillStyle = 'rgba(255,80,20,0.14)';
-  fillRibbon(ctx, glow);
-  const crust = ribbon(dense, (u) => width(u) + 6, 2.5, seed + 1);
-  ctx.fillStyle = '#2b0b08';
-  fillRibbon(ctx, crust);
-  const body = ribbon(dense, (u) => width(u) * 0.9, 1.5, seed + 2);
-  const g = ctx.createLinearGradient(0, dense[0][1], 0, dense[dense.length - 1][1]);
-  g.addColorStop(0, '#ffb347');
-  g.addColorStop(1, '#d9441a');
-  ctx.fillStyle = g;
-  fillRibbon(ctx, body);
-  // listras verticais da cascata
-  ctx.strokeStyle = 'rgba(255,240,180,0.75)';
-  ctx.lineWidth = 1.5;
-  for (let i = 0; i < dense.length - 6; i += 3) {
-    const [x, y] = dense[i];
-    const [x2, y2] = dense[i + 4];
-    const off = Math.sin(i * 1.3 + seed) * width(i / dense.length) * 0.3;
-    ctx.beginPath();
-    ctx.moveTo(x + off, y);
-    ctx.lineTo(x2 + off, y2);
-    ctx.stroke();
-  }
-  // em cada degrau: borda de pedra cruzando a cascata e um respingo brilhando
-  for (const ty of [330, 450, 580, 720, 880]) {
-    const i = dense.findIndex(([, y]) => y >= ty);
-    if (i < 0) continue;
-    const [x, y] = dense[i];
-    const w = width(i / dense.length);
-    ctx.fillStyle = '#2b0b08';
-    poly(ctx, [[x - w * 0.9, y - 2], [x - w * 0.3, y - 5], [x + w * 0.4, y - 4], [x + w * 0.9, y - 1], [x + w * 0.8, y + 4], [x - w * 0.8, y + 4]]);
-    ctx.fill();
-    ctx.fillStyle = 'rgba(255,230,160,0.95)';
-    for (let k = 0; k < 5; k++) {
-      ctx.beginPath();
-      ctx.arc(x - w * 0.5 + k * w * 0.25, y + 8 + (k % 2) * 3, 2.2 + (k % 3), 0, Math.PI * 2);
-      ctx.fill();
-    }
-  }
-}
 
-// c: crosta escura com fissuras acesas por dentro (lava esfriando)
-function riverC(ctx, dense, width, seed, rand) {
-  const glow = ribbon(dense, (u) => width(u) * 1.8, 6, seed);
-  ctx.fillStyle = 'rgba(255,70,20,0.10)';
-  fillRibbon(ctx, glow);
-  const body = ribbon(dense, width, 4, seed + 1);
-  ctx.fillStyle = '#1f0907';
-  fillRibbon(ctx, body);
-  // beiradas acesas
-  ctx.strokeStyle = 'rgba(255,120,40,0.75)';
-  ctx.lineWidth = 1.5;
-  for (const side of [body.left, body.right]) {
-    ctx.beginPath();
-    side.forEach(([x, y], i) => (i ? ctx.lineTo(x, y) : ctx.moveTo(x, y)));
-    ctx.stroke();
-  }
-  // rede de rachaduras brilhando dentro da crosta
-  ctx.lineCap = 'round';
-  for (let i = 1; i < dense.length - 2; i += 2) {
-    const [x, y] = dense[i];
-    const w = width(i / dense.length) * 0.45;
-    const a = (rand() - 0.5) * w * 2;
-    const b = (rand() - 0.5) * w * 2;
-    const [x2, y2] = dense[i + 2];
-    ctx.strokeStyle = rand() < 0.3 ? '#ffe08a' : '#ff8a24';
-    ctx.lineWidth = 0.8 + rand() * 1.4;
-    ctx.beginPath();
-    ctx.moveTo(x + a, y);
-    ctx.lineTo((x + x2) / 2 + (a + b) / 2 + (rand() - 0.5) * 6, (y + y2) / 2);
-    ctx.lineTo(x2 + b, y2);
-    ctx.stroke();
-  }
-}
 
 function drawCrater(ctx, body, c) {
   const open = { x: c.x, y: c.y - 5, rx: c.rx + 8, ry: c.ry + 5 };
@@ -464,19 +302,19 @@ function drawCrater(ctx, body, c) {
 const DENSE_RIVERS = RIVERS.map((r) => densify(r.pts, 7));
 
 export function volcanoAnimated(ctx, time) {
-  const c = CRATER[STYLE];
+  const c = CRATER;
   // brilho da cratera
   const pulse = 0.5 + Math.sin(time * 1.7) * 0.15;
   ctx.globalCompositeOperation = 'lighter';
   ctx.globalAlpha = pulse;
-  const gw = STYLE === 'b' ? 60 : 120;
+  const gw = 120;
   ctx.drawImage(glowSprite('255,140,60'), c.x - c.rx - gw, c.y - 150, c.rx * 2 + gw * 2, 260);
   ctx.globalAlpha = 1;
   ctx.globalCompositeOperation = 'source-over';
 
   smoke(ctx, time, c);
-  const vent = VENT[STYLE];
-  if (vent) {
+  const vent = VENT;
+  {
     ctx.globalCompositeOperation = 'lighter';
     ctx.globalAlpha = 0.5 + Math.sin(time * 2.3) * 0.15;
     ctx.drawImage(glowSprite('255,120,50'), vent[0] - 22, vent[1] - 14, 44, 24);
@@ -497,20 +335,18 @@ export function volcanoAnimated(ctx, time) {
   const surge = phase < 4 ? 1 - phase / 4 : 0;
   flowLights(ctx, DENSE_RIVERS, time, surge);
 
-  if (STYLE === 'a') eruptionA(ctx, time, c, phase);
-  else if (STYLE === 'b') eruptionB(ctx, time, c, phase);
-  else eruptionC(ctx, time, c, phase);
+  eruption(ctx, time, c, phase);
 }
 
 function flowLights(ctx, rivers, time, surge) {
-  const hot = glowSprite(STYLE === 'c' ? '255,150,70' : '255,220,140');
+  const hot = glowSprite('255,220,140');
   ctx.globalCompositeOperation = 'lighter';
   rivers.forEach((dense, f) => {
-    const n = STYLE === 'c' ? 4 : 7;
+    const n = 7;
     for (let k = 0; k < n; k++) {
-      const u = (time * (STYLE === 'b' ? 0.11 : 0.06) + k / n + f * 0.13) % 1;
+      const u = (time * 0.06 + k / n + f * 0.13) % 1;
       const [x, y] = alongDense(dense, u);
-      const r = (STYLE === 'c' ? 10 : 14) * (1 - u * 0.3);
+      const r = 14 * (1 - u * 0.3);
       ctx.globalAlpha = Math.min(1, (0.45 + surge * 0.5) * (1 - u * 0.5));
       ctx.drawImage(hot, x - r, y - r * 1.4, r * 2, r * 2.8);
     }
@@ -609,48 +445,6 @@ function charge(ctx, c, phase) {
   ctx.globalCompositeOperation = 'source-over';
 }
 
-// Coluna de lava líquida com bordas que se mexem (polígono, não bolinhas)
-function lavaColumn(ctx, x0, y0, h, w, time, seed) {
-  if (h < 4) return;
-  const left = [];
-  const right = [];
-  const n = 18;
-  for (let i = 0; i <= n; i++) {
-    const u = i / n;
-    const y = y0 - h * u;
-    const half = w * (1 - u * 0.55) + Math.sin(u * 9 + time * 14 + seed) * 3;
-    const sway = Math.sin(u * 4 + time * 6 + seed) * 5 * u;
-    left.push([x0 + sway - half, y]);
-    right.push([x0 + sway + half + Math.sin(u * 11 + time * 13 + seed) * 2, y]);
-  }
-  const shape = [...left, ...right.reverse()];
-  ctx.fillStyle = '#b52a0c';
-  poly(ctx, shape.map(([x, y], i) => [x + (i < left.length ? -3 : 3), y]));
-  ctx.fill();
-  const g = ctx.createLinearGradient(0, y0, 0, y0 - h);
-  g.addColorStop(0, '#ff7a1a');
-  g.addColorStop(0.5, '#ffa53a');
-  g.addColorStop(1, '#ffe08a');
-  ctx.fillStyle = g;
-  poly(ctx, shape);
-  ctx.fill();
-  // miolo claro
-  ctx.fillStyle = 'rgba(255,245,200,0.8)';
-  poly(ctx, left.map(([x, y], i) => [x + (right[right.length - 1 - i][0] - x) * 0.35, y]).concat(
-    left.map(([x, y], i) => [x + (right[right.length - 1 - i][0] - x) * 0.55, y]).reverse(),
-  ));
-  ctx.fill();
-  // topo se abrindo em gotas que caem
-  const top = left[left.length - 1];
-  for (let j = 0; j < 9; j++) {
-    const a = -Math.PI / 2 + (j - 4) * 0.35;
-    const d = 10 + (j % 3) * 8;
-    ctx.fillStyle = j % 2 ? '#fff0b0' : '#ffb347';
-    ctx.beginPath();
-    ctx.arc(top[0] + w * 0.45 + Math.cos(a) * d * 1.4, top[1] + Math.sin(a) * d * 0.6 + d * 0.4, 5 - Math.abs(j - 4) * 0.6, 0, Math.PI * 2);
-    ctx.fill();
-  }
-}
 
 // Leque de lava: muitas gotas incandescentes lançadas em arco da cratera,
 // cada uma com um risco de rastro (como os vulcões do Havaí)
@@ -679,8 +473,8 @@ function fountainFan(ctx, c, phase, dur, count, spread, speed) {
   }
 }
 
-// a: leque de lava incandescente, bombas com rastro de fumaça, cinzas
-function eruptionA(ctx, time, c, phase) {
+// Erupção: leque de lava incandescente, bombas com rastro de fumaça, cinzas
+function eruption(ctx, time, c, phase) {
   charge(ctx, c, phase);
   if (phase > 3.2) return;
   flash(ctx, c, phase, 320);
@@ -696,77 +490,7 @@ function eruptionA(ctx, time, c, phase) {
   bombs(ctx, c, phase, true, 'rgba(255,140,50,0.8)');
 }
 
-// b: vários gêiseres de lava estourando da cratera larga
-function eruptionB(ctx, time, c, phase) {
-  charge(ctx, c, phase);
-  if (phase > 3) return;
-  flash(ctx, c, phase, 360);
-  ashPuffs(ctx, c, phase, 4, 0.4);
-  for (const [dx, delay, hmax, w] of [[-70, 0, 170, 12], [0, 0.15, 240, 16], [70, 0.3, 190, 12]]) {
-    const p = phase - delay;
-    if (p > 0 && p < 1.5) lavaColumn(ctx, c.x + dx, c.y, hmax * Math.sin(Math.PI * (p / 1.5)), w, time, dx);
-  }
-  bombs(ctx, c, phase, false, 'rgba(255,160,60,0.8)');
-}
 
-// c: coluna de cinzas subindo com raios dentro e pedras incandescentes
-function eruptionC(ctx, time, c, phase) {
-  charge(ctx, c, phase);
-  if (phase > 4) return;
-  flash(ctx, c, phase, 260);
-  const k = Math.min(1, phase / 2.2);
-  const fade = phase < 3 ? 1 : 1 - (phase - 3);
-  // coluna de cinzas (bolhas escuras iluminadas por baixo)
-  for (let j = 0; j < 20; j++) {
-    const u = j / 19;
-    if (u > k) break;
-    const r = 30 + u * 90 + Math.sin(j * 1.7 + time * 2) * 8;
-    const x = c.x + Math.sin(j * 2.1 + time * 0.8) * (10 + u * 26) + u * u * 90;
-    const y = c.y - 20 - u * 420;
-    const g = ctx.createRadialGradient(x, y + r * 0.3, 0, x, y, r);
-    const warm = 1 - u;
-    g.addColorStop(0, `rgba(${Math.round(70 + 110 * warm)},${Math.round(35 + 40 * warm)},40,${0.85 * fade})`);
-    g.addColorStop(0.7, `rgba(40,25,35,${0.75 * fade})`);
-    g.addColorStop(1, 'rgba(40,25,35,0)');
-    ctx.fillStyle = g;
-    ctx.fillRect(x - r, y - r, r * 2, r * 2);
-  }
-  // raios dentro da nuvem de cinzas
-  for (const at of [0.5, 1.1, 1.7, 2.4]) {
-    if (phase < at || phase > at + 0.12) continue;
-    const seed = at * 10;
-    let x = c.x + Math.sin(seed) * 30;
-    let y = c.y - 60 - (at / 2.4) * 160;
-    const pts = [[x, y]];
-    for (let s = 0; s < 8; s++) {
-      x += Math.sin(seed + s * 2.7) * 24;
-      y -= 16 + Math.abs(Math.sin(seed * s)) * 12;
-      pts.push([x, y]);
-    }
-    ctx.globalCompositeOperation = 'lighter';
-    ctx.globalAlpha = 0.8;
-    ctx.drawImage(glowSprite('200,190,255'), pts[4][0] - 120, pts[4][1] - 110, 240, 220);
-    ctx.globalAlpha = 1;
-    ctx.globalCompositeOperation = 'source-over';
-    for (const [w, col] of [[5, 'rgba(170,150,255,0.5)'], [2, 'rgba(250,245,255,1)']]) {
-      ctx.strokeStyle = col;
-      ctx.lineWidth = w;
-      ctx.beginPath();
-      pts.forEach(([px, py], i) => (i ? ctx.lineTo(px, py) : ctx.moveTo(px, py)));
-      // galho
-      ctx.moveTo(pts[3][0], pts[3][1]);
-      ctx.lineTo(pts[3][0] + 26, pts[3][1] - 8);
-      ctx.lineTo(pts[3][0] + 40, pts[3][1] + 6);
-      ctx.stroke();
-    }
-    ctx.globalCompositeOperation = 'lighter';
-    ctx.globalAlpha = 0.6;
-    ctx.drawImage(glowSprite('200,190,255'), x - 80, y - 60, 160, 160);
-    ctx.globalAlpha = 1;
-    ctx.globalCompositeOperation = 'source-over';
-  }
-  bombs(ctx, c, phase, false, 'rgba(255,120,40,0.85)');
-}
 
 function ashPuffs(ctx, c, phase, count, alpha) {
   for (let j = 0; j < count; j++) {
