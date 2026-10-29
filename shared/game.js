@@ -511,7 +511,7 @@ export class Game {
   applyWind(p) {
     let target = 0;
     const cfg = this.map.wind;
-    if (cfg && hazardReaction(p.element, 'vento') !== 'imune') {
+    if (cfg && !p.admin && hazardReaction(p.element, 'vento') !== 'imune') {
       for (const w of this.winds) {
         if (w.state === 'ativo' && rectsOverlap(p, w)) target += w.dir * cfg.strength * (WIND_FACTOR[p.element] ?? 1);
       }
@@ -535,6 +535,7 @@ export class Game {
 
   checkHazards(p) {
     p.inHazard = null;
+    if (p.admin) return; // modo ADM: atravessa lava, água e espinhos
     for (const h of this.map.hazards) {
       // Margem de 4px para não morrer por encostar um pixel na borda.
       if (!rectsOverlap(p, h, 4)) continue;
@@ -656,7 +657,8 @@ export class Game {
   // ---------------------------------------------------------------- combate
 
   canHit(attacker, target) {
-    return target !== attacker && target.state === 'alive' && target.invuln <= 0 && target.team !== attacker.team;
+    // Modo ADM (testes): o jogador ADM é intangível, nada acerta ele
+    return target !== attacker && target.state === 'alive' && target.invuln <= 0 && target.team !== attacker.team && !target.admin;
   }
 
   // Dash na direção segurada (8 direções); sem direção, vai para a frente.

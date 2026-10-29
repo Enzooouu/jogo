@@ -51,7 +51,7 @@
         <label class="toggle"><input type="checkbox" id="opt-sound"> Som</label>
         <label class="toggle"><input type="checkbox" id="opt-demo"> Partida de demonstração no fundo</label>
         <label class="toggle"><input type="checkbox" id="opt-admin"> Modo ADM (testes)</label>
-        <p class="hint">No modo ADM cada golpe seu dá 999% de dano. As partidas não contam nas estatísticas.</p>
+        <p class="hint">No modo ADM cada golpe seu dá 999% de dano e nada te acerta (nem lava, água, espinhos ou vento). As partidas não contam nas estatísticas.</p>
         <button type="button" class="btn ghost small" data-close>Fechar</button>
       </div>
     </section>
@@ -100,6 +100,10 @@
           <button type="button" data-value="facil">Fácil</button>
           <button type="button" data-value="normal">Normal</button>
           <button type="button" data-value="dificil">Difícil</button>
+        </div>
+        <div class="chips" id="map-seg">
+          <button type="button" data-value="caldeira">Caldeira</button>
+          <button type="button" data-value="pico">Pico dos Ventos</button>
         </div>
         <button type="button" id="play-btn" class="fight">LUTAR</button>
         <p class="hint" id="save-hint"></p>

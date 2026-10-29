@@ -74,13 +74,12 @@ export const MAPS = {
     theme: { skyTop: '#140a24', skyBottom: '#3d1630', haze: '#ff7a3c' },
   },
 
-  // Protótipo (ainda não aparece no menu): ilhas no céu ao entardecer, com
+  // Ilhas no céu ao entardecer, com
   // muito vento, lava na ilhota da esquerda, lago de chuva na da direita,
   // espinhos na ilha do meio e plataformas balançando presas em balões.
   pico: {
     id: 'pico',
     name: 'Pico dos Ventos',
-    prototype: true,
     width: 1280,
     height: 720,
     blast: { left: -260, right: 1540, top: -560, bottom: 1000 },

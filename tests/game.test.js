@@ -160,7 +160,7 @@ test('soco acerta o inimigo (dano + empurrão) e não acerta o aliado', () => {
   assert.equal(ally.damage, 0, 'aliado não leva dano');
 });
 
-test('modo ADM: cada golpe do jogador ADM dá 999%, o dos outros não', () => {
+test('modo ADM: cada golpe do jogador ADM dá 999%', () => {
   const players = [
     { id: 1, name: 'Adm', element: 'fogo', team: 'fogo', admin: true },
     { id: 2, name: 'Bot', element: 'agua', team: 'agua' },
@@ -174,11 +174,6 @@ test('modo ADM: cada golpe do jogador ADM dá 999%, o dos outros não', () => {
   adm.facing = 1;
   bot.facing = -1;
   run(g, 2);
-  run(g, 1, { 2: makeInput({ attack: true }) });
-  run(g, 10);
-  assert.ok(adm.damage > 0 && adm.damage < 50, 'o golpe do bot continua normal');
-  // volta para perto e o ADM bate
-  run(g, 60);
   place(adm, 600, 540);
   place(bot, 640, 540);
   adm.facing = 1;
@@ -214,6 +209,30 @@ test('na Caldeira as plataformas ficam paradas', () => {
   const before = g.platforms.map((pl) => [pl.x, pl.y]);
   run(g, 120);
   assert.deepEqual(g.platforms.map((pl) => [pl.x, pl.y]), before);
+});
+
+test('modo ADM: o jogador ADM é intangível (golpes e perigos não pegam)', () => {
+  const players = [
+    { id: 1, name: 'Adm', element: 'fogo', team: 'fogo', admin: true },
+    { id: 2, name: 'Bot', element: 'agua', team: 'agua' },
+  ];
+  const g = new Game({ players, seed: 42 });
+  while (g.phase === 'countdown') g.step({});
+  const adm = g.playerById(1);
+  const bot = g.playerById(2);
+  adm.invuln = 0;
+  place(adm, 600, 540);
+  place(bot, 640, 540);
+  bot.facing = -1;
+  run(g, 2);
+  run(g, 1, { 2: makeInput({ attack: true }) });
+  run(g, 10);
+  assert.equal(adm.damage, 0, 'o golpe não acertou');
+  // em cima da água (que mata o fogo) não morre
+  const water = g.map.hazards.find((h) => h.type === 'agua');
+  place(adm, water.x + water.w / 2, water.y + water.h);
+  run(g, 30);
+  assert.equal(adm.lives, PLAYER.lives);
 });
 
 test('quanto mais dano, maior o empurrão', () => {

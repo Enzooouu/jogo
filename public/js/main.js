@@ -3,6 +3,7 @@
 
 import { ELEMENTS, HAZARDS, HAZARD_REACTION } from '/shared/elements.js';
 import { WEAPONS, weaponProfile } from '/shared/weapons.js';
+import { MAPS } from '/shared/maps.js';
 import { MatchRunner } from './match.js';
 import { unlockAudio, toggleMute, isMuted } from './audio.js';
 import { Renderer, TEAM_COLORS } from './render/renderer.js';
@@ -22,6 +23,7 @@ const state = {
   teamSize: Number(loadPref('tamanho', '2')) || 2,
   mode: 'times',
   difficulty: loadPref('dificuldade', 'normal'),
+  mapId: loadPref('mapa', 'caldeira'),
   demo: loadPref('demo', '1') === '1',
   admin: loadPref('adm', '0') === '1', // modo ADM (testes): golpes dão 999%
   runner: null,
@@ -270,6 +272,7 @@ function goVersus() {
   if (ffa) fillRivals($('#vs-right'), theirs);
   else fillSide($('#vs-right'), 'ADVERSÁRIO', b, theirs, me.id);
   setChips('#diff-seg', state.difficulty);
+  setChips('#map-seg', state.mapId);
   show('versus');
   versus.start(setup);
   $('#play-btn').focus();
@@ -339,8 +342,7 @@ function newSetup() {
     difficulty: state.difficulty,
     admin: state.admin,
   });
-  // Teste de mapas em protótipo: ?debug&mapa=pico
-  if (DEBUG) setup.mapId = new URLSearchParams(location.search).get('mapa') ?? undefined;
+  setup.mapId = MAPS[state.mapId] ? state.mapId : 'caldeira';
   return setup;
 }
 
@@ -552,6 +554,13 @@ function init() {
   }
   $('.mode-tile[data-mode="ffa"]').addEventListener('click', () => chooseMode(1, 'ffa'));
   $('#cards-next').addEventListener('click', goVersus);
+  $('#map-seg').addEventListener('click', (e) => {
+    const btn = e.target.closest('button');
+    if (!btn) return;
+    state.mapId = btn.dataset.value;
+    savePref('mapa', state.mapId);
+    setChips('#map-seg', state.mapId);
+  });
   $('#diff-seg').addEventListener('click', (e) => {
     const btn = e.target.closest('button');
     if (!btn) return;
@@ -562,6 +571,7 @@ function init() {
   $('#play-btn').addEventListener('click', () => {
     const setup = state.pendingSetup ?? newSetup();
     setup.difficulty = state.difficulty;
+    setup.mapId = state.mapId;
     startMatch(setup);
   });
   $('#resume-btn').addEventListener('click', () => setPaused(false));

@@ -74,8 +74,13 @@ elemento do seu time → confira os times na tela **Versus** e clique em **Lutar
 | Espada | Lâmina Flamejante: queima | Lâmina da Maré: empurra mais e deixa lento | Espadão de Pedra: dano alto, atordoa | Lâmina do Vento: rápida e longa |
 | Cajado | Bola de Fogo: explode e queima | Jato d'Água: atravessa e empurra | Pedrada: arco, atordoa | Tornado: lento, atravessa e puxa |
 
+**Mapas:** na tela antes da luta (Versus) escolha **Caldeira** ou **Pico dos Ventos**
+(ilhas no céu com muito vento, plataformas que balançam presas a balões, lava,
+lago e espinhos no meio).
+
 **Modo ADM (testes):** em Configurações, ligue "Modo ADM (testes)". Cada golpe seu
-passa a dar 999% de dano (bom para testar comemorações e o fim da partida). Os
+passa a dar 999% de dano e o seu lutador fica intangível: nenhum golpe, lava,
+água, espinho ou vento pega nele (cair para fora do mapa ainda tira vida). Os
 bots continuam normais e essas partidas não contam nas estatísticas da conta.
 
 ## Contas e estatísticas
