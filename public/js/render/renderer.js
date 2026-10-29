@@ -500,37 +500,34 @@ export class Renderer {
 
   // Estrelinhas girando em cima de quem está atordoado
   // Arma arremessada que caiu no chão: espada ou cajado universal (sem ser de
-  // time nenhum), flutuando de leve, com brilho e as cargas que sobraram
+  // time nenhum), deitada no chão com a ponta para o lado em que ia, do
+  // mesmo tamanho que fica na mão; as bolinhas são as cargas que sobraram
   drawDroppedWeapon(ctx, item) {
     const cx = item.x + item.w / 2;
     const ground = item.y + item.h;
     const t = this.time + item.id;
+    const dir = item.dir ?? 1;
     ctx.save();
     if (item.landed) {
-      ctx.globalAlpha = 0.45 + Math.sin(t * 4) * 0.15;
-      ctx.fillStyle = prismColor(t);
-      ctx.beginPath();
-      ctx.ellipse(cx, ground, 32, 7, 0, 0, Math.PI * 2);
-      ctx.fill();
-      ctx.globalAlpha = 1;
-      // cargas que sobraram
       const n = item.uses ?? 0;
       for (let i = 0; i < n; i++) {
         ctx.fillStyle = '#ffffff';
         ctx.strokeStyle = 'rgba(11,7,16,0.8)';
-        ctx.lineWidth = 1.5;
+        ctx.lineWidth = 1.2;
         ctx.beginPath();
-        ctx.arc(cx - (n - 1) * 4.5 + i * 9, ground + 12, 3, 0, Math.PI * 2);
+        ctx.arc(cx - (n - 1) * 3.5 + i * 7, ground - 22, 2.2, 0, Math.PI * 2);
         ctx.fill();
         ctx.stroke();
       }
+      // deitada: a arma aponta para -y, gira 90° para ficar na horizontal
+      ctx.translate(cx - dir * 20, ground - (item.weapon === 'espada' ? 5 : 4));
+      ctx.rotate((dir * Math.PI) / 2);
+    } else {
+      // caindo: gira no ar
+      ctx.translate(cx, ground - 15);
+      ctx.rotate(t * 10 * dir);
+      ctx.translate(0, 20);
     }
-    const bob = item.landed ? Math.sin(t * 2.5) * 3 : 0;
-    ctx.translate(cx, ground - 30 + bob);
-    // caindo: gira; no chão: fica inclinada
-    ctx.rotate(item.landed ? (item.weapon === 'espada' ? -0.6 : 0.5) : t * 10);
-    ctx.scale(1.3, 1.3);
-    ctx.translate(0, 18);
     if (item.weapon === 'espada') drawUniversalSword(ctx, t);
     else drawUniversalStaff(ctx, t);
     ctx.restore();

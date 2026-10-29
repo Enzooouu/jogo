@@ -898,6 +898,7 @@ export class Game {
       weapon: pr.weapon,
       uses: pr.uses ?? WEAPONS[pr.weapon].uses,
       dropped: true,
+      dir: Math.sign(pr.vx) || 1,   // lado para onde ia (a ponta fica para esse lado)
       x: Math.round(x - 17),
       y: Math.round(y - 15),
       w: 34,
