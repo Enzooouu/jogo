@@ -42,7 +42,7 @@ export const PLAYER = {
 export const MATCH = {
   countdown: 3,           // "3, 2, 1, LUTA!"
   timeLimit: 240,         // 4 minutos; depois disso vence quem tem mais vidas
-  endDelay: 2.2,          // tempo mostrando o último K.O. antes do resultado
+  endDelay: 4,            // comemoração do vencedor antes da tela de resultado
 };
 
 export const ITEMS = {

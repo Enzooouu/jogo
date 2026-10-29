@@ -911,7 +911,8 @@ export class Game {
         hits: p.stats.hits, pickups: p.stats.pickups, livesLeft: p.state === 'out' ? 0 : p.lives,
       })),
     };
-    this.emit('matchEnd', { winnerTeam, reason });
+    const winnerElement = winnerTeam !== null ? this.players.find((p) => p.team === winnerTeam)?.element ?? null : null;
+    this.emit('matchEnd', { winnerTeam, reason, winnerElement });
   }
 }
 

@@ -120,6 +120,18 @@ export function playEvents(events, localId) {
         tone({ freq: 880, dur: 0.35, type: 'square', vol: 0.18 });
         break;
       case 'matchEnd':
+        // som da comemoração de cada elemento
+        if (e.winnerElement === 'fogo') {
+          for (let i = 0; i < 6; i++) noise({ dur: 0.4, vol: 0.25, freq: 600, delay: 0.5 + i * 0.4 });
+        } else if (e.winnerElement === 'agua') {
+          noise({ dur: 2.5, vol: 0.3, freq: 900, delay: 0.2 });
+        } else if (e.winnerElement === 'ar') {
+          tone({ freq: 200, to: 600, dur: 2.5, type: 'sawtooth', vol: 0.05, delay: 0.1 });
+          noise({ dur: 2.5, vol: 0.2, freq: 1500, delay: 0.1 });
+        } else if (e.winnerElement === 'terra') {
+          tone({ freq: 50, to: 30, dur: 3, type: 'sawtooth', vol: 0.35 });
+          noise({ dur: 3, vol: 0.3, freq: 200 });
+        }
         tone({ freq: 523, dur: 0.15, type: 'triangle', vol: 0.2 });
         tone({ freq: 659, dur: 0.15, type: 'triangle', vol: 0.2, delay: 0.15 });
         tone({ freq: 784, dur: 0.3, type: 'triangle', vol: 0.2, delay: 0.3 });

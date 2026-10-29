@@ -6,6 +6,7 @@ import { weaponProfile } from '/shared/weapons.js';
 import { StageRenderer, roundRect } from './stage.js';
 import { Particles } from './particles.js';
 import { Camera } from './camera.js';
+import { startCelebration, updateCelebration, drawCelebration, CELEBRATION_TIME } from './celebrations.js';
 import { drawFighter, drawSword, drawStaff, hexA } from './fighter.js';
 import { drawSwordArt, drawStaffArt, drawShot } from './weapons-art.js';
 
@@ -157,9 +158,18 @@ export class Renderer {
         case 'respawn':
           P.add({ type: 'ring', x: e.x, y: e.y - 33, size: 50, grow: -60, life: 0.6, color: '#ffffff' });
           break;
-        case 'matchEnd':
-          this.banner = { text: 'FIM DE JOGO', time: 2.2, max: 2.2, color: '#ffffff' };
+        case 'matchEnd': {
+          const winner = e.winnerTeam !== null ? g.players.find((p) => p.team === e.winnerTeam) : null;
+          if (winner) {
+            const el = ELEMENTS[winner.element];
+            const of = { fogo: 'DO FOGO', agua: 'DA ÁGUA', terra: 'DA TERRA', ar: 'DO AR' }[winner.element] ?? el.name.toUpperCase();
+            this.banner = { text: `VITÓRIA ${of}!`, time: CELEBRATION_TIME, max: CELEBRATION_TIME, color: el.light };
+            this.celebration = startCelebration(winner.element);
+          } else {
+            this.banner = { text: 'EMPATE', time: 2.2, max: 2.2, color: '#ffffff' };
+          }
           break;
+        }
         default:
           break;
       }
@@ -215,13 +225,19 @@ export class Renderer {
     // Mundo: a câmera decide o centro e o zoom
     const z = this.scale * cam.zoom;
     ctx.setTransform(z, 0, 0, z, (VIEW_W / 2 - cam.x * cam.zoom + sx) * this.scale, (VIEW_H / 2 - cam.y * cam.zoom + sy) * this.scale);
+    if (this.celebration) {
+      updateCelebration(this.celebration, dt, this);
+      drawCelebration(ctx, this.celebration, 'back');
+    }
     this.stage.drawTerrain(ctx, this.time);
     this.stage.drawHazards(ctx, this.time, false);
     this.drawWinds(ctx);
+    drawCelebration(ctx, this.celebration, 'mid');
     this.drawItems(ctx);
     this.drawProjectiles(ctx);
     this.drawPlayers(ctx, alpha);
     this.particles.draw(ctx);
+    drawCelebration(ctx, this.celebration, 'front');
     this.stage.drawHazards(ctx, this.time, true);
     if (this.debug) this.drawDebug(ctx);
 
