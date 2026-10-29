@@ -7,6 +7,11 @@
 // Só o visual mora aqui: chão, paredes, plataformas e perigos continuam nas
 // posições de shared/maps.js (é lá que fica a colisão).
 
+import { roundRect, shadeHex, seeded, glowSprite } from './stage-util.js';
+import { PICO_ART } from './stage-pico.js';
+
+export { roundRect };
+
 const VIEW_W = 1280;
 const VIEW_H = 720;
 
@@ -29,6 +34,8 @@ export class StageRenderer {
     this.map = map;
     this.scale = 0;
     this.terrainRect = { x: 60, y: -420, w: 1160, h: 1400 };
+    // cada mapa tem o seu cenário; os perigos são desenhados igual em todos
+    this.art = map.id === 'pico' ? PICO_ART : CALDEIRA_ART;
     this.setScale(scale);
   }
 
@@ -36,9 +43,9 @@ export class StageRenderer {
     if (scale === this.scale) return;
     this.scale = scale;
     this.sky = this.buildSky();
-    this.far = this.buildLayer(FAR, (ctx, rand) => drawFar(ctx, this.map, rand));
-    this.mid = this.buildLayer(MID, (ctx, rand) => drawMid(ctx, this.map, rand));
-    this.terrain = this.buildLayer({ ...this.terrainRect, res: 1 }, (ctx, rand) => drawTerrain(ctx, this.map, rand));
+    this.far = this.buildLayer(FAR, (ctx, rand) => this.art.far(ctx, this.map, rand));
+    this.mid = this.buildLayer(MID, (ctx, rand) => this.art.mid(ctx, this.map, rand));
+    this.terrain = this.buildLayer({ ...this.terrainRect, res: 1 }, (ctx, rand) => this.art.terrain(ctx, this.map, rand));
     this.vignette = this.buildVignette();
     this.haze = this.buildHaze();
   }
@@ -50,8 +57,8 @@ export class StageRenderer {
     const ctx = canvas.getContext('2d');
     ctx.scale(s, s);
     const fog = ctx.createLinearGradient(0, VIEW_H * 0.55, 0, VIEW_H);
-    fog.addColorStop(0, 'rgba(60,20,40,0)');
-    fog.addColorStop(1, 'rgba(70,24,40,0.55)');
+    fog.addColorStop(0, this.art.haze[0]);
+    fog.addColorStop(1, this.art.haze[1]);
     ctx.fillStyle = fog;
     ctx.fillRect(0, VIEW_H * 0.55, VIEW_W, VIEW_H * 0.45);
     return canvas;
@@ -83,54 +90,7 @@ export class StageRenderer {
     const canvas = this.makeCanvas(VIEW_W * s, VIEW_H * s);
     const ctx = canvas.getContext('2d');
     ctx.scale(s, s);
-    const t = this.map.theme;
-    const sky = ctx.createLinearGradient(0, 0, 0, VIEW_H);
-    sky.addColorStop(0, t.skyTop);
-    sky.addColorStop(0.45, '#26113c');
-    sky.addColorStop(0.75, t.skyBottom);
-    sky.addColorStop(1, '#2a0f24');
-    ctx.fillStyle = sky;
-    ctx.fillRect(0, 0, VIEW_W, VIEW_H);
-    // Metade quente (vulcão) e metade fria (cachoeira)
-    const side = ctx.createLinearGradient(0, 0, VIEW_W, 0);
-    side.addColorStop(0, 'rgba(255,80,30,0.22)');
-    side.addColorStop(0.5, 'rgba(120,40,120,0)');
-    side.addColorStop(1, 'rgba(40,130,255,0.2)');
-    ctx.fillStyle = side;
-    ctx.fillRect(0, 0, VIEW_W, VIEW_H);
-    // Nebulosas bem suaves
-    for (const [x, y, r, c] of [[420, 120, 380, '122,60,255,0.10'], [930, 80, 300, '47,181,201,0.08'], [660, 250, 440, '255,79,154,0.06']]) {
-      const g = ctx.createRadialGradient(x, y, 0, x, y, r);
-      g.addColorStop(0, `rgba(${c})`);
-      g.addColorStop(1, `rgba(${c.split(',').slice(0, 3).join(',')},0)`);
-      ctx.fillStyle = g;
-      ctx.fillRect(x - r, y - r, r * 2, r * 2);
-    }
-    const rand = seeded(3);
-    // Faixa da via láctea (diagonal)
-    ctx.save();
-    ctx.translate(640, 160);
-    ctx.rotate(-0.28);
-    const band = ctx.createLinearGradient(0, -90, 0, 90);
-    band.addColorStop(0, 'rgba(220,200,255,0)');
-    band.addColorStop(0.5, 'rgba(220,200,255,0.07)');
-    band.addColorStop(1, 'rgba(220,200,255,0)');
-    ctx.fillStyle = band;
-    ctx.fillRect(-900, -90, 1800, 180);
-    for (let i = 0; i < 160; i++) {
-      ctx.globalAlpha = 0.15 + rand() * 0.5;
-      ctx.fillStyle = '#f2e8ff';
-      ctx.fillRect(-800 + rand() * 1600, (rand() + rand() - 1) * 70, 1, 1);
-    }
-    ctx.restore();
-    for (let i = 0; i < 150; i++) {
-      ctx.globalAlpha = 0.15 + rand() * 0.65;
-      ctx.fillStyle = rand() < 0.15 ? '#ffd7b0' : '#ffffff';
-      ctx.beginPath();
-      ctx.arc(rand() * VIEW_W, rand() * VIEW_H * 0.6, rand() * 1.3 + 0.3, 0, Math.PI * 2);
-      ctx.fill();
-    }
-    ctx.globalAlpha = 1;
+    this.art.sky(ctx, this.map.theme);
     return canvas;
   }
 
@@ -150,9 +110,9 @@ export class StageRenderer {
     ctx.setTransform(1, 0, 0, 1, 0, 0);
     ctx.drawImage(this.sky, 0, 0);
     ctx.setTransform(s, 0, 0, s, 0, 0);
-    drawSkyAnimated(ctx, time);
+    this.art.skyAnimated(ctx, time);
 
-    for (const [layer, cache, animate] of [[FAR, this.far, drawFarAnimated], [MID, this.mid, drawMidAnimated]]) {
+    for (const [layer, cache, animate] of [[FAR, this.far, this.art.farAnimated], [MID, this.mid, this.art.midAnimated]]) {
       const l = camera.layer(layer.f);
       const z = s * l.zoom;
       ctx.setTransform(z, 0, 0, z, (l.ox + shake.x * layer.f) * s, (l.oy + shake.y * layer.f) * s);
@@ -168,14 +128,10 @@ export class StageRenderer {
 
   // Ilha, plataformas e enfeites (com a transformação do mundo já aplicada).
   drawTerrain(ctx, time) {
-    for (const d of this.map.decor ?? []) {
-      if (d.type === 'cascata') drawCascade(ctx, d, time);
-    }
-    drawAbyssGlow(ctx, time);
+    this.art.behind(ctx, this.map, time);
     const r = this.terrainRect;
     ctx.drawImage(this.terrain, r.x, r.y, r.w, r.h);
-    drawIslandAnimated(ctx, time);
-    for (const d of this.map.decor ?? []) drawDecorAnimated(ctx, d, time);
+    this.art.front(ctx, this.map, time);
   }
 
   // Perigos animados. `front` desenha uma camada translúcida por cima dos
@@ -193,6 +149,57 @@ export class StageRenderer {
     ctx.setTransform(1, 0, 0, 1, 0, 0);
     ctx.drawImage(this.vignette, 0, 0);
   }
+}
+
+// Céu da Caldeira: noite com nebulosas, via láctea e estrelas
+function paintSkyCaldeira(ctx, t) {
+  const sky = ctx.createLinearGradient(0, 0, 0, VIEW_H);
+  sky.addColorStop(0, t.skyTop);
+  sky.addColorStop(0.45, '#26113c');
+  sky.addColorStop(0.75, t.skyBottom);
+  sky.addColorStop(1, '#2a0f24');
+  ctx.fillStyle = sky;
+  ctx.fillRect(0, 0, VIEW_W, VIEW_H);
+  // Metade quente (vulcão) e metade fria (cachoeira)
+  const side = ctx.createLinearGradient(0, 0, VIEW_W, 0);
+  side.addColorStop(0, 'rgba(255,80,30,0.22)');
+  side.addColorStop(0.5, 'rgba(120,40,120,0)');
+  side.addColorStop(1, 'rgba(40,130,255,0.2)');
+  ctx.fillStyle = side;
+  ctx.fillRect(0, 0, VIEW_W, VIEW_H);
+  // Nebulosas bem suaves
+  for (const [x, y, r, c] of [[420, 120, 380, '122,60,255,0.10'], [930, 80, 300, '47,181,201,0.08'], [660, 250, 440, '255,79,154,0.06']]) {
+    const g = ctx.createRadialGradient(x, y, 0, x, y, r);
+    g.addColorStop(0, `rgba(${c})`);
+    g.addColorStop(1, `rgba(${c.split(',').slice(0, 3).join(',')},0)`);
+    ctx.fillStyle = g;
+    ctx.fillRect(x - r, y - r, r * 2, r * 2);
+  }
+  const rand = seeded(3);
+  // Faixa da via láctea (diagonal)
+  ctx.save();
+  ctx.translate(640, 160);
+  ctx.rotate(-0.28);
+  const band = ctx.createLinearGradient(0, -90, 0, 90);
+  band.addColorStop(0, 'rgba(220,200,255,0)');
+  band.addColorStop(0.5, 'rgba(220,200,255,0.07)');
+  band.addColorStop(1, 'rgba(220,200,255,0)');
+  ctx.fillStyle = band;
+  ctx.fillRect(-900, -90, 1800, 180);
+  for (let i = 0; i < 160; i++) {
+    ctx.globalAlpha = 0.15 + rand() * 0.5;
+    ctx.fillStyle = '#f2e8ff';
+    ctx.fillRect(-800 + rand() * 1600, (rand() + rand() - 1) * 70, 1, 1);
+  }
+  ctx.restore();
+  for (let i = 0; i < 150; i++) {
+    ctx.globalAlpha = 0.15 + rand() * 0.65;
+    ctx.fillStyle = rand() < 0.15 ? '#ffd7b0' : '#ffffff';
+    ctx.beginPath();
+    ctx.arc(rand() * VIEW_W, rand() * VIEW_H * 0.6, rand() * 1.3 + 0.3, 0, Math.PI * 2);
+    ctx.fill();
+  }
+  ctx.globalAlpha = 1;
 }
 
 // ======================================================================
@@ -588,22 +595,6 @@ function bigRiver(ctx, pts, w) {
   }
 }
 
-// Bolinha de luz suave (desenhada uma vez por cor e só copiada)
-const glowSprites = {};
-function glowSprite(rgb) {
-  if (glowSprites[rgb]) return glowSprites[rgb];
-  const c = document.createElement('canvas');
-  c.width = c.height = 64;
-  const ctx = c.getContext('2d');
-  const g = ctx.createRadialGradient(32, 32, 0, 32, 32, 32);
-  g.addColorStop(0, `rgba(${rgb},1)`);
-  g.addColorStop(0.4, `rgba(${rgb},0.5)`);
-  g.addColorStop(1, `rgba(${rgb},0)`);
-  ctx.fillStyle = g;
-  ctx.fillRect(0, 0, 64, 64);
-  glowSprites[rgb] = c;
-  return c;
-}
 
 // Pontos de luz descendo por rios de lava (a lava andando)
 function lavaPulses(ctx, flows, time, speed, perFlow, size, boost) {
@@ -2500,6 +2491,32 @@ function drawCascade(ctx, d, time) {
 }
 
 // ======================================================================
+// Cenário da Caldeira (quem desenha cada camada)
+
+const CALDEIRA_ART = {
+  sky: paintSkyCaldeira,
+  skyAnimated: drawSkyAnimated,
+  far: drawFar,
+  farAnimated: drawFarAnimated,
+  mid: drawMid,
+  midAnimated: drawMidAnimated,
+  terrain: drawTerrain,
+  // atrás da ilha: cascatas e brilho do abismo
+  behind(ctx, map, time) {
+    for (const d of map.decor ?? []) {
+      if (d.type === 'cascata') drawCascade(ctx, d, time);
+    }
+    drawAbyssGlow(ctx, time);
+  },
+  // por cima da ilha: luzes que mudam e enfeites animados
+  front(ctx, map, time) {
+    drawIslandAnimated(ctx, time);
+    for (const d of map.decor ?? []) drawDecorAnimated(ctx, d, time);
+  },
+  haze: ['rgba(60,20,40,0)', 'rgba(70,24,40,0.55)'],
+};
+
+// ======================================================================
 // Perigos
 
 function drawLava(ctx, h, time, front) {
@@ -2674,30 +2691,5 @@ function wavyLine(ctx, h, t, amp, freq) {
   }
 }
 
-export function roundRect(ctx, x, y, w, h, r) {
-  ctx.beginPath();
-  ctx.moveTo(x + r, y);
-  ctx.arcTo(x + w, y, x + w, y + h, r);
-  ctx.arcTo(x + w, y + h, x, y + h, r);
-  ctx.arcTo(x, y + h, x, y, r);
-  ctx.arcTo(x, y, x + w, y, r);
-  ctx.closePath();
-}
 
-// Clareia (k > 0) ou escurece (k < 0) uma cor #rrggbb
-function shadeHex(hex, k) {
-  const n = parseInt(hex.slice(1), 16);
-  const f = (c) => Math.round(k < 0 ? c * (1 + k) : c + (255 - c) * k);
-  const r = f((n >> 16) & 255);
-  const g = f((n >> 8) & 255);
-  const b = f(n & 255);
-  return `rgb(${r},${g},${b})`;
-}
 
-function seeded(seed) {
-  let s = seed;
-  return () => {
-    s = (s * 16807) % 2147483647;
-    return (s - 1) / 2147483646;
-  };
-}

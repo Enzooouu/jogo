@@ -331,7 +331,7 @@ function playerName() {
 }
 
 function newSetup() {
-  return buildLocalSetup({
+  const setup = buildLocalSetup({
     element: state.element,
     name: playerName(),
     teamSize: state.teamSize,
@@ -339,6 +339,9 @@ function newSetup() {
     difficulty: state.difficulty,
     admin: state.admin,
   });
+  // Teste de mapas em protótipo: ?debug&mapa=pico
+  if (DEBUG) setup.mapId = new URLSearchParams(location.search).get('mapa') ?? undefined;
+  return setup;
 }
 
 async function startMatch(setup) {

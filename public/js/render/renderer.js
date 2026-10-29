@@ -253,12 +253,19 @@ export class Renderer {
     const g = this.game;
     const chance = (rate) => Math.random() < rate * dt;
 
-    // Brasas e cinzas no ar (lado do fogo) e gotículas de névoa (lado da água)
-    if (chance(6)) {
-      P.add({ x: -100 + Math.random() * 700, y: 760, vx: 20 + Math.random() * 30, vy: -50 - Math.random() * 50, life: 5, size: 1.6, color: Math.random() < 0.6 ? '#ff9a3c' : '#ffd25a', drag: 0.1 });
-    }
-    if (chance(4)) {
-      P.add({ x: 700 + Math.random() * 700, y: -20 + Math.random() * 300, vx: -15, vy: 25 + Math.random() * 20, life: 5, size: 1.4, color: 'rgba(180,225,255,0.7)' });
+    if (g.map.id === 'pico') {
+      // Folhas e pétalas levadas pelo vento
+      if (chance(5)) {
+        P.add({ x: -60, y: 100 + Math.random() * 500, vx: 90 + Math.random() * 80, vy: -10 + Math.random() * 30, life: 9, size: 2, color: Math.random() < 0.5 ? '#9fdc6e' : '#ffb3c8', drag: 0.02 });
+      }
+    } else {
+      // Brasas e cinzas no ar (lado do fogo) e gotículas de névoa (lado da água)
+      if (chance(6)) {
+        P.add({ x: -100 + Math.random() * 700, y: 760, vx: 20 + Math.random() * 30, vy: -50 - Math.random() * 50, life: 5, size: 1.6, color: Math.random() < 0.6 ? '#ff9a3c' : '#ffd25a', drag: 0.1 });
+      }
+      if (chance(4)) {
+        P.add({ x: 700 + Math.random() * 700, y: -20 + Math.random() * 300, vx: -15, vy: 25 + Math.random() * 20, life: 5, size: 1.4, color: 'rgba(180,225,255,0.7)' });
+      }
     }
     for (const d of g.map.decor ?? []) {
       if (d.type === 'braseiro' && chance(10)) {

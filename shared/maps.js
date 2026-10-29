@@ -73,6 +73,63 @@ export const MAPS = {
     ],
     theme: { skyTop: '#140a24', skyBottom: '#3d1630', haze: '#ff7a3c' },
   },
+
+  // Protótipo (ainda não aparece no menu): ilhas no céu ao entardecer, com
+  // muito vento, espinhos na ilhota da esquerda e um lago de chuva na direita.
+  pico: {
+    id: 'pico',
+    name: 'Pico dos Ventos',
+    prototype: true,
+    width: 1280,
+    height: 720,
+    blast: { left: -260, right: 1540, top: -560, bottom: 1000 },
+    solids: [
+      { x: 360, y: 520, w: 560, h: 150 },  // ilha principal
+      { x: 110, y: 450, w: 170, h: 80 },   // ilhota da esquerda
+      { x: 1000, y: 450, w: 36, h: 80 },   // ilhota da direita (bordas do lago)
+      { x: 1036, y: 474, w: 98, h: 56 },   // fundo do lago
+      { x: 1134, y: 450, w: 36, h: 80 },
+    ],
+    platforms: [
+      { x: 420, y: 390, w: 150 },
+      { x: 710, y: 390, w: 150 },
+      { x: 560, y: 270, w: 160 },
+    ],
+    hazards: [
+      { type: 'espinhos', x: 155, y: 438, w: 80, h: 12 },
+      { type: 'agua', x: 1036, y: 458, w: 98, h: 16 },
+    ],
+    spawns: [
+      { x: 420, y: 520 }, { x: 860, y: 520 },
+      { x: 520, y: 520 }, { x: 760, y: 520 },
+      { x: 495, y: 390 }, { x: 785, y: 390 },
+      { x: 190, y: 450, near: 'espinhos' }, { x: 1085, y: 450, near: 'agua' },
+    ],
+    respawns: [
+      { x: 560, y: 150 }, { x: 720, y: 150 }, { x: 400, y: 150 }, { x: 880, y: 150 },
+    ],
+    wind: {
+      first: 5, every: [5, 8], warn: 1.2, active: 3, max: 3,
+      w: 190, h: 150, strength: 340,
+      surfaces: [
+        { y: 520, x0: 370, x1: 910 },
+        { y: 450, x0: 115, x1: 275 },
+        { y: 450, x0: 1005, x1: 1165 },
+        { y: 390, x0: 420, x1: 570 },
+        { y: 390, x0: 710, x1: 860 },
+        { y: 270, x0: 560, x1: 720 },
+      ],
+    },
+    itemSpawn: { minX: 380, maxX: 900, y: -40 },
+    decor: [
+      { type: 'moinho', x: 1150, y: 450 },
+      { type: 'bandeira', x: 380, y: 520 },
+      { type: 'bandeira', x: 900, y: 520 },
+      { type: 'arvore', x: 240, y: 450 },
+      { type: 'santuario', x: 640, y: 520 },
+    ],
+    theme: { skyTop: '#3a4f9e', skyBottom: '#ffb98a', haze: '#ffd6a8' },
+  },
 };
 
 export const DEFAULT_MAP = 'caldeira';
