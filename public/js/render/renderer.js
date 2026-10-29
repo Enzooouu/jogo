@@ -516,9 +516,16 @@ export class Renderer {
     ctx.save();
     ctx.textBaseline = 'alphabetic';
 
-    // Cartões dos jogadores, agrupados por time
+    // Seu cartão fica destacado no canto de cima; os outros ficam embaixo
+    // (no 1x1, o adversário vai para o canto de baixo à direita).
+    const me = g.playerById(this.localId);
+    if (me) this.drawMyCard(ctx, me, 18, 16);
     const teams = g.teams();
-    const ordered = teams.flatMap((t) => g.players.filter((p) => p.team === t));
+    const ordered = teams.flatMap((t) => g.players.filter((p) => p.team === t && p !== me));
+    if (me && ordered.length === 1) {
+      this.drawCard(ctx, ordered[0], VIEW_W - 210 - 18, VIEW_H - 74, 210);
+      ordered.length = 0;
+    }
     const n = ordered.length;
     const gap = 10;
     const extraGap = teams.length > 1 && teams.length <= 4 ? 30 : 0;
@@ -527,6 +534,8 @@ export class Renderer {
     let x = (VIEW_W - totalW) / 2;
     const y = VIEW_H - 74;
     let prevTeam = ordered[0]?.team;
+    const groups = new Set(ordered.map((p) => p.team)).size;
+    if (groups < teams.length) x += (extraGap * (teams.length - groups)) / 2;
     for (const p of ordered) {
       if (p.team !== prevTeam) {
         x += extraGap;
@@ -575,7 +584,6 @@ export class Renderer {
       this.drawBigText(ctx, b.text, 1 + (1 - k) * 0.25, b.color, Math.min(1, k * 2));
     }
 
-    const me = g.playerById(this.localId);
     if (me && me.state === 'out' && g.phase === 'playing') {
       ctx.textAlign = 'center';
       ctx.font = '700 18px system-ui, sans-serif';
@@ -591,6 +599,105 @@ export class Renderer {
       ctx.font = '12px monospace';
       ctx.fillStyle = '#9f9';
       ctx.fillText(`FPS ${this.fps.toFixed(0)}  tick ${g.tick}  partículas ${this.particles.list.length}`, 10, 18);
+    }
+    ctx.restore();
+  }
+
+  // Cartão grande do jogador local (canto de cima à esquerda)
+  drawMyCard(ctx, p, x, y) {
+    const el = ELEMENTS[p.element];
+    const w = 300;
+    const h = 100;
+    const out = p.state === 'out';
+    ctx.save();
+    ctx.globalAlpha = out ? 0.55 : 1;
+    ctx.shadowColor = el.color;
+    ctx.shadowBlur = 18;
+    const bg = ctx.createLinearGradient(x, 0, x + w, 0);
+    bg.addColorStop(0, hexA(el.color, 0.45));
+    bg.addColorStop(0.45, 'rgba(14,8,20,0.92)');
+    bg.addColorStop(1, 'rgba(14,8,20,0.88)');
+    ctx.fillStyle = bg;
+    roundRect(ctx, x, y, w, h, 14);
+    ctx.fill();
+    ctx.shadowBlur = 0;
+    ctx.strokeStyle = '#ffffff';
+    ctx.lineWidth = 2.5;
+    ctx.stroke();
+
+    // Retrato (cabeça do lutador)
+    ctx.save();
+    ctx.beginPath();
+    ctx.arc(x + 46, y + 50, 32, 0, Math.PI * 2);
+    ctx.fillStyle = 'rgba(0,0,0,0.35)';
+    ctx.fill();
+    ctx.strokeStyle = el.light;
+    ctx.lineWidth = 2;
+    ctx.stroke();
+    ctx.clip();
+    // centraliza a cabeça no círculo
+    ctx.translate(x + 42, y + 132);
+    ctx.scale(1.5, 1.5);
+    const portrait = { ...p, x: -15, y: -66, hitstun: 0, attack: null, weapon: null, onWall: 0, dashTime: 0, invuln: 0, vx: 0, vy: 0, onGround: true, facing: 1 };
+    drawFighter(ctx, portrait, -15, -66, { runPhase: 0 }, this.time, { showName: false });
+    ctx.restore();
+
+    ctx.textAlign = 'left';
+    ctx.font = '800 15px system-ui, sans-serif';
+    ctx.fillStyle = '#ffffff';
+    ctx.fillText(fit(ctx, `${p.name} (você)`, 150), x + 88, y + 24);
+    ctx.font = '700 11px system-ui, sans-serif';
+    ctx.fillStyle = el.light;
+    let sub = el.name.toUpperCase();
+    if (p.weapon) sub = `${weaponProfile(p.weapon.id, p.element).name} (${p.weapon.uses})`;
+    if (p.state === 'respawning') sub = 'VOLTANDO...';
+    if (out) sub = 'ELIMINADO';
+    ctx.fillText(fit(ctx, sub, 150), x + 88, y + 40);
+
+    // Vidas
+    for (let i = 0; i < this.game.lives; i++) {
+      ctx.fillStyle = i < p.lives ? el.color : 'rgba(255,255,255,0.15)';
+      ctx.strokeStyle = 'rgba(0,0,0,0.6)';
+      ctx.lineWidth = 1.5;
+      ctx.beginPath();
+      ctx.arc(x + 95 + i * 17, y + 58, 6, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.stroke();
+    }
+
+    // Dashes no ar disponíveis
+    const maxDash = el.stats?.airDashes ?? 1;
+    ctx.font = '800 10px system-ui, sans-serif';
+    ctx.fillStyle = 'rgba(255,255,255,0.6)';
+    ctx.fillText('DASH', x + 88, y + 86);
+    for (let i = 0; i < maxDash; i++) {
+      const on = !out && (p.onGround || i < p.airDashes) && p.dashCooldown <= 0;
+      const ax = x + 124 + i * 20;
+      const ay = y + 82;
+      ctx.fillStyle = on ? el.light : 'rgba(255,255,255,0.15)';
+      ctx.beginPath();
+      ctx.moveTo(ax - 6, ay - 5);
+      ctx.lineTo(ax + 2, ay - 5);
+      ctx.lineTo(ax + 9, ay);
+      ctx.lineTo(ax + 2, ay + 5);
+      ctx.lineTo(ax - 6, ay + 5);
+      ctx.lineTo(ax - 1, ay);
+      ctx.closePath();
+      ctx.fill();
+    }
+
+    // Dano
+    if (!out) {
+      const dmg = Math.round(p.damage);
+      const txt = `${dmg}%`;
+      ctx.textAlign = 'right';
+      ctx.font = '900 40px system-ui, sans-serif';
+      ctx.lineWidth = 6;
+      ctx.strokeStyle = 'rgba(0,0,0,0.85)';
+      const shakeX = dmg > 120 ? (Math.random() - 0.5) * 3 : 0;
+      ctx.strokeText(txt, x + w - 14 + shakeX, y + 88);
+      ctx.fillStyle = damageColor(dmg);
+      ctx.fillText(txt, x + w - 14 + shakeX, y + 88);
     }
     ctx.restore();
   }
