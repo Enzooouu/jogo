@@ -640,7 +640,8 @@ function volcanoAnimated(ctx, time) {
 // ======================================================================
 // Penhasco com cachoeira (fundo distante, à direita)
 
-const FALL = { x: 1200, top: 150, bottom: 980, w: 66 };
+const POOL = { x: 1200, y: 562, rx: 120, ry: 13 };
+const FALL = { x: 1200, top: 150, bottom: POOL.y, w: 66 };
 
 function cliff(ctx, rand) {
   const outline = [
@@ -753,43 +754,179 @@ function cliff(ctx, rand) {
     ctx.fill();
   }
   ctx.shadowBlur = 0;
+  plungeLedge(ctx, rand);
 }
 
 // Largura da queda numa altura (abre um pouco ao cair)
 function fallEdges(y) {
   const k = (y - FALL.top) / (FALL.bottom - FALL.top);
-  const half = FALL.w / 2 + k * 22;
+  const half = FALL.w / 2 + k * 16;
   return [FALL.x - half, FALL.x + half];
+}
+
+// Plataforma de pedra com o poço onde a cachoeira bate
+function plungeLedge(ctx, rand) {
+  const { x, y, rx } = POOL;
+  // frente da plataforma descendo até o fundo
+  const face = ctx.createLinearGradient(0, y, 0, 1100);
+  face.addColorStop(0, '#18214a');
+  face.addColorStop(1, '#0a0f24');
+  ctx.fillStyle = face;
+  ctx.beginPath();
+  ctx.moveTo(x - rx - 34, y + 2);
+  ctx.lineTo(x - rx - 24, y + 40);
+  ctx.lineTo(x - rx - 10, y + 140);
+  ctx.lineTo(x - rx - 28, 1380);
+  ctx.lineTo(x + rx + 30, 1380);
+  ctx.lineTo(x + rx + 14, y + 150);
+  ctx.lineTo(x + rx + 28, y + 40);
+  ctx.lineTo(x + rx + 34, y + 2);
+  ctx.closePath();
+  ctx.fill();
+  // camadas e brilho de lua na frente
+  ctx.strokeStyle = 'rgba(0,0,0,0.35)';
+  ctx.lineWidth = 2;
+  for (let yy = y + 40; yy < 1000; yy += 34 + rand() * 20) {
+    ctx.beginPath();
+    ctx.moveTo(x - rx - 24, yy);
+    ctx.lineTo(x + rx + 24, yy + (rand() - 0.5) * 8);
+    ctx.stroke();
+  }
+  ctx.fillStyle = 'rgba(120,150,230,0.10)';
+  ctx.beginPath();
+  ctx.moveTo(x - rx - 34, y + 2);
+  ctx.lineTo(x - rx + 10, y + 10);
+  ctx.lineTo(x - rx, y + 200);
+  ctx.lineTo(x - rx - 16, y + 200);
+  ctx.closePath();
+  ctx.fill();
+  // borda de pedra em volta do poço
+  ctx.fillStyle = '#212d5a';
+  ctx.beginPath();
+  ctx.ellipse(x, y + 4, rx + 34, POOL.ry + 11, 0, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.strokeStyle = 'rgba(160,190,255,0.35)';
+  ctx.lineWidth = 2;
+  ctx.beginPath();
+  ctx.ellipse(x, y + 4, rx + 34, POOL.ry + 11, 0, Math.PI * 1.05, Math.PI * 1.95);
+  ctx.stroke();
+  // fundo do poço (a água é desenhada por cima, animada)
+  ctx.fillStyle = '#0a1733';
+  ctx.beginPath();
+  ctx.ellipse(x, y, rx, POOL.ry, 0, 0, Math.PI * 2);
+  ctx.fill();
+  // pedras com musgo na beira (a da frente tem um vão por onde a água sai)
+  for (const [bx, by, r] of [[x - rx - 18, y + 6, 16], [x - rx + 26, y + 16, 13], [x - 52, y + 20, 11], [x + 50, y + 20, 12], [x + rx - 22, y + 16, 14], [x + rx + 16, y + 4, 17]]) {
+    ctx.fillStyle = '#1b2650';
+    ctx.beginPath();
+    ctx.ellipse(bx, by, r, r * 0.65, 0, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = 'rgba(160,190,255,0.25)';
+    ctx.beginPath();
+    ctx.ellipse(bx - r * 0.3, by - r * 0.3, r * 0.5, r * 0.22, -0.3, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = '#2f6b4c';
+    ctx.beginPath();
+    ctx.ellipse(bx, by - r * 0.5, r * 0.75, r * 0.22, 0, Math.PI, 0);
+    ctx.fill();
+  }
+  // capim na beira
+  ctx.strokeStyle = '#3f7a45';
+  ctx.lineWidth = 1.5;
+  for (const gx of [x - rx - 30, x - rx - 4, x + rx + 2, x + rx + 30]) {
+    ctx.beginPath();
+    for (let b = 0; b < 4; b++) {
+      ctx.moveTo(gx + b * 3, y + 4);
+      ctx.quadraticCurveTo(gx + b * 3 - 2, y - 6, gx + b * 3 - 4 + b, y - 12 - b * 2);
+    }
+    ctx.stroke();
+  }
+}
+
+// Nuvem branca-azulada redonda e suave, desenhada uma vez só (névoa e
+// respingos da cachoeira usam cópias dela)
+let mistPuffCanvas = null;
+function mistPuff() {
+  if (mistPuffCanvas) return mistPuffCanvas;
+  const c = document.createElement('canvas');
+  c.width = c.height = 128;
+  const ctx = c.getContext('2d');
+  const g = ctx.createRadialGradient(64, 64, 0, 64, 64, 64);
+  g.addColorStop(0, 'rgba(225,242,255,0.9)');
+  g.addColorStop(0.5, 'rgba(210,235,255,0.4)');
+  g.addColorStop(1, 'rgba(210,235,255,0)');
+  ctx.fillStyle = g;
+  ctx.fillRect(0, 0, 128, 128);
+  mistPuffCanvas = c;
+  return c;
+}
+
+// Cortina de água com bordas que ondulam
+function curtainPath(ctx, top, bottom, edges, time, wobble) {
+  ctx.beginPath();
+  for (let y = top; y <= bottom; y += 20) {
+    const [l] = edges(y);
+    const xx = l + Math.sin(y * 0.11 + time * 9) * wobble;
+    if (y === top) ctx.moveTo(xx, y);
+    else ctx.lineTo(xx, y);
+  }
+  for (let y = bottom; y >= top; y -= 20) {
+    const [, r] = edges(y);
+    ctx.lineTo(r + Math.sin(y * 0.11 + time * 9 + 2) * wobble, y);
+  }
+  ctx.closePath();
 }
 
 function waterfallAnimated(ctx, time) {
   const { x, top, bottom } = FALL;
-  // cortina de água com faixas claras e escuras
   const [l0, r0] = fallEdges(top);
   const [l1, r1] = fallEdges(bottom);
-  const g = ctx.createLinearGradient(l1, 0, r1, 0);
-  g.addColorStop(0, 'rgba(90,170,255,0.25)');
-  g.addColorStop(0.12, 'rgba(160,215,255,0.7)');
-  g.addColorStop(0.3, 'rgba(110,185,255,0.6)');
-  g.addColorStop(0.5, 'rgba(215,240,255,0.85)');
-  g.addColorStop(0.7, 'rgba(110,185,255,0.6)');
-  g.addColorStop(0.88, 'rgba(170,220,255,0.7)');
-  g.addColorStop(1, 'rgba(90,170,255,0.25)');
-  ctx.fillStyle = g;
-  ctx.beginPath();
-  ctx.moveTo(l0, top + 6);
-  ctx.lineTo(r0, top + 6);
-  ctx.lineTo(r1, bottom);
-  ctx.lineTo(l1, bottom);
-  ctx.closePath();
-  ctx.fill();
+  const puff = mistPuff();
 
-  // riscos de água caindo em velocidades diferentes
+  // cortina de água com faixas claras e escuras
+  const g = ctx.createLinearGradient(l1, 0, r1, 0);
+  g.addColorStop(0, 'rgba(90,170,255,0.3)');
+  g.addColorStop(0.12, 'rgba(160,215,255,0.75)');
+  g.addColorStop(0.3, 'rgba(100,175,250,0.6)');
+  g.addColorStop(0.5, 'rgba(215,240,255,0.88)');
+  g.addColorStop(0.7, 'rgba(100,175,250,0.6)');
+  g.addColorStop(0.88, 'rgba(170,220,255,0.75)');
+  g.addColorStop(1, 'rgba(90,170,255,0.3)');
+  ctx.fillStyle = g;
+  curtainPath(ctx, top + 6, bottom, fallEdges, time, 1.2);
+  ctx.fill();
+  // canais mais escuros correndo na água
+  ctx.fillStyle = 'rgba(40,100,190,0.22)';
+  for (const lane of [0.24, 0.62, 0.8]) {
+    ctx.beginPath();
+    for (let y = top + 10; y <= bottom; y += 30) {
+      const [l, r] = fallEdges(y);
+      const xx = l + (r - l) * lane + Math.sin(y * 0.03 + lane * 9) * 3;
+      if (y === top + 10) ctx.moveTo(xx - 2, y);
+      else ctx.lineTo(xx - 2, y);
+    }
+    for (let y = bottom; y >= top + 10; y -= 30) {
+      const [l, r] = fallEdges(y);
+      ctx.lineTo(l + (r - l) * lane + Math.sin(y * 0.03 + lane * 9) * 3 + 3, y);
+    }
+    ctx.closePath();
+    ctx.fill();
+  }
+  // placas de espuma escorregando (dão a sensação de queda)
+  for (let i = 0; i < 7; i++) {
+    const y = top + ((time * 230 + i * 97) % (bottom - top - 20));
+    const [l, r] = fallEdges(y);
+    const cx = l + (r - l) * (0.2 + ((i * 0.37) % 0.6));
+    ctx.globalAlpha = 0.35;
+    ctx.drawImage(puff, cx - 14, y - 26, 28, 52);
+  }
+  ctx.globalAlpha = 1;
   ctx.lineCap = 'round';
+  // riscos de água caindo em velocidades diferentes
   for (let i = 0; i < 30; i++) {
     const lane = ((i * 0.618) % 1) * 0.9 + 0.05;
     const speed = 260 + (i % 5) * 45;
-    const len = 30 + (i % 4) * 22;
+    const len = 26 + (i % 4) * 18;
     const y = top + 10 + ((time * speed + i * 131) % (bottom - top));
     const [l, r] = fallEdges(y);
     const lx = l + (r - l) * lane;
@@ -799,17 +936,6 @@ function waterfallAnimated(ctx, time) {
     ctx.moveTo(lx, y);
     ctx.lineTo(lx, Math.min(bottom, y + len));
     ctx.stroke();
-  }
-  // placas de espuma escorregando
-  for (let i = 0; i < 6; i++) {
-    const y = top + ((time * 200 + i * 160) % (bottom - top));
-    const [l, r] = fallEdges(y);
-    const cx = l + (r - l) * (0.2 + ((i * 0.37) % 0.6));
-    const fg = ctx.createRadialGradient(cx, y, 0, cx, y, 18);
-    fg.addColorStop(0, 'rgba(255,255,255,0.45)');
-    fg.addColorStop(1, 'rgba(255,255,255,0)');
-    ctx.fillStyle = fg;
-    ctx.fillRect(cx - 18, y - 30, 36, 60);
   }
   // borda de cima: água passando por cima da pedra
   const lip = ctx.createLinearGradient(0, top - 6, 0, top + 16);
@@ -834,7 +960,7 @@ function waterfallAnimated(ctx, time) {
   for (let i = 0; i < 12; i++) {
     const k = (time * 0.8 + i / 12) % 1;
     const side = i % 2 ? 1 : -1;
-    const y0 = top + 80 + ((i * 97) % 600);
+    const y0 = top + 60 + ((i * 97) % (bottom - top - 120));
     const [l, r] = fallEdges(y0);
     const ex = side > 0 ? r : l;
     ctx.globalAlpha = 1 - k;
@@ -845,7 +971,7 @@ function waterfallAnimated(ctx, time) {
   ctx.globalAlpha = 1;
 
   // quedas finas saindo do penhasco
-  for (const [sx, sy, sb] of [[1290, 300, 720], [1352, 262, 640]]) {
+  for (const [sx, sy, sb] of [[1290, 300, 556], [1352, 262, 552]]) {
     ctx.fillStyle = 'rgba(170,220,255,0.45)';
     ctx.fillRect(sx - 3, sy, 6, sb - sy);
     ctx.fillStyle = 'rgba(255,255,255,0.7)';
@@ -853,42 +979,137 @@ function waterfallAnimated(ctx, time) {
       const y = sy + ((time * 220 + i * 90) % (sb - sy));
       ctx.fillRect(sx - 1, y, 2, 24);
     }
-    const m = ctx.createRadialGradient(sx, sb, 0, sx, sb, 40);
-    m.addColorStop(0, 'rgba(210,235,255,0.35)');
-    m.addColorStop(1, 'rgba(210,235,255,0)');
-    ctx.fillStyle = m;
-    ctx.fillRect(sx - 40, sb - 40, 80, 80);
   }
 
-  // névoa lá embaixo, onde a água some
-  const fade = ctx.createLinearGradient(0, bottom - 200, 0, bottom);
-  fade.addColorStop(0, 'rgba(200,230,255,0)');
-  fade.addColorStop(1, 'rgba(200,230,255,0.45)');
-  ctx.fillStyle = fade;
-  ctx.fillRect(l1 - 10, bottom - 200, r1 - l1 + 20, 200);
-  for (let i = 0; i < 6; i++) {
-    const k = (time * 0.12 + i / 6) % 1;
-    const px = x + Math.sin(i * 2.1) * 80 + Math.sin(time * 0.5 + i) * 20;
-    const py = bottom - 30 - k * 110;
-    const r = 50 + k * 50;
-    const puff = ctx.createRadialGradient(px, py, 0, px, py, r);
-    puff.addColorStop(0, `rgba(215,235,255,${0.32 * (1 - k)})`);
-    puff.addColorStop(1, 'rgba(215,235,255,0)');
-    ctx.fillStyle = puff;
-    ctx.fillRect(px - r, py - r, r * 2, r * 2);
+  splash(ctx, time, puff, l1, r1);
+}
+
+// Água batendo no poço: água agitada, anéis, espuma, gotas pulando,
+// névoa subindo e o poço transbordando pela frente.
+function splash(ctx, time, puff, l1, r1) {
+  const { x, y, rx, ry } = POOL;
+
+  // água do poço
+  const w = ctx.createRadialGradient(x, y, 4, x, y, rx);
+  w.addColorStop(0, 'rgba(200,235,255,0.95)');
+  w.addColorStop(0.35, 'rgba(90,170,240,0.9)');
+  w.addColorStop(1, 'rgba(30,90,180,0.9)');
+  ctx.fillStyle = w;
+  ctx.beginPath();
+  ctx.ellipse(x, y, rx, ry, 0, 0, Math.PI * 2);
+  ctx.fill();
+  // anéis de onda abrindo a partir da queda
+  ctx.lineWidth = 1.5;
+  for (let i = 0; i < 4; i++) {
+    const k = (time * 0.55 + i / 4) % 1;
+    const rr = 40 + k * (rx - 40);
+    ctx.strokeStyle = `rgba(235,250,255,${0.6 * (1 - k)})`;
+    ctx.beginPath();
+    ctx.ellipse(x, y + 1, rr, rr * (ry / rx), 0, 0, Math.PI * 2);
+    ctx.stroke();
   }
-  const mist = ctx.createRadialGradient(x, bottom, 10, x, bottom, 220);
-  mist.addColorStop(0, 'rgba(200,230,255,0.4)');
-  mist.addColorStop(1, 'rgba(200,230,255,0)');
-  ctx.fillStyle = mist;
-  ctx.fillRect(x - 220, bottom - 220, 440, 440);
+
+  // poço transbordando pela frente: queda menor descendo até o abismo
+  const sTop = y + ry;
+  const sBottom = 1000;
+  const spill = (yy) => {
+    const k = (yy - sTop) / (sBottom - sTop);
+    return [x - 16 - k * 10, x + 16 + k * 10];
+  };
+  const sg = ctx.createLinearGradient(x - 26, 0, x + 26, 0);
+  sg.addColorStop(0, 'rgba(90,170,255,0.2)');
+  sg.addColorStop(0.5, 'rgba(200,235,255,0.7)');
+  sg.addColorStop(1, 'rgba(90,170,255,0.2)');
+  ctx.fillStyle = sg;
+  curtainPath(ctx, sTop, sBottom, spill, time, 1.5);
+  ctx.fill();
+  ctx.strokeStyle = 'rgba(255,255,255,0.6)';
+  ctx.lineWidth = 1.5;
+  for (let i = 0; i < 10; i++) {
+    const yy = sTop + ((time * 300 + i * 61) % (sBottom - sTop));
+    const [l, r] = spill(yy);
+    const lx = l + (r - l) * ((i * 0.37) % 1);
+    ctx.beginPath();
+    ctx.moveTo(lx, yy);
+    ctx.lineTo(lx, Math.min(sBottom, yy + 30));
+    ctx.stroke();
+  }
+  ctx.fillStyle = 'rgba(240,252,255,0.9)';
+  ctx.beginPath();
+  ctx.ellipse(x, sTop + 2, 20, 4, 0, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.globalAlpha = 0.6;
+  ctx.drawImage(puff, x - 120, sBottom - 90, 240, 180);
+  ctx.globalAlpha = 1;
+
+  // espuma revolta onde a água bate
+  const half = (r1 - l1) / 2;
+  ctx.globalAlpha = 1;
+  ctx.drawImage(puff, x - half * 2.4, y - 50, half * 4.8, 84);
+  ctx.globalAlpha = 1;
+  // jatos de água espirrando para cima
+  for (let i = 0; i < 7; i++) {
+    const jx = x - half * 0.9 + (i / 6) * half * 1.8 + Math.sin(i * 3.3) * 6;
+    const jh = 10 + Math.abs(Math.sin(time * (5 + i) + i * 2.1)) * (22 + (i % 3) * 10);
+    const jw = 3 + (i % 3);
+    ctx.fillStyle = 'rgba(245,252,255,0.95)';
+    ctx.beginPath();
+    ctx.moveTo(jx - jw, y - 4);
+    ctx.quadraticCurveTo(jx - jw * 0.4, y - 4 - jh * 0.6, jx + Math.sin(time * 6 + i) * 3, y - 4 - jh);
+    ctx.quadraticCurveTo(jx + jw * 0.4, y - 4 - jh * 0.6, jx + jw, y - 4);
+    ctx.closePath();
+    ctx.fill();
+  }
+  // espuma em duas camadas, com bolhas de tamanhos diferentes
+  for (const [row, alpha, dy, scale] of [[0, 0.9, -8, 1.15], [1, 1, -1, 0.8]]) {
+    ctx.fillStyle = row ? `rgba(255,255,255,${alpha})` : `rgba(225,242,255,${alpha})`;
+    for (let i = 0; i < 9; i++) {
+      const u = (i + (row ? 0.5 : 0)) / 9;
+      const fx = x - half * 1.25 + u * half * 2.5 + Math.sin(i * 7.7 + row) * 5;
+      const bump = Math.sin(time * (6 + (i % 4)) + i * 1.9 + row * 3);
+      const r = (5 + (1 - Math.abs(u - 0.5) * 1.6) * 9 + bump * 3) * scale;
+      ctx.beginPath();
+      ctx.arc(fx, y + dy - Math.abs(bump) * 3, Math.max(2, r), 0, Math.PI * 2);
+      ctx.fill();
+    }
+  }
+
+  // gotas pulando em arco para os lados
+  for (let i = 0; i < 26; i++) {
+    const period = 0.7 + (i % 5) * 0.12;
+    const k = ((time + i * 0.173) % period) / period;
+    const dir = i % 2 ? 1 : -1;
+    const sx = x + dir * (half * 0.4 + (i % 4) * half * 0.2);
+    const dist = (30 + (i % 6) * 16) * k;
+    const h = 22 + (i % 7) * 9;
+    const dx = sx + dir * dist;
+    const dy = y - 6 - 4 * h * k * (1 - k);
+    ctx.globalAlpha = 1 - k * 0.7;
+    ctx.fillStyle = i % 3 ? 'rgba(235,250,255,0.95)' : 'rgba(170,220,255,0.95)';
+    ctx.beginPath();
+    ctx.arc(dx, dy, 1.4 + (i % 3) * 0.6, 0, Math.PI * 2);
+    ctx.fill();
+  }
+  ctx.globalAlpha = 1;
+
+  // névoa de respingos subindo da queda
+  for (let i = 0; i < 6; i++) {
+    const k = (time * 0.35 + i / 6) % 1;
+    const px = x + Math.sin(i * 2.4 + time * 0.6) * (20 + k * 40);
+    const py = y - 10 - k * 110;
+    const r = 30 + k * 50;
+    ctx.globalAlpha = 0.45 * (1 - k);
+    ctx.drawImage(puff, px - r, py - r, r * 2, r * 2);
+  }
+  ctx.globalAlpha = 1;
+
   // arco-íris de lua bem fraquinho na névoa
   const bands = ['255,120,120', '255,220,120', '140,255,160', '120,190,255', '200,140,255'];
-  ctx.lineWidth = 5;
+  ctx.lineWidth = 4;
   bands.forEach((c, i) => {
-    ctx.strokeStyle = `rgba(${c},${0.07 + Math.sin(time * 0.6) * 0.02})`;
+    ctx.strokeStyle = `rgba(${c},${0.08 + Math.sin(time * 0.6) * 0.02})`;
     ctx.beginPath();
-    ctx.arc(x, bottom + 40, 170 - i * 5, Math.PI * 1.1, Math.PI * 1.9);
+    ctx.arc(x, y + 30, 120 - i * 4, Math.PI * 1.12, Math.PI * 1.88);
     ctx.stroke();
   });
 }
@@ -906,6 +1127,8 @@ function drawMid(ctx, map, rand) {
     x += 60 + rand() * 90;
     hills.push([x, 520 + rand() * 170]);
   }
+  // vale baixo atrás da cachoeira (para o poço dela aparecer)
+  for (const h of hills) if (h[0] > 1110 && h[0] < 1460) h[1] = Math.max(h[1], 712 + Math.sin(h[0]) * 10);
   ctx.fillStyle = '#1d0b1c';
   ctx.beginPath();
   ctx.moveTo(-560, 1340);
@@ -926,7 +1149,7 @@ function drawMid(ctx, map, rand) {
   templeArch(ctx);
 
   // Colunas em ruínas: runas laranja do lado do fogo, azuis do lado da água
-  const columns = [[-120, 300, '#ff7a2a', false], [90, 360, '#ff7a2a', false], [1400, 340, '#4fb0ff', true], [1600, 290, '#4fb0ff', true]];
+  const columns = [[-120, 300, '#ff7a2a', false], [90, 360, '#ff7a2a', false], [1500, 340, '#4fb0ff', true], [1700, 290, '#4fb0ff', true]];
   for (const [cx, h, rune, ivy] of columns) ruinColumn(ctx, cx, 640, h, rune, ivy, rand);
 
   // Pedras flutuando entre o fundo e a ilha
