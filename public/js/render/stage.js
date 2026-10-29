@@ -482,6 +482,9 @@ function volcano(ctx, rand) {
     }
   }
 
+  // os dois rios grandes
+  for (const f of BIG_FLOWS) bigRiver(ctx, f.pts, f.w);
+
   // cratera: parede de trás escura, lago de lava e a borda da frente
   // tampando a parte de baixo do lago
   const open = { x: CRATER.x, y: CRATER.y - 5, rx: CRATER.rx + 8, ry: 11 };
@@ -532,6 +535,256 @@ function alongFlow(flow, u) {
   return flow[flow.length - 1];
 }
 
+// Os dois rios de lava grandes (bem mais largos que os outros): um desce
+// quase reto pela esquerda e o outro em diagonal para a direita.
+const BIG_FLOWS = [
+  { w: 18, pts: [[54, 430], [40, 520], [10, 590], [-28, 680], [-52, 800], [-60, 900]] },
+  { w: 24, pts: [[80, 192], [56, 262], [46, 370], [60, 470], [80, 580], [94, 700], [100, 860], [96, 1040]] },
+  { w: 26, pts: [[130, 194], [146, 270], [152, 360], [170, 450], [190, 545], [214, 645], [234, 765], [250, 905], [256, 1060]] },
+];
+
+// Caminho suave passando pelo meio dos pontos
+function smoothPath(ctx, pts) {
+  ctx.beginPath();
+  ctx.moveTo(pts[0][0], pts[0][1]);
+  for (let i = 1; i < pts.length - 1; i++) {
+    const [ax, ay] = pts[i];
+    const [bx, by] = pts[i + 1];
+    ctx.quadraticCurveTo(ax, ay, (ax + bx) / 2, (ay + by) / 2);
+  }
+  const last = pts[pts.length - 1];
+  ctx.lineTo(last[0], last[1]);
+}
+
+// Rio de lava largo: brilho, margens de crosta escura, corpo, miolo claro
+function bigRiver(ctx, pts, w) {
+  ctx.lineCap = 'round';
+  ctx.lineJoin = 'round';
+  for (const [width, color] of [
+    [w * 2.4, 'rgba(255,70,20,0.12)'],
+    [w * 1.6, 'rgba(255,90,20,0.18)'],
+    [w + 7, '#2a0a08'],
+    [w, '#c8380f'],
+    [w * 0.62, '#ff8a24'],
+    [w * 0.28, '#ffd27a'],
+  ]) {
+    ctx.strokeStyle = color;
+    ctx.lineWidth = width;
+    smoothPath(ctx, pts);
+    ctx.stroke();
+  }
+  // placas de crosta escura boiando
+  ctx.fillStyle = 'rgba(70,14,6,0.7)';
+  for (let i = 1; i < pts.length - 1; i++) {
+    const [ax, ay] = pts[i];
+    const [bx, by] = pts[i + 1];
+    for (const k of [0.3, 0.7]) {
+      const x = ax + (bx - ax) * k + (k < 0.5 ? -w * 0.22 : w * 0.2);
+      const y = ay + (by - ay) * k;
+      ctx.beginPath();
+      ctx.ellipse(x, y, w * 0.16, w * 0.09, Math.atan2(by - ay, bx - ax), 0, Math.PI * 2);
+      ctx.fill();
+    }
+  }
+}
+
+// Bolinha de luz suave (desenhada uma vez por cor e só copiada)
+const glowSprites = {};
+function glowSprite(rgb) {
+  if (glowSprites[rgb]) return glowSprites[rgb];
+  const c = document.createElement('canvas');
+  c.width = c.height = 64;
+  const ctx = c.getContext('2d');
+  const g = ctx.createRadialGradient(32, 32, 0, 32, 32, 32);
+  g.addColorStop(0, `rgba(${rgb},1)`);
+  g.addColorStop(0.4, `rgba(${rgb},0.5)`);
+  g.addColorStop(1, `rgba(${rgb},0)`);
+  ctx.fillStyle = g;
+  ctx.fillRect(0, 0, 64, 64);
+  glowSprites[rgb] = c;
+  return c;
+}
+
+// Pontos de luz descendo por rios de lava (a lava andando)
+function lavaPulses(ctx, flows, time, speed, perFlow, size, boost) {
+  const hot = glowSprite('255,220,140');
+  ctx.globalCompositeOperation = 'lighter';
+  flows.forEach((flow, f) => {
+    for (let k = 0; k < perFlow; k++) {
+      const u = (time * speed + k / perFlow + f * 0.13) % 1;
+      const [x, y] = alongFlow(flow, u);
+      const r = size * (1 - u * 0.4);
+      ctx.globalAlpha = Math.min(1, (0.55 + boost) * (1 - u * 0.7));
+      ctx.drawImage(hot, x - r, y - r, r * 2, r * 2);
+    }
+  });
+  ctx.globalAlpha = 1;
+  ctx.globalCompositeOperation = 'source-over';
+}
+
+// Erupção grande a cada ERUPT_EVERY segundos
+const ERUPT_EVERY = 8;
+
+// Bombas de lava: [direção, velocidade para o lado, velocidade para cima]
+const BOMBS = Array.from({ length: 14 }, (_, i) => ({
+  dir: i % 2 ? 1 : -1,
+  vx: 60 + ((i * 37) % 170),
+  vy: 300 + ((i * 53) % 170),
+  delay: i * 0.035,
+  r: 3 + (i % 3),
+}));
+const BOMB_GRAVITY = 520;
+
+function eruption(ctx, time) {
+  const phase = time % ERUPT_EVERY;
+  const cx = CRATER.x;
+  const cy = CRATER.y;
+
+  // antes de explodir: a cratera fica mais clara (avisando)
+  const charge = phase > ERUPT_EVERY - 1 ? phase - (ERUPT_EVERY - 1) : 0;
+  if (charge > 0) {
+    ctx.globalCompositeOperation = 'lighter';
+    ctx.globalAlpha = charge * 0.8;
+    ctx.drawImage(glowSprite('255,150,60'), cx - 110, cy - 90, 220, 160);
+    ctx.globalAlpha = 1;
+    ctx.globalCompositeOperation = 'source-over';
+  }
+  if (phase > 3) return;
+
+  // céu avermelhado e clarão
+  const flash = Math.max(0, 1 - phase / 1.2);
+  if (phase < 2.5) {
+    ctx.fillStyle = `rgba(255,80,20,${0.1 * (1 - phase / 2.5)})`;
+    ctx.fillRect(-760, -520, 2800, 1900);
+  }
+  if (flash > 0) {
+    ctx.globalCompositeOperation = 'lighter';
+    ctx.globalAlpha = flash * 0.9;
+    ctx.drawImage(glowSprite('255,200,120'), cx - 330, cy - 330, 660, 600);
+    ctx.globalAlpha = 1;
+    ctx.globalCompositeOperation = 'source-over';
+  }
+  // onda de choque saindo da cratera
+  if (phase < 0.6) {
+    const k = phase / 0.6;
+    ctx.strokeStyle = `rgba(255,220,170,${0.8 * (1 - k)})`;
+    ctx.lineWidth = 4 * (1 - k) + 1;
+    ctx.beginPath();
+    ctx.ellipse(cx, cy - 10, 20 + k * 380, (20 + k * 380) * 0.35, 0, Math.PI, Math.PI * 2);
+    ctx.stroke();
+  }
+  // nuvem de cinzas subindo rápido
+  for (let j = 0; j < 5; j++) {
+    const k = Math.min(1, phase / 2.6);
+    const px = cx + (j - 2) * 34 * k + Math.sin(j * 3.1) * 10;
+    const py = cy - 30 - k * (220 + (j % 3) * 50);
+    const r = 26 + k * (70 + (j % 2) * 30);
+    const a = 0.6 * (1 - k);
+    const g = ctx.createRadialGradient(px, py, 0, px, py, r);
+    g.addColorStop(0, `rgba(70,35,40,${a})`);
+    g.addColorStop(0.6, `rgba(55,30,40,${a * 0.6})`);
+    g.addColorStop(1, 'rgba(55,30,40,0)');
+    ctx.fillStyle = g;
+    ctx.fillRect(px - r, py - r, r * 2, r * 2);
+  }
+  // jato de lava subindo em bolhas, com uma coroa espirrando no alto
+  if (phase < 1.5) {
+    const h = 250 * Math.sin(Math.PI * (phase / 1.5));
+    ctx.globalCompositeOperation = 'lighter';
+    ctx.globalAlpha = 0.7;
+    ctx.drawImage(glowSprite('255,110,30'), cx - 50, cy - h - 30, 100, h + 60);
+    ctx.globalAlpha = 1;
+    ctx.globalCompositeOperation = 'source-over';
+    // borda vermelho-escura por baixo e o miolo claro por cima
+    const blob = (j) => {
+      const u = j / 34;
+      return [
+        cx + Math.sin(j * 0.9 + time * 12) * 6 * u,
+        cy - h * u,
+        (17 - u * 8) * (0.85 + 0.2 * Math.sin(j * 1.7 + time * 20)),
+        u,
+      ];
+    };
+    ctx.fillStyle = '#b52a0c';
+    ctx.beginPath();
+    for (let j = 0; j <= 34; j++) {
+      const [x, y, r] = blob(j);
+      ctx.moveTo(x + r + 3, y);
+      ctx.arc(x, y, r + 3, 0, Math.PI * 2);
+    }
+    ctx.fill();
+    for (let j = 0; j <= 34; j++) {
+      const [x, y, r, u] = blob(j);
+      ctx.fillStyle = u < 0.25 ? '#ff7a1a' : u < 0.6 ? '#ffa53a' : '#ffe08a';
+      ctx.beginPath();
+      ctx.arc(x, y, r, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    ctx.fillStyle = 'rgba(255,245,200,0.8)';
+    ctx.beginPath();
+    for (let j = 0; j <= 34; j += 2) {
+      const [x, y, r] = blob(j);
+      ctx.moveTo(x - r * 0.2 + r * 0.35, y);
+      ctx.arc(x - r * 0.2, y, r * 0.35, 0, Math.PI * 2);
+    }
+    ctx.fill();
+    for (let j = 0; j < 11; j++) {
+      const a = -Math.PI / 2 + (j - 5) * 0.32;
+      const d = 12 + (phase / 1.5) * 40;
+      ctx.fillStyle = j % 2 ? '#fff0b0' : '#ffb347';
+      ctx.beginPath();
+      ctx.arc(cx + Math.cos(a) * d, cy - h + Math.sin(a) * d * 0.5 + d * 0.3, 6 - Math.abs(j - 5) * 0.6, 0, Math.PI * 2);
+      ctx.fill();
+    }
+  }
+  // bombas de lava voando em arco, com rastro, e brilhando onde caem
+  for (const b of BOMBS) {
+    const t = phase - b.delay;
+    if (t <= 0) continue;
+    const slope = 1.05;
+    const vy = -b.vy;
+    const bb = vy - slope * b.vx;
+    const land = (-bb + Math.sqrt(bb * bb + 2 * BOMB_GRAVITY * 10)) / BOMB_GRAVITY;
+    const pos = (tt) => [cx + b.dir * b.vx * tt, cy - 10 + vy * tt + 0.5 * BOMB_GRAVITY * tt * tt];
+    if (t < land) {
+      ctx.lineCap = 'round';
+      for (let s = 3; s >= 1; s--) {
+        const [ax, ay] = pos(Math.max(0, t - s * 0.05));
+        const [bx2, by2] = pos(Math.max(0, t - (s - 1) * 0.05));
+        ctx.strokeStyle = `rgba(255,${120 + s * 20},40,${0.25 + (3 - s) * 0.2})`;
+        ctx.lineWidth = b.r * (1.6 - s * 0.3);
+        ctx.beginPath();
+        ctx.moveTo(ax, ay);
+        ctx.lineTo(bx2, by2);
+        ctx.stroke();
+      }
+      const [x, y] = pos(t);
+      ctx.fillStyle = '#fff0b0';
+      ctx.beginPath();
+      ctx.arc(x, y, b.r, 0, Math.PI * 2);
+      ctx.fill();
+    } else if (t - land < 1.5) {
+      const [x, y] = pos(land);
+      const k = (t - land) / 1.5;
+      ctx.globalCompositeOperation = 'lighter';
+      ctx.globalAlpha = 1 - k;
+      ctx.drawImage(glowSprite('255,140,50'), x - 16, y - 10, 32, 20);
+      ctx.globalAlpha = 1;
+      ctx.globalCompositeOperation = 'source-over';
+      ctx.fillStyle = `rgba(255,${Math.round(200 - k * 120)},80,${1 - k})`;
+      ctx.beginPath();
+      ctx.ellipse(x, y, b.r + 1, b.r * 0.6, 0, 0, Math.PI * 2);
+      ctx.fill();
+    }
+  }
+}
+
+// Força extra da lava descendo logo depois de uma erupção
+function lavaSurge(time) {
+  const phase = time % ERUPT_EVERY;
+  return phase < 4 ? 1 - phase / 4 : 0;
+}
+
 function volcanoAnimated(ctx, time) {
   // brilho pulsando na cratera
   const pulse = 0.55 + Math.sin(time * 1.7) * 0.15;
@@ -558,83 +811,34 @@ function volcanoAnimated(ctx, time) {
     ctx.fillRect(sx - r, sy - r, r * 2, r * 2);
   }
 
-  // lava escorrendo: pontos de luz descendo pelos rios
-  ctx.globalCompositeOperation = 'lighter';
-  LAVA_FLOWS.forEach((flow, f) => {
-    for (let k = 0; k < 3; k++) {
-      const u = (time * 0.05 + k / 3 + f * 0.17) % 1;
-      const [x, y] = alongFlow(flow, u);
-      const r = 9 * (1 - u * 0.6);
-      const g = ctx.createRadialGradient(x, y, 0, x, y, r);
-      g.addColorStop(0, `rgba(255,230,150,${0.8 * (1 - u)})`);
-      g.addColorStop(1, 'rgba(255,120,40,0)');
-      ctx.fillStyle = g;
-      ctx.fillRect(x - r, y - r, r * 2, r * 2);
-    }
-  });
-  ctx.globalCompositeOperation = 'source-over';
+  // lava escorrendo: pontos de luz descendo pelos rios (mais forte logo
+  // depois de uma erupção)
+  lavaPulses(ctx, LAVA_FLOWS, time, 0.05, 3, 9, 0);
+  lavaPulses(ctx, BIG_FLOWS.map((f) => f.pts), time, 0.07, 6, 20, lavaSurge(time) * 0.6);
 
-  // erupção: bolhas de lava sempre saindo e uma explosão maior a cada 7 s
-  const burst = time % 7;
-  const big = burst < 1.6;
-  const count = big ? 22 : 8;
-  for (let i = 0; i < count; i++) {
+  // bolhas de lava pulando da cratera o tempo todo
+  for (let i = 0; i < 8; i++) {
     const period = 1.4 + (i % 4) * 0.25;
-    const k = big && i >= 8 ? burst / 1.6 : ((time + i * 0.37) % period) / period;
-    const dir = Math.sin(i * 12.9898) ;
-    const height = (big && i >= 8 ? 200 : 90) + Math.abs(Math.sin(i * 4.1)) * 80;
-    const x = CRATER.x + dir * k * (big && i >= 8 ? 220 : 90);
+    const k = ((time + i * 0.37) % period) / period;
+    const dir = Math.sin(i * 12.9898);
+    const height = 90 + Math.abs(Math.sin(i * 4.1)) * 80;
+    const x = CRATER.x + dir * k * 90;
     const y = CRATER.y - 4 * height * k * (1 - k);
     if (y > CRATER.y + 2) continue;
-    const r = big && i >= 8 ? 3.5 : 2.5;
     ctx.globalAlpha = Math.min(1, (1 - k) * 1.6) * 0.3;
     ctx.fillStyle = '#ff6a1a';
     ctx.beginPath();
-    ctx.arc(x, y, r * 2.2, 0, Math.PI * 2);
+    ctx.arc(x, y, 5.5, 0, Math.PI * 2);
     ctx.fill();
     ctx.globalAlpha = Math.min(1, (1 - k) * 1.6);
     ctx.fillStyle = k < 0.5 ? '#fff0b0' : '#ff8a2a';
     ctx.beginPath();
-    ctx.arc(x, y, r, 0, Math.PI * 2);
+    ctx.arc(x, y, 2.5, 0, Math.PI * 2);
     ctx.fill();
   }
   ctx.globalAlpha = 1;
-  if (big) {
-    // coluna de lava subindo e caindo de volta
-    const h = 170 * Math.sin(Math.PI * Math.min(1, burst / 1.3));
-    if (h > 4) {
-      // bolhas de lava subindo em coluna e uma coroa espirrando no alto
-      ctx.fillStyle = 'rgba(255,106,26,0.3)';
-      ctx.beginPath();
-      ctx.ellipse(CRATER.x, CRATER.y - h / 2, 24, h / 2 + 14, 0, 0, Math.PI * 2);
-      ctx.fill();
-      for (let j = 0; j <= 16; j++) {
-        const u = j / 16;
-        const x = CRATER.x + Math.sin(j * 2.1 + time * 12) * 5 * u;
-        const y = CRATER.y - h * u;
-        const r = 13 - u * 6;
-        ctx.fillStyle = u < 0.3 ? '#ff7a1a' : u < 0.7 ? '#ffa53a' : '#ffd27a';
-        ctx.beginPath();
-        ctx.arc(x, y, r, 0, Math.PI * 2);
-        ctx.fill();
-      }
-      for (let j = 0; j < 9; j++) {
-        const a = -Math.PI / 2 + (j - 4) * 0.38;
-        const d = 10 + Math.min(1, burst / 1.3) * 30;
-        ctx.fillStyle = j % 2 ? '#fff0b0' : '#ffb347';
-        ctx.beginPath();
-        ctx.arc(CRATER.x + Math.cos(a) * d, CRATER.y - h - Math.sin(a) * -d * 0.6, 5 - Math.abs(j - 4) * 0.5, 0, Math.PI * 2);
-        ctx.fill();
-      }
-    }
-    // clarão da explosão
-    const a = Math.max(0, 1 - burst / 0.8);
-    const flash = ctx.createRadialGradient(CRATER.x, CRATER.y - 20, 0, CRATER.x, CRATER.y - 20, 260);
-    flash.addColorStop(0, `rgba(255,220,140,${0.6 * a})`);
-    flash.addColorStop(1, 'rgba(255,120,40,0)');
-    ctx.fillStyle = flash;
-    ctx.fillRect(CRATER.x - 260, CRATER.y - 280, 520, 520);
-  }
+
+  eruption(ctx, time);
 }
 
 // ======================================================================
@@ -1118,6 +1322,19 @@ function splash(ctx, time, puff, l1, r1) {
 // Fundo médio: morros, um grande arco de templo com o selo dos quatro
 // elementos, colunas em ruínas e pedras flutuando.
 
+// Rios de lava no fundo médio (calculados ao desenhar os morros)
+let MID_LAVA = [];
+
+// Altura do morro num x (entre os pontos do contorno)
+function hillAt(hills, x) {
+  for (let i = 0; i < hills.length - 1; i++) {
+    const [ax, ay] = hills[i];
+    const [bx, by] = hills[i + 1];
+    if (x >= ax && x <= bx) return ay + ((by - ay) * (x - ax)) / (bx - ax);
+  }
+  return 640;
+}
+
 function drawMid(ctx, map, rand) {
   // Morros com a borda iluminada (quente à esquerda, fria à direita)
   const hills = [];
@@ -1146,10 +1363,42 @@ function drawMid(ctx, map, rand) {
   hills.forEach(([hx, hy], i) => (i ? ctx.lineTo(hx, hy) : ctx.moveTo(hx, hy)));
   ctx.stroke();
 
+  // os rios grandes do vulcão continuam descendo pelos morros da frente
+  MID_LAVA = [[98, 30, [2, 6, 4]], [250, 32, [8, 12, 16]]].map(([x0, w, dx]) => {
+    const y0 = hillAt(hills, x0);
+    return { w, pts: [[x0, y0 - 40], [x0 + dx[0], y0 + 110], [x0 + dx[1], y0 + 260], [x0 + dx[2], 1340]] };
+  });
+  // recorta no formato do morro: a lava aparece saindo de trás do topo
+  ctx.save();
+  ctx.beginPath();
+  ctx.moveTo(-560, 1340);
+  for (const [hx, hy] of hills) ctx.lineTo(hx, hy);
+  ctx.lineTo(1840, 1340);
+  ctx.closePath();
+  ctx.clip();
+  for (const f of MID_LAVA) {
+    const glow = ctx.createRadialGradient(f.pts[0][0], f.pts[0][1] + 60, 10, f.pts[0][0], f.pts[0][1] + 60, 160);
+    glow.addColorStop(0, 'rgba(255,90,30,0.3)');
+    glow.addColorStop(1, 'rgba(255,90,30,0)');
+    ctx.fillStyle = glow;
+    ctx.fillRect(f.pts[0][0] - 160, f.pts[0][1] - 100, 320, 320);
+    bigRiver(ctx, f.pts, f.w);
+  }
+  ctx.restore();
+  // borda do morro brilhando onde a lava passa por cima
+  for (const f of MID_LAVA) {
+    const [x0] = f.pts[0];
+    const g = ctx.createRadialGradient(x0, hillAt(hills, x0), 2, x0, hillAt(hills, x0), f.w * 1.6);
+    g.addColorStop(0, 'rgba(255,220,140,0.9)');
+    g.addColorStop(1, 'rgba(255,120,40,0)');
+    ctx.fillStyle = g;
+    ctx.fillRect(x0 - f.w * 1.6, hillAt(hills, x0) - f.w * 1.6, f.w * 3.2, f.w * 3.2);
+  }
+
   templeArch(ctx);
 
   // Colunas em ruínas: runas laranja do lado do fogo, azuis do lado da água
-  const columns = [[-120, 300, '#ff7a2a', false], [90, 360, '#ff7a2a', false], [1500, 340, '#4fb0ff', true], [1700, 290, '#4fb0ff', true]];
+  const columns = [[-120, 300, '#ff7a2a', false], [172, 360, '#ff7a2a', false], [1500, 340, '#4fb0ff', true], [1700, 290, '#4fb0ff', true]];
   for (const [cx, h, rune, ivy] of columns) ruinColumn(ctx, cx, 640, h, rune, ivy, rand);
 
   // Pedras flutuando entre o fundo e a ilha
@@ -1361,6 +1610,7 @@ function fogPuff() {
 }
 
 function drawMidAnimated(ctx, time) {
+  lavaPulses(ctx, MID_LAVA.map((f) => f.pts), time, 0.06, 5, 22, lavaSurge(time) * 0.6);
   // Selo do templo pulsando devagar
   const a = 0.15 + (Math.sin(time * 1.2) + 1) * 0.08;
   const g = ctx.createRadialGradient(640, -40, 10, 640, -40, 120);
