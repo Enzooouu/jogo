@@ -12,7 +12,7 @@ const VIEW_H = 720;
 
 // Área coberta por cada camada (em coordenadas da própria camada) e quanto
 // ela acompanha a câmera.
-const FAR = { f: 0.2, x: -760, y: -520, w: 2800, h: 1900, res: 0.5 };
+const FAR = { f: 0.2, x: -760, y: -520, w: 2800, h: 1900, res: 0.75 };
 const MID = { f: 0.5, x: -560, y: -360, w: 2400, h: 1700, res: 0.75 };
 
 // Paleta da pedra da ilha
@@ -39,6 +39,36 @@ export class StageRenderer {
     this.far = this.buildLayer(FAR, (ctx, rand) => drawFar(ctx, this.map, rand));
     this.mid = this.buildLayer(MID, (ctx, rand) => drawMid(ctx, this.map, rand));
     this.terrain = this.buildLayer({ ...this.terrainRect, res: 1 }, (ctx, rand) => drawTerrain(ctx, this.map, rand));
+    this.vignette = this.buildVignette();
+    this.haze = this.buildHaze();
+  }
+
+  // Neblina quente subindo do fundo (fica parada na tela)
+  buildHaze() {
+    const s = this.scale;
+    const canvas = this.makeCanvas(VIEW_W * s, VIEW_H * s);
+    const ctx = canvas.getContext('2d');
+    ctx.scale(s, s);
+    const fog = ctx.createLinearGradient(0, VIEW_H * 0.55, 0, VIEW_H);
+    fog.addColorStop(0, 'rgba(60,20,40,0)');
+    fog.addColorStop(1, 'rgba(70,24,40,0.55)');
+    ctx.fillStyle = fog;
+    ctx.fillRect(0, VIEW_H * 0.55, VIEW_W, VIEW_H * 0.45);
+    return canvas;
+  }
+
+  // Bordas escuras: desenhadas uma vez e só copiadas a cada quadro
+  buildVignette() {
+    const s = this.scale;
+    const canvas = this.makeCanvas(VIEW_W * s, VIEW_H * s);
+    const ctx = canvas.getContext('2d');
+    ctx.scale(s, s);
+    const v = ctx.createRadialGradient(VIEW_W / 2, VIEW_H * 0.55, VIEW_H * 0.45, VIEW_W / 2, VIEW_H * 0.55, VIEW_W * 0.75);
+    v.addColorStop(0, 'rgba(8,2,14,0)');
+    v.addColorStop(1, 'rgba(8,2,14,0.45)');
+    ctx.fillStyle = v;
+    ctx.fillRect(0, 0, VIEW_W, VIEW_H);
+    return canvas;
   }
 
   makeCanvas(w, h) {
@@ -130,13 +160,10 @@ export class StageRenderer {
       animate(ctx, time);
     }
 
-    // Neblina quente subindo do fundo
-    ctx.setTransform(s, 0, 0, s, 0, 0);
-    const fog = ctx.createLinearGradient(0, VIEW_H * 0.55, 0, VIEW_H);
-    fog.addColorStop(0, 'rgba(60,20,40,0)');
-    fog.addColorStop(1, 'rgba(70,24,40,0.55)');
-    ctx.fillStyle = fog;
-    ctx.fillRect(0, 0, VIEW_W, VIEW_H);
+    // Neblina quente subindo do fundo (só a metade de baixo da tela)
+    ctx.setTransform(1, 0, 0, 1, 0, 0);
+    const hy = Math.floor(VIEW_H * 0.55 * s);
+    ctx.drawImage(this.haze, 0, hy, this.haze.width, this.haze.height - hy, 0, hy, this.haze.width, this.haze.height - hy);
   }
 
   // Ilha, plataformas e enfeites (com a transformação do mundo já aplicada).
@@ -163,13 +190,8 @@ export class StageRenderer {
 
   // Escurece as bordas da tela (por cima do mundo, embaixo do placar).
   drawVignette(ctx) {
-    const s = this.scale;
-    ctx.setTransform(s, 0, 0, s, 0, 0);
-    const v = ctx.createRadialGradient(VIEW_W / 2, VIEW_H * 0.55, VIEW_H * 0.45, VIEW_W / 2, VIEW_H * 0.55, VIEW_W * 0.75);
-    v.addColorStop(0, 'rgba(8,2,14,0)');
-    v.addColorStop(1, 'rgba(8,2,14,0.45)');
-    ctx.fillStyle = v;
-    ctx.fillRect(0, 0, VIEW_W, VIEW_H);
+    ctx.setTransform(1, 0, 0, 1, 0, 0);
+    ctx.drawImage(this.vignette, 0, 0);
   }
 }
 
@@ -260,104 +282,8 @@ function drawFar(ctx, map, rand) {
   ridge(ctx, rand, -760, 2040, 470, 120, '#2a1636');
   ridge(ctx, rand, -760, 2040, 560, 110, '#22112d');
 
-  // Vulcão (esquerda), com o lado da luz à esquerda e sulcos na encosta
-  const vg = ctx.createLinearGradient(0, 170, 0, 1300);
-  vg.addColorStop(0, '#3a1628');
-  vg.addColorStop(0.5, '#28101f');
-  vg.addColorStop(1, '#1a0a16');
-  ctx.fillStyle = vg;
-  ctx.beginPath();
-  ctx.moveTo(-760, 1380);
-  ctx.lineTo(-420, 600);
-  ctx.quadraticCurveTo(-140, 220, 40, 170);
-  ctx.lineTo(170, 170);
-  ctx.quadraticCurveTo(330, 230, 560, 640);
-  ctx.lineTo(820, 1380);
-  ctx.closePath();
-  ctx.fill();
-  // lado na sombra (direita)
-  ctx.fillStyle = 'rgba(10,2,12,0.35)';
-  ctx.beginPath();
-  ctx.moveTo(130, 172);
-  ctx.lineTo(170, 170);
-  ctx.quadraticCurveTo(330, 230, 560, 640);
-  ctx.lineTo(820, 1380);
-  ctx.lineTo(300, 1380);
-  ctx.quadraticCurveTo(260, 600, 130, 172);
-  ctx.fill();
-  // sulcos
-  ctx.strokeStyle = 'rgba(10,2,12,0.35)';
-  ctx.lineWidth = 3;
-  for (const [x0, x1] of [[60, -260], [20, -400], [150, 420], [120, 250]]) {
-    ctx.beginPath();
-    ctx.moveTo(x0, 190);
-    ctx.quadraticCurveTo((x0 + x1) / 2 + 20, 500, x1, 1000);
-    ctx.stroke();
-  }
-  // borda da cratera brilhando
-  ctx.strokeStyle = 'rgba(255,140,60,0.7)';
-  ctx.shadowColor = '#ff6a1a';
-  ctx.shadowBlur = 14;
-  ctx.lineWidth = 3;
-  ctx.beginPath();
-  ctx.moveTo(40, 171);
-  ctx.quadraticCurveTo(105, 160, 170, 171);
-  ctx.stroke();
-  ctx.shadowBlur = 0;
-  // Rios de lava descendo
-  ctx.lineCap = 'round';
-  for (const [x0, x1, y1] of [[80, -40, 430], [112, 150, 520], [140, 300, 400], [60, -180, 620]]) {
-    ctx.beginPath();
-    ctx.moveTo(x0, 178);
-    ctx.bezierCurveTo(x0 + (x1 - x0) * 0.2, 260, x0 + (x1 - x0) * 0.9, y1 - 160, x1, y1);
-    ctx.strokeStyle = 'rgba(255,90,20,0.2)';
-    ctx.lineWidth = 10;
-    ctx.stroke();
-    ctx.strokeStyle = 'rgba(255,170,70,0.5)';
-    ctx.lineWidth = 2;
-    ctx.stroke();
-  }
-
-  // Penhasco (direita) de onde cai a cachoeira: facetas de rocha azulada
-  ctx.fillStyle = '#121a33';
-  ctx.beginPath();
-  ctx.moveTo(1180, 1380);
-  ctx.lineTo(1150, 300);
-  ctx.lineTo(1210, 120);
-  ctx.lineTo(1330, 90);
-  ctx.lineTo(1460, 140);
-  ctx.lineTo(2040, 120);
-  ctx.lineTo(2040, 1380);
-  ctx.closePath();
-  ctx.fill();
-  ctx.fillStyle = 'rgba(90,130,220,0.10)';
-  for (const pts of [[[1150, 300], [1210, 120], [1240, 360], [1190, 700]], [[1330, 90], [1460, 140], [1420, 420], [1300, 380]], [[1560, 135], [1700, 128], [1660, 520]]]) {
-    ctx.beginPath();
-    pts.forEach(([x, y], i) => (i ? ctx.lineTo(x, y) : ctx.moveTo(x, y)));
-    ctx.closePath();
-    ctx.fill();
-  }
-  ctx.fillStyle = 'rgba(120,180,255,0.08)';
-  for (let i = 0; i < 40; i++) ctx.fillRect(1180 + rand() * 800, 150 + rand() * 900, 30 + rand() * 60, 3);
-  // árvores pequenas no topo do penhasco
-  for (let i = 0; i < 9; i++) {
-    const x = 1240 + i * 70 + rand() * 30;
-    const y = x < 1460 ? 90 + (x - 1330) * 0.38 + 6 : 128;
-    pineSilhouette(ctx, x, Math.max(y, 95), 26 + rand() * 22, '#0b1226');
-  }
-  // cristais azuis brilhando na rocha
-  for (const [x, y] of [[1240, 420], [1380, 300], [1520, 520]]) {
-    ctx.shadowColor = '#5ab8ff';
-    ctx.shadowBlur = 16;
-    ctx.fillStyle = 'rgba(140,210,255,0.8)';
-    ctx.beginPath();
-    ctx.moveTo(x, y);
-    ctx.lineTo(x + 6, y - 18);
-    ctx.lineTo(x + 12, y);
-    ctx.closePath();
-    ctx.fill();
-  }
-  ctx.shadowBlur = 0;
+  volcano(ctx, rand);
+  cliff(ctx, rand);
 }
 
 function ridge(ctx, rand, x0, x1, base, amp, color) {
@@ -419,74 +345,552 @@ function distantIsland(ctx, x, y, size, rand) {
 }
 
 function drawFarAnimated(ctx, time) {
-  // Brilho pulsando na cratera
+  volcanoAnimated(ctx, time);
+  waterfallAnimated(ctx, time);
+}
+
+// ======================================================================
+// Vulcão (fundo distante, à esquerda)
+
+const CRATER = { x: 108, y: 188, rx: 44, ry: 6 };
+
+// Rios de lava descendo da cratera (pontos do caminho, de cima para baixo)
+const LAVA_FLOWS = [
+  [[72, 192], [40, 240], [-10, 320], [-30, 400], [-90, 480], [-130, 570]],
+  [[100, 196], [112, 260], [92, 330], [122, 420], [150, 520], [138, 610]],
+  [[140, 192], [188, 240], [230, 300], [292, 362], [330, 446]],
+  [[230, 300], [222, 380], [252, 462]],
+  [[60, 188], [-40, 250], [-160, 330], [-262, 424]],
+];
+
+function volcano(ctx, rand) {
+  // silhueta: dois picos em volta da cratera e encostas com degraus
+  const outline = [
+    [-760, 1380], [-540, 780], [-420, 600], [-300, 470], [-180, 360], [-90, 280], [-20, 214],
+    [20, 172], [36, 156], [52, 166], [66, 172], [CRATER.x, 176],
+    [150, 172], [168, 162], [184, 168], [214, 196], [270, 250],
+    [340, 330], [420, 440], [500, 560], [600, 760], [820, 1380],
+  ];
+  const body = new Path2D();
+  outline.forEach(([x, y], i) => (i ? body.lineTo(x, y) : body.moveTo(x, y)));
+  body.closePath();
+  const vg = ctx.createLinearGradient(0, 150, 0, 1300);
+  vg.addColorStop(0, '#45192c');
+  vg.addColorStop(0.35, '#2e1022');
+  vg.addColorStop(1, '#170914');
+  ctx.fillStyle = vg;
+  ctx.fill(body);
+
+  ctx.save();
+  ctx.clip(body);
+  // lado direito na sombra
+  ctx.fillStyle = 'rgba(8,2,12,0.38)';
+  ctx.beginPath();
+  ctx.moveTo(CRATER.x + 10, CRATER.y);
+  ctx.lineTo(260, 250);
+  ctx.quadraticCurveTo(380, 700, 330, 1380);
+  ctx.lineTo(900, 1380);
+  ctx.lineTo(900, 100);
+  ctx.closePath();
+  ctx.fill();
+  // brilho quente perto do topo (luz da cratera batendo na pedra)
+  const heat = ctx.createRadialGradient(CRATER.x, CRATER.y, 10, CRATER.x, CRATER.y, 300);
+  heat.addColorStop(0, 'rgba(255,110,40,0.35)');
+  heat.addColorStop(1, 'rgba(255,110,40,0)');
+  ctx.fillStyle = heat;
+  ctx.fillRect(CRATER.x - 300, CRATER.y - 300, 600, 600);
+  // camadas de rocha (estratos)
+  ctx.strokeStyle = 'rgba(0,0,0,0.22)';
+  ctx.lineWidth = 3;
+  for (let k = 0; k < 7; k++) {
+    const y = 230 + k * 70;
+    ctx.beginPath();
+    ctx.moveTo(-700, y + 160);
+    ctx.quadraticCurveTo(CRATER.x, y - 40 + rand() * 20, 800, y + 180);
+    ctx.stroke();
+  }
+  // sulcos descendo: risco escuro com uma linha iluminada do lado esquerdo
+  for (const [x0, x1, y1] of [[40, -300, 900], [0, -500, 1100], [80, -120, 1000], [150, 420, 900], [175, 300, 1100], [120, 180, 1200]]) {
+    const cx = (x0 + x1) / 2 + (rand() - 0.5) * 60;
+    ctx.strokeStyle = 'rgba(8,2,12,0.5)';
+    ctx.lineWidth = 5;
+    ctx.beginPath();
+    ctx.moveTo(x0, 200);
+    ctx.quadraticCurveTo(cx, 520, x1, y1);
+    ctx.stroke();
+    ctx.strokeStyle = 'rgba(255,150,110,0.10)';
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.moveTo(x0 - 5, 204);
+    ctx.quadraticCurveTo(cx - 6, 520, x1 - 6, y1);
+    ctx.stroke();
+  }
+  // pedregulhos na encosta
+  for (let i = 0; i < 18; i++) {
+    const y = 300 + rand() * 700;
+    const spread = (y - 150) * 0.9;
+    const x = CRATER.x - spread + rand() * spread * 2;
+    const r = 6 + rand() * 10;
+    ctx.fillStyle = 'rgba(8,2,12,0.35)';
+    ctx.beginPath();
+    ctx.ellipse(x, y, r, r * 0.55, 0, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = 'rgba(255,140,100,0.08)';
+    ctx.beginPath();
+    ctx.ellipse(x - r * 0.3, y - r * 0.2, r * 0.5, r * 0.25, 0, 0, Math.PI * 2);
+    ctx.fill();
+  }
+  ctx.restore();
+
+  // luz da lua contornando o lado direito
+  ctx.strokeStyle = 'rgba(190,160,230,0.35)';
+  ctx.lineWidth = 2;
+  ctx.beginPath();
+  outline.slice(13, 21).forEach(([x, y], i) => (i ? ctx.lineTo(x, y) : ctx.moveTo(x, y)));
+  ctx.stroke();
+
+  // rios de lava: brilho largo, corpo laranja e miolo claro, afinando
+  for (const flow of LAVA_FLOWS) {
+    const n = flow.length - 1;
+    for (const [w0, w1, color, blur] of [[14, 6, 'rgba(255,70,20,0.18)', 14], [6, 2.5, '#b8360f', 0], [2.2, 0.8, 'rgba(255,190,90,0.85)', 0]]) {
+      ctx.strokeStyle = color;
+      ctx.shadowColor = '#ff5a14';
+      ctx.shadowBlur = blur;
+      ctx.lineCap = 'round';
+      ctx.lineJoin = 'round';
+      for (let i = 0; i < n; i++) {
+        const [ax, ay] = flow[i];
+        const [bx, by] = flow[i + 1];
+        const [cx, cy] = flow[i + 2] ?? flow[i + 1];
+        ctx.lineWidth = w0 + (w1 - w0) * (i / n);
+        ctx.beginPath();
+        ctx.moveTo(i ? (flow[i - 1][0] + ax) / 2 : ax, i ? (flow[i - 1][1] + ay) / 2 : ay);
+        ctx.quadraticCurveTo(ax, ay, (ax + bx) / 2, (ay + by) / 2);
+        if (i === n - 1) ctx.lineTo(bx, by);
+        else ctx.quadraticCurveTo(bx, by, (bx + cx) / 2, (by + cy) / 2);
+        ctx.stroke();
+      }
+    }
+    ctx.shadowBlur = 0;
+    // pedaços de crosta escura boiando
+    ctx.fillStyle = 'rgba(60,10,5,0.6)';
+    for (let i = 1; i < n; i++) {
+      const [x, y] = flow[i];
+      ctx.beginPath();
+      ctx.ellipse(x + 2, y + 6, 2.5, 1.5, 0.6, 0, Math.PI * 2);
+      ctx.fill();
+    }
+  }
+
+  // cratera: parede de trás escura, lago de lava e a borda da frente
+  // tampando a parte de baixo do lago
+  const open = { x: CRATER.x, y: CRATER.y - 5, rx: CRATER.rx + 8, ry: 11 };
+  ctx.save();
+  ctx.clip(body);
+  ctx.beginPath();
+  ctx.ellipse(open.x, open.y, open.rx, open.ry, 0, 0, Math.PI * 2);
+  ctx.clip();
+  const wall = ctx.createLinearGradient(0, open.y - open.ry, 0, CRATER.y);
+  wall.addColorStop(0, '#24091a');
+  wall.addColorStop(1, '#a8361a');
+  ctx.fillStyle = wall;
+  ctx.fillRect(open.x - open.rx, open.y - open.ry, open.rx * 2, open.ry * 2);
+  const lake = ctx.createLinearGradient(0, CRATER.y - CRATER.ry, 0, CRATER.y + CRATER.ry);
+  lake.addColorStop(0, '#fff2a8');
+  lake.addColorStop(0.5, '#ff9a2a');
+  lake.addColorStop(1, '#c2300a');
+  ctx.fillStyle = lake;
+  ctx.beginPath();
+  ctx.ellipse(CRATER.x, CRATER.y, CRATER.rx, CRATER.ry, 0, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.restore();
+  // borda da frente iluminada pela lava
+  ctx.strokeStyle = 'rgba(255,170,90,0.85)';
+  ctx.lineWidth = 2;
+  ctx.beginPath();
+  ctx.ellipse(open.x, open.y, open.rx, open.ry, 0, 0.15, Math.PI - 0.15);
+  ctx.stroke();
+}
+
+// Ponto a uma fração `u` (0..1) do caminho de um rio de lava
+function alongFlow(flow, u) {
+  const lens = [];
+  let total = 0;
+  for (let i = 0; i < flow.length - 1; i++) {
+    const l = Math.hypot(flow[i + 1][0] - flow[i][0], flow[i + 1][1] - flow[i][1]);
+    lens.push(l);
+    total += l;
+  }
+  let d = u * total;
+  for (let i = 0; i < lens.length; i++) {
+    if (d <= lens[i]) {
+      const k = d / lens[i];
+      return [flow[i][0] + (flow[i + 1][0] - flow[i][0]) * k, flow[i][1] + (flow[i + 1][1] - flow[i][1]) * k];
+    }
+    d -= lens[i];
+  }
+  return flow[flow.length - 1];
+}
+
+function volcanoAnimated(ctx, time) {
+  // brilho pulsando na cratera
   const pulse = 0.55 + Math.sin(time * 1.7) * 0.15;
-  const crater = ctx.createRadialGradient(105, 170, 6, 105, 170, 170);
+  const crater = ctx.createRadialGradient(CRATER.x, CRATER.y, 6, CRATER.x, CRATER.y, 190);
   crater.addColorStop(0, `rgba(255,190,90,${pulse})`);
   crater.addColorStop(0.4, `rgba(255,90,30,${pulse * 0.45})`);
   crater.addColorStop(1, 'rgba(255,60,20,0)');
   ctx.fillStyle = crater;
-  ctx.fillRect(-80, 0, 370, 340);
-  // Fumaça
-  for (let i = 0; i < 6; i++) {
-    const k = (time * 0.05 + i / 6) % 1;
-    const sx = 105 + Math.sin(i * 2 + time * 0.3) * 30 + k * 140;
-    const sy = 150 - k * 380;
-    const r = 50 + k * 120;
+  ctx.fillRect(CRATER.x - 190, CRATER.y - 190, 380, 380);
+
+  // fumaça grossa subindo e indo para a direita, iluminada por baixo
+  for (let i = 0; i < 7; i++) {
+    const k = (time * 0.045 + i / 7) % 1;
+    const sx = CRATER.x + Math.sin(i * 2.3 + time * 0.4) * 20 + k * k * 260;
+    const sy = CRATER.y - 10 - k * 420;
+    const r = 34 + k * 100;
+    const warm = Math.max(0, 1 - k * 2.2);
+    const c = `${Math.round(55 + 90 * warm)},${Math.round(32 + 25 * warm)},${Math.round(50 - 10 * warm)}`;
     const puff = ctx.createRadialGradient(sx, sy, 0, sx, sy, r);
-    puff.addColorStop(0, `rgba(60,30,45,${0.35 * (1 - k)})`);
-    puff.addColorStop(1, 'rgba(60,30,45,0)');
+    puff.addColorStop(0, `rgba(${c},${0.5 * (1 - k)})`);
+    puff.addColorStop(0.6, `rgba(${c},${0.3 * (1 - k)})`);
+    puff.addColorStop(1, `rgba(${c},0)`);
     ctx.fillStyle = puff;
     ctx.fillRect(sx - r, sy - r, r * 2, r * 2);
   }
-  // Pedrinhas de lava sendo cuspidas
-  for (let i = 0; i < 4; i++) {
-    const k = (time * 0.45 + i * 0.27) % 1;
-    const dir = i % 2 ? 1 : -1;
-    const x = 105 + dir * k * (60 + i * 20);
-    const y = 165 - Math.sin(k * Math.PI) * (90 + i * 25);
-    ctx.globalAlpha = 1 - k;
-    ctx.fillStyle = '#ffb347';
+
+  // lava escorrendo: pontos de luz descendo pelos rios
+  ctx.globalCompositeOperation = 'lighter';
+  LAVA_FLOWS.forEach((flow, f) => {
+    for (let k = 0; k < 3; k++) {
+      const u = (time * 0.05 + k / 3 + f * 0.17) % 1;
+      const [x, y] = alongFlow(flow, u);
+      const r = 9 * (1 - u * 0.6);
+      const g = ctx.createRadialGradient(x, y, 0, x, y, r);
+      g.addColorStop(0, `rgba(255,230,150,${0.8 * (1 - u)})`);
+      g.addColorStop(1, 'rgba(255,120,40,0)');
+      ctx.fillStyle = g;
+      ctx.fillRect(x - r, y - r, r * 2, r * 2);
+    }
+  });
+  ctx.globalCompositeOperation = 'source-over';
+
+  // erupção: bolhas de lava sempre saindo e uma explosão maior a cada 7 s
+  const burst = time % 7;
+  const big = burst < 1.6;
+  const count = big ? 22 : 8;
+  for (let i = 0; i < count; i++) {
+    const period = 1.4 + (i % 4) * 0.25;
+    const k = big && i >= 8 ? burst / 1.6 : ((time + i * 0.37) % period) / period;
+    const dir = Math.sin(i * 12.9898) ;
+    const height = (big && i >= 8 ? 200 : 90) + Math.abs(Math.sin(i * 4.1)) * 80;
+    const x = CRATER.x + dir * k * (big && i >= 8 ? 220 : 90);
+    const y = CRATER.y - 4 * height * k * (1 - k);
+    if (y > CRATER.y + 2) continue;
+    const r = big && i >= 8 ? 3.5 : 2.5;
+    ctx.globalAlpha = Math.min(1, (1 - k) * 1.6) * 0.3;
+    ctx.fillStyle = '#ff6a1a';
     ctx.beginPath();
-    ctx.arc(x, y, 2.5, 0, Math.PI * 2);
+    ctx.arc(x, y, r * 2.2, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.globalAlpha = Math.min(1, (1 - k) * 1.6);
+    ctx.fillStyle = k < 0.5 ? '#fff0b0' : '#ff8a2a';
+    ctx.beginPath();
+    ctx.arc(x, y, r, 0, Math.PI * 2);
+    ctx.fill();
+  }
+  ctx.globalAlpha = 1;
+  if (big) {
+    // coluna de lava subindo e caindo de volta
+    const h = 170 * Math.sin(Math.PI * Math.min(1, burst / 1.3));
+    if (h > 4) {
+      // bolhas de lava subindo em coluna e uma coroa espirrando no alto
+      ctx.fillStyle = 'rgba(255,106,26,0.3)';
+      ctx.beginPath();
+      ctx.ellipse(CRATER.x, CRATER.y - h / 2, 24, h / 2 + 14, 0, 0, Math.PI * 2);
+      ctx.fill();
+      for (let j = 0; j <= 16; j++) {
+        const u = j / 16;
+        const x = CRATER.x + Math.sin(j * 2.1 + time * 12) * 5 * u;
+        const y = CRATER.y - h * u;
+        const r = 13 - u * 6;
+        ctx.fillStyle = u < 0.3 ? '#ff7a1a' : u < 0.7 ? '#ffa53a' : '#ffd27a';
+        ctx.beginPath();
+        ctx.arc(x, y, r, 0, Math.PI * 2);
+        ctx.fill();
+      }
+      for (let j = 0; j < 9; j++) {
+        const a = -Math.PI / 2 + (j - 4) * 0.38;
+        const d = 10 + Math.min(1, burst / 1.3) * 30;
+        ctx.fillStyle = j % 2 ? '#fff0b0' : '#ffb347';
+        ctx.beginPath();
+        ctx.arc(CRATER.x + Math.cos(a) * d, CRATER.y - h - Math.sin(a) * -d * 0.6, 5 - Math.abs(j - 4) * 0.5, 0, Math.PI * 2);
+        ctx.fill();
+      }
+    }
+    // clarão da explosão
+    const a = Math.max(0, 1 - burst / 0.8);
+    const flash = ctx.createRadialGradient(CRATER.x, CRATER.y - 20, 0, CRATER.x, CRATER.y - 20, 260);
+    flash.addColorStop(0, `rgba(255,220,140,${0.6 * a})`);
+    flash.addColorStop(1, 'rgba(255,120,40,0)');
+    ctx.fillStyle = flash;
+    ctx.fillRect(CRATER.x - 260, CRATER.y - 280, 520, 520);
+  }
+}
+
+// ======================================================================
+// Penhasco com cachoeira (fundo distante, à direita)
+
+const FALL = { x: 1200, top: 150, bottom: 980, w: 66 };
+
+function cliff(ctx, rand) {
+  const outline = [
+    [1110, 1380], [1098, 700], [1124, 520], [1104, 380], [1134, 250], [1118, 150],
+    [1150, 126], [FALL.x - FALL.w / 2 - 4, FALL.top - 2], [FALL.x + FALL.w / 2 + 4, FALL.top - 4],
+    [1252, 116], [1330, 92], [1460, 140], [1700, 128], [2040, 120], [2040, 1380],
+  ];
+  const body = new Path2D();
+  outline.forEach(([x, y], i) => (i ? body.lineTo(x, y) : body.moveTo(x, y)));
+  body.closePath();
+  const g = ctx.createLinearGradient(1100, 0, 1500, 0);
+  g.addColorStop(0, '#202c56');
+  g.addColorStop(0.3, '#151e40');
+  g.addColorStop(1, '#0d132b');
+  ctx.fillStyle = g;
+  ctx.fill(body);
+
+  ctx.save();
+  ctx.clip(body);
+  // facetas iluminadas pela lua (lado esquerdo das pedras)
+  ctx.fillStyle = 'rgba(120,150,230,0.12)';
+  for (const pts of [
+    [[1104, 380], [1134, 250], [1150, 330], [1130, 470]], [[1118, 150], [1150, 126], [1160, 220], [1134, 250]],
+    [[1124, 520], [1150, 560], [1140, 700], [1098, 700]], [[1330, 92], [1460, 140], [1420, 420], [1300, 380]],
+    [[1560, 135], [1700, 128], [1660, 520]],
+  ]) {
+    ctx.beginPath();
+    pts.forEach(([x, y], i) => (i ? ctx.lineTo(x, y) : ctx.moveTo(x, y)));
+    ctx.closePath();
+    ctx.fill();
+  }
+  // rocha molhada e escura atrás da queda
+  const wet = ctx.createLinearGradient(FALL.x - 70, 0, FALL.x + 70, 0);
+  wet.addColorStop(0, 'rgba(5,8,20,0)');
+  wet.addColorStop(0.5, 'rgba(5,8,20,0.55)');
+  wet.addColorStop(1, 'rgba(5,8,20,0)');
+  ctx.fillStyle = wet;
+  ctx.fillRect(FALL.x - 70, FALL.top, 140, 1200);
+  // camadas horizontais da rocha
+  ctx.strokeStyle = 'rgba(0,0,0,0.3)';
+  ctx.lineWidth = 2;
+  for (let y = 200; y < 1300; y += 40 + rand() * 40) {
+    ctx.beginPath();
+    ctx.moveTo(1090, y);
+    for (let x = 1090; x < 2040; x += 60) ctx.lineTo(x + 60, y + (rand() - 0.5) * 10);
+    ctx.stroke();
+  }
+  ctx.fillStyle = 'rgba(120,180,255,0.07)';
+  for (let i = 0; i < 40; i++) ctx.fillRect(1180 + rand() * 800, 150 + rand() * 900, 30 + rand() * 60, 3);
+  ctx.restore();
+
+  // saliências de pedra com musgo na beira do penhasco
+  for (const [x, y, w] of [[1112, 382, 46], [1100, 702, 54], [1262, 330, 40], [1300, 560, 50]]) {
+    ctx.fillStyle = '#18213f';
+    ctx.beginPath();
+    ctx.moveTo(x - w * 0.5, y);
+    ctx.lineTo(x + w * 0.5, y - 2);
+    ctx.lineTo(x + w * 0.3, y + 14);
+    ctx.lineTo(x - w * 0.2, y + 18);
+    ctx.closePath();
+    ctx.fill();
+    ctx.fillStyle = 'rgba(150,180,255,0.25)';
+    ctx.fillRect(x - w * 0.5, y - 1, w, 2);
+    ctx.fillStyle = '#244a3a';
+    ctx.beginPath();
+    ctx.ellipse(x, y - 2, w * 0.45, 4, 0, Math.PI, 0);
+    ctx.fill();
+  }
+  // trepadeiras descendo pela borda esquerda
+  ctx.strokeStyle = '#1f4a3a';
+  ctx.lineWidth = 2;
+  for (const [x0, len] of [[1124, 160], [1146, 110], [1258, 140]]) {
+    ctx.beginPath();
+    ctx.moveTo(x0, 140);
+    for (let y = 140; y < 140 + len; y += 12) ctx.lineTo(x0 + Math.sin(y * 0.09) * 5, y);
+    ctx.stroke();
+  }
+  // pedras com musgo de cada lado de onde a água sai
+  for (const [x, y, r] of [[FALL.x - FALL.w / 2 - 8, FALL.top - 6, 16], [FALL.x + FALL.w / 2 + 10, FALL.top - 8, 18]]) {
+    ctx.fillStyle = '#1c274e';
+    ctx.beginPath();
+    ctx.ellipse(x, y, r, r * 0.7, 0, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = 'rgba(150,180,255,0.25)';
+    ctx.beginPath();
+    ctx.ellipse(x - r * 0.3, y - r * 0.3, r * 0.5, r * 0.25, -0.3, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = '#2f6b4c';
+    ctx.beginPath();
+    ctx.ellipse(x, y - r * 0.55, r * 0.8, r * 0.25, 0, Math.PI, 0);
+    ctx.fill();
+  }
+  // árvores no topo
+  for (let i = 0; i < 11; i++) {
+    const x = 1150 + i * 64 + rand() * 30;
+    if (Math.abs(x - FALL.x) < FALL.w) continue;
+    const y = x < 1330 ? 126 - (x - 1150) * 0.19 : x < 1460 ? 92 + (x - 1330) * 0.37 : 134;
+    pineSilhouette(ctx, x, y + 4, 30 + rand() * 26, '#0a1024');
+  }
+  // cristais azuis brilhando na rocha
+  for (const [x, y] of [[1270, 440], [1380, 300], [1520, 520], [1150, 620]]) {
+    ctx.shadowColor = '#5ab8ff';
+    ctx.shadowBlur = 16;
+    ctx.fillStyle = 'rgba(140,210,255,0.8)';
+    ctx.beginPath();
+    ctx.moveTo(x, y);
+    ctx.lineTo(x + 6, y - 18);
+    ctx.lineTo(x + 12, y);
+    ctx.closePath();
+    ctx.fill();
+  }
+  ctx.shadowBlur = 0;
+}
+
+// Largura da queda numa altura (abre um pouco ao cair)
+function fallEdges(y) {
+  const k = (y - FALL.top) / (FALL.bottom - FALL.top);
+  const half = FALL.w / 2 + k * 22;
+  return [FALL.x - half, FALL.x + half];
+}
+
+function waterfallAnimated(ctx, time) {
+  const { x, top, bottom } = FALL;
+  // cortina de água com faixas claras e escuras
+  const [l0, r0] = fallEdges(top);
+  const [l1, r1] = fallEdges(bottom);
+  const g = ctx.createLinearGradient(l1, 0, r1, 0);
+  g.addColorStop(0, 'rgba(90,170,255,0.25)');
+  g.addColorStop(0.12, 'rgba(160,215,255,0.7)');
+  g.addColorStop(0.3, 'rgba(110,185,255,0.6)');
+  g.addColorStop(0.5, 'rgba(215,240,255,0.85)');
+  g.addColorStop(0.7, 'rgba(110,185,255,0.6)');
+  g.addColorStop(0.88, 'rgba(170,220,255,0.7)');
+  g.addColorStop(1, 'rgba(90,170,255,0.25)');
+  ctx.fillStyle = g;
+  ctx.beginPath();
+  ctx.moveTo(l0, top + 6);
+  ctx.lineTo(r0, top + 6);
+  ctx.lineTo(r1, bottom);
+  ctx.lineTo(l1, bottom);
+  ctx.closePath();
+  ctx.fill();
+
+  // riscos de água caindo em velocidades diferentes
+  ctx.lineCap = 'round';
+  for (let i = 0; i < 30; i++) {
+    const lane = ((i * 0.618) % 1) * 0.9 + 0.05;
+    const speed = 260 + (i % 5) * 45;
+    const len = 30 + (i % 4) * 22;
+    const y = top + 10 + ((time * speed + i * 131) % (bottom - top));
+    const [l, r] = fallEdges(y);
+    const lx = l + (r - l) * lane;
+    ctx.strokeStyle = `rgba(255,255,255,${0.35 + (i % 3) * 0.18})`;
+    ctx.lineWidth = 1.2 + (i % 3) * 0.8;
+    ctx.beginPath();
+    ctx.moveTo(lx, y);
+    ctx.lineTo(lx, Math.min(bottom, y + len));
+    ctx.stroke();
+  }
+  // placas de espuma escorregando
+  for (let i = 0; i < 6; i++) {
+    const y = top + ((time * 200 + i * 160) % (bottom - top));
+    const [l, r] = fallEdges(y);
+    const cx = l + (r - l) * (0.2 + ((i * 0.37) % 0.6));
+    const fg = ctx.createRadialGradient(cx, y, 0, cx, y, 18);
+    fg.addColorStop(0, 'rgba(255,255,255,0.45)');
+    fg.addColorStop(1, 'rgba(255,255,255,0)');
+    ctx.fillStyle = fg;
+    ctx.fillRect(cx - 18, y - 30, 36, 60);
+  }
+  // borda de cima: água passando por cima da pedra
+  const lip = ctx.createLinearGradient(0, top - 6, 0, top + 16);
+  lip.addColorStop(0, 'rgba(160,215,255,0.9)');
+  lip.addColorStop(0.5, 'rgba(240,252,255,1)');
+  lip.addColorStop(1, 'rgba(200,235,255,0)');
+  ctx.fillStyle = lip;
+  ctx.beginPath();
+  ctx.moveTo(l0 - 2, top + 16);
+  ctx.quadraticCurveTo(l0 - 2, top - 4, l0 + 10, top - 4);
+  ctx.lineTo(r0 - 10, top - 4);
+  ctx.quadraticCurveTo(r0 + 2, top - 4, r0 + 2, top + 16);
+  ctx.closePath();
+  ctx.fill();
+  ctx.fillStyle = 'rgba(255,255,255,0.9)';
+  for (let i = 0; i < 6; i++) {
+    const fx = l0 + 6 + ((time * 30 + i * 11) % (r0 - l0 - 12));
+    ctx.fillRect(fx, top - 3 + Math.sin(time * 5 + i) * 1.5, 6, 1.5);
+  }
+  // gotas espirrando pelas bordas
+  ctx.fillStyle = 'rgba(220,245,255,0.8)';
+  for (let i = 0; i < 12; i++) {
+    const k = (time * 0.8 + i / 12) % 1;
+    const side = i % 2 ? 1 : -1;
+    const y0 = top + 80 + ((i * 97) % 600);
+    const [l, r] = fallEdges(y0);
+    const ex = side > 0 ? r : l;
+    ctx.globalAlpha = 1 - k;
+    ctx.beginPath();
+    ctx.arc(ex + side * k * 18, y0 + k * 40, 1.6, 0, Math.PI * 2);
     ctx.fill();
   }
   ctx.globalAlpha = 1;
 
-  // Cachoeira com várias faixas de água
-  const x = 1190;
-  const top = 160;
-  const bottom = 980;
-  const g = ctx.createLinearGradient(x - 40, 0, x + 40, 0);
-  g.addColorStop(0, 'rgba(90,170,255,0.35)');
-  g.addColorStop(0.5, 'rgba(200,235,255,0.75)');
-  g.addColorStop(1, 'rgba(90,170,255,0.35)');
-  ctx.fillStyle = g;
-  ctx.beginPath();
-  ctx.moveTo(x - 30, top);
-  ctx.lineTo(x + 30, top);
-  ctx.lineTo(x + 40, bottom);
-  ctx.lineTo(x - 40, bottom);
-  ctx.closePath();
-  ctx.fill();
-  ctx.fillStyle = 'rgba(255,255,255,0.55)';
-  for (let i = 0; i < 18; i++) {
-    const lx = x - 30 + ((i * 37) % 60);
-    const ly = top + ((time * (240 + (i % 3) * 40) + i * 97) % (bottom - top));
-    ctx.fillRect(lx, ly, 2.5, 40 + (i % 4) * 10);
+  // quedas finas saindo do penhasco
+  for (const [sx, sy, sb] of [[1290, 300, 720], [1352, 262, 640]]) {
+    ctx.fillStyle = 'rgba(170,220,255,0.45)';
+    ctx.fillRect(sx - 3, sy, 6, sb - sy);
+    ctx.fillStyle = 'rgba(255,255,255,0.7)';
+    for (let i = 0; i < 4; i++) {
+      const y = sy + ((time * 220 + i * 90) % (sb - sy));
+      ctx.fillRect(sx - 1, y, 2, 24);
+    }
+    const m = ctx.createRadialGradient(sx, sb, 0, sx, sb, 40);
+    m.addColorStop(0, 'rgba(210,235,255,0.35)');
+    m.addColorStop(1, 'rgba(210,235,255,0)');
+    ctx.fillStyle = m;
+    ctx.fillRect(sx - 40, sb - 40, 80, 80);
   }
-  // espuma no topo
-  const foam = ctx.createRadialGradient(x, top + 4, 2, x, top + 4, 40);
-  foam.addColorStop(0, 'rgba(235,250,255,0.7)');
-  foam.addColorStop(1, 'rgba(235,250,255,0)');
-  ctx.fillStyle = foam;
-  ctx.fillRect(x - 40, top - 16, 80, 40);
-  // Névoa na base
-  const mist = ctx.createRadialGradient(x, 900, 10, x, 900, 260);
-  mist.addColorStop(0, 'rgba(200,230,255,0.35)');
+
+  // névoa lá embaixo, onde a água some
+  const fade = ctx.createLinearGradient(0, bottom - 200, 0, bottom);
+  fade.addColorStop(0, 'rgba(200,230,255,0)');
+  fade.addColorStop(1, 'rgba(200,230,255,0.45)');
+  ctx.fillStyle = fade;
+  ctx.fillRect(l1 - 10, bottom - 200, r1 - l1 + 20, 200);
+  for (let i = 0; i < 6; i++) {
+    const k = (time * 0.12 + i / 6) % 1;
+    const px = x + Math.sin(i * 2.1) * 80 + Math.sin(time * 0.5 + i) * 20;
+    const py = bottom - 30 - k * 110;
+    const r = 50 + k * 50;
+    const puff = ctx.createRadialGradient(px, py, 0, px, py, r);
+    puff.addColorStop(0, `rgba(215,235,255,${0.32 * (1 - k)})`);
+    puff.addColorStop(1, 'rgba(215,235,255,0)');
+    ctx.fillStyle = puff;
+    ctx.fillRect(px - r, py - r, r * 2, r * 2);
+  }
+  const mist = ctx.createRadialGradient(x, bottom, 10, x, bottom, 220);
+  mist.addColorStop(0, 'rgba(200,230,255,0.4)');
   mist.addColorStop(1, 'rgba(200,230,255,0)');
   ctx.fillStyle = mist;
-  ctx.fillRect(x - 260, 640, 520, 520);
+  ctx.fillRect(x - 220, bottom - 220, 440, 440);
+  // arco-íris de lua bem fraquinho na névoa
+  const bands = ['255,120,120', '255,220,120', '140,255,160', '120,190,255', '200,140,255'];
+  ctx.lineWidth = 5;
+  bands.forEach((c, i) => {
+    ctx.strokeStyle = `rgba(${c},${0.07 + Math.sin(time * 0.6) * 0.02})`;
+    ctx.beginPath();
+    ctx.arc(x, bottom + 40, 170 - i * 5, Math.PI * 1.1, Math.PI * 1.9);
+    ctx.stroke();
+  });
 }
 
 // ======================================================================
@@ -522,7 +926,7 @@ function drawMid(ctx, map, rand) {
   templeArch(ctx);
 
   // Colunas em ruínas: runas laranja do lado do fogo, azuis do lado da água
-  const columns = [[-120, 300, '#ff7a2a', false], [90, 360, '#ff7a2a', false], [1180, 340, '#4fb0ff', true], [1390, 290, '#4fb0ff', true]];
+  const columns = [[-120, 300, '#ff7a2a', false], [90, 360, '#ff7a2a', false], [1400, 340, '#4fb0ff', true], [1600, 290, '#4fb0ff', true]];
   for (const [cx, h, rune, ivy] of columns) ruinColumn(ctx, cx, 640, h, rune, ivy, rand);
 
   // Pedras flutuando entre o fundo e a ilha
@@ -717,6 +1121,22 @@ function ruinColumn(ctx, cx, base, h, rune, ivy, rand) {
   }
 }
 
+// Nuvem de névoa redonda e suave, desenhada uma vez só
+let fogPuffCanvas = null;
+function fogPuff() {
+  if (fogPuffCanvas) return fogPuffCanvas;
+  const c = document.createElement('canvas');
+  c.width = c.height = 128;
+  const ctx = c.getContext('2d');
+  const g = ctx.createRadialGradient(64, 64, 0, 64, 64, 64);
+  g.addColorStop(0, 'rgba(120,70,120,0.12)');
+  g.addColorStop(1, 'rgba(120,70,120,0)');
+  ctx.fillStyle = g;
+  ctx.fillRect(0, 0, 128, 128);
+  fogPuffCanvas = c;
+  return c;
+}
+
 function drawMidAnimated(ctx, time) {
   // Selo do templo pulsando devagar
   const a = 0.15 + (Math.sin(time * 1.2) + 1) * 0.08;
@@ -725,16 +1145,13 @@ function drawMidAnimated(ctx, time) {
   g.addColorStop(1, 'rgba(199,125,255,0)');
   ctx.fillStyle = g;
   ctx.fillRect(520, -160, 240, 240);
-  // Névoa passando na frente dos morros
+  // Névoa passando na frente dos morros (uma nuvem pronta, copiada)
+  const puff = fogPuff();
   for (let i = 0; i < 5; i++) {
     const x = ((time * (14 + i * 4) + i * 420) % 2400) - 560;
     const y = 600 + (i % 3) * 40;
     const r = 220 + (i % 2) * 80;
-    const fog = ctx.createRadialGradient(x, y, 0, x, y, r);
-    fog.addColorStop(0, 'rgba(120,70,120,0.12)');
-    fog.addColorStop(1, 'rgba(120,70,120,0)');
-    ctx.fillStyle = fog;
-    ctx.fillRect(x - r, y - r, r * 2, r * 2);
+    ctx.drawImage(puff, x - r, y - r, r * 2, r * 2);
   }
 }
 
