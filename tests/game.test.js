@@ -186,22 +186,28 @@ test('modo ADM: cada golpe do jogador ADM dá 999%', () => {
   assert.equal(bot.lives, PLAYER.lives - 1, 'voou para fora do mapa');
 });
 
-test('plataforma que balança leva junto quem está em cima (Pico dos Ventos)', () => {
+test('plataforma do balão só balança quando alguém anda em cima (Pico dos Ventos)', () => {
   const g = newGame(['fogo', 'agua', 'agua', 'fogo'], { mapId: 'pico' });
-  park(g, 2, 3, 4);
   for (const id of [2, 3, 4]) place(g.playerById(id), 640, 520);
   const p = g.playerById(1);
   const pl = g.platforms[0];
-  place(p, pl.x + pl.w / 2, pl.y);
-  run(g, 2);
-  assert.equal(p.standingOn, 'platform');
-  const offset = p.x - pl.x;
   const x0 = pl.x;
-  run(g, 50);
-  assert.ok(Math.abs(pl.x - x0) > 20, 'a plataforma se mexeu');
+  place(p, pl.x + pl.w / 2, pl.y);
+  run(g, 60);
+  assert.equal(p.standingOn, 'platform');
+  assert.ok(Math.abs(pl.x - x0) < 0.5, 'parado em cima: a plataforma não se mexe');
+
+  // andando para a direita, ela balança para a direita e leva o jogador
+  place(p, pl.x + 20, pl.y);
+  run(g, 2);
+  run(g, 20, { 1: makeInput({ right: true }) });
+  assert.ok(pl.x > x0 + 5, 'balançou para o lado que ele andou');
   assert.equal(p.standingOn, 'platform', 'continua em cima');
-  assert.ok(Math.abs(p.x - pl.x - offset) < 1, 'andou junto com a plataforma');
   assert.ok(Math.abs(p.y + p.h - pl.y) < 1, 'pés em cima da plataforma');
+
+  // parou de andar: volta devagar para o lugar
+  run(g, 300);
+  assert.ok(Math.abs(pl.x - x0) < 3, 'voltou para o lugar');
 });
 
 test('na Caldeira as plataformas ficam paradas', () => {

@@ -179,13 +179,25 @@ export class Game {
 
   // ---------------------------------------------------------------- plataformas
 
-  // Plataformas com `swing` balançam como um balanço preso no balão: o ponto
-  // de apoio fica `length` acima da plataforma e o ângulo vai e volta.
+  // Plataformas com `swing` ficam penduradas num balão parado, como uma
+  // tábua de balanço: sozinhas não se mexem; quem anda em cima empurra para
+  // o lado que está andando e, sem ninguém andando, ela volta devagar para
+  // o lugar (o ponto de apoio fica `length` acima da plataforma).
   updatePlatforms() {
-    for (const pl of this.platforms) {
+    for (const [i, pl] of this.platforms.entries()) {
       const sw = pl.swing;
       if (!sw) continue;
-      const angle = sw.amp * Math.sin((2 * Math.PI * this.time) / sw.period + (sw.phase ?? 0));
+      pl.angle ??= 0;
+      pl.spin ??= 0;
+      let push = 0;
+      for (const p of this.players) {
+        if (p.state === 'alive' && p.onGround && p.standingOn === 'platform' && p.platform === i) push += p.vx;
+      }
+      const accel = (-sw.gravity * Math.sin(pl.angle) + push * sw.push) / sw.length - sw.damping * pl.spin;
+      pl.spin += accel * DT;
+      pl.angle = Math.max(-sw.maxAngle, Math.min(sw.maxAngle, pl.angle + pl.spin * DT));
+      if (Math.abs(pl.angle) >= sw.maxAngle) pl.spin = 0;
+      const angle = pl.angle;
       const x = pl.baseX + sw.length * Math.sin(angle);
       const y = pl.baseY - sw.length * (1 - Math.cos(angle));
       pl.dx = x - pl.x;

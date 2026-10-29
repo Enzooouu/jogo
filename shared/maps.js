@@ -12,6 +12,9 @@
 // wind:      rajadas de vento que aparecem em lugares aleatórios
 //            (surfaces = chãos onde podem nascer; dir = sempre para fora)
 
+// Plataforma pendurada em balão (Pico dos Ventos)
+const SWING = { length: 130, push: 1.3, gravity: 900, damping: 1.4, maxAngle: 0.6 };
+
 export const MAPS = {
   caldeira: {
     id: 'caldeira',
@@ -85,31 +88,32 @@ export const MAPS = {
     blast: { left: -260, right: 1540, top: -560, bottom: 1000 },
     solids: [
       { x: 360, y: 520, w: 560, h: 150 },  // ilha principal
-      { x: 80, y: 450, w: 80, h: 80 },     // ilhota da esquerda (bordas da lava)
-      { x: 160, y: 474, w: 60, h: 56 },    // fundo da lava
-      { x: 220, y: 450, w: 80, h: 80 },
-      { x: 980, y: 450, w: 80, h: 80 },    // ilhota da direita (bordas do lago)
-      { x: 1060, y: 474, w: 60, h: 56 },   // fundo do lago
-      { x: 1120, y: 450, w: 80, h: 80 },
+      { x: 80, y: 450, w: 66, h: 80 },     // ilhota da esquerda (bordas da lava)
+      { x: 146, y: 474, w: 88, h: 56 },    // fundo da lava
+      { x: 234, y: 450, w: 66, h: 80 },
+      { x: 980, y: 450, w: 66, h: 80 },    // ilhota da direita (bordas do lago)
+      { x: 1046, y: 474, w: 88, h: 56 },   // fundo do lago
+      { x: 1134, y: 450, w: 66, h: 80 },
     ],
-    // swing: balança como um balanço preso no balão (length = tamanho da
-    // corda, amp = ângulo máximo, period = segundos de uma ida e volta)
+    // swing: pendurada num balão; só balança quando alguém anda em cima
+    // (length = corda, push = força de quem anda, gravity = força que traz
+    // de volta, damping = freio, maxAngle = inclinação máxima da corda)
     platforms: [
-      { x: 420, y: 390, w: 150, swing: { length: 130, amp: 0.48, period: 3.4, phase: 0 } },
-      { x: 710, y: 390, w: 150, swing: { length: 130, amp: 0.48, period: 3.4, phase: Math.PI } },
-      { x: 560, y: 270, w: 160, swing: { length: 130, amp: 0.4, period: 4, phase: Math.PI / 2 } },
+      { x: 363, y: 390, w: 150, swing: SWING },
+      { x: 767, y: 390, w: 150, swing: SWING },
+      { x: 560, y: 270, w: 160, swing: SWING },
     ],
     hazards: [
-      { type: 'lava', x: 160, y: 458, w: 60, h: 16 },
-      { type: 'agua', x: 1060, y: 458, w: 60, h: 16 },
+      { type: 'lava', x: 146, y: 458, w: 88, h: 16 },
+      { type: 'agua', x: 1046, y: 458, w: 88, h: 16 },
       { type: 'espinhos', x: 455, y: 508, w: 100, h: 12 },
       { type: 'espinhos', x: 725, y: 508, w: 100, h: 12 },
     ],
     spawns: [
       { x: 405, y: 520, near: 'espinhos' }, { x: 875, y: 520, near: 'espinhos' },
       { x: 600, y: 520, near: 'espinhos' }, { x: 680, y: 520, near: 'espinhos' },
-      { x: 495, y: 390 }, { x: 785, y: 390 },
-      { x: 260, y: 450, near: 'lava' }, { x: 1020, y: 450, near: 'agua' },
+      { x: 438, y: 390 }, { x: 842, y: 390 },
+      { x: 266, y: 450, near: 'lava' }, { x: 1014, y: 450, near: 'agua' },
     ],
     respawns: [
       { x: 560, y: 150 }, { x: 720, y: 150 }, { x: 400, y: 150 }, { x: 880, y: 150 },
@@ -122,7 +126,7 @@ export const MAPS = {
         { y: 520, x0: 370, x1: 910 },
         { y: 450, x0: 85, x1: 295 },
         { y: 450, x0: 985, x1: 1195 },
-        { y: 390, x0: 400, x1: 880 },
+        { y: 390, x0: 360, x1: 920 },
         { y: 270, x0: 540, x1: 740 },
       ],
     },
