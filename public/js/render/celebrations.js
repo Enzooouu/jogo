@@ -2,7 +2,7 @@
 //   fogo  -> chuva de meteoros e um meteoro gigante explodindo atrás da ilha
 //   agua  -> tsunami atravessando a tela
 //   ar    -> tornado gigante
-//   terra -> terremoto (tremor, rachaduras, pedras caindo)
+//   terra -> terremoto: rachaduras, pilares subindo e espinhos rasgando o chão
 //
 // Camadas (todas em coordenadas do mundo):
 //   'back'  -> atrás da ilha     'mid' -> entre a ilha e os lutadores
@@ -22,11 +22,7 @@ export function updateCelebration(cel, dt, renderer) {
   if (cel.element === 'fogo') {
     updateFire(cel, dt, renderer);
   } else if (cel.element === 'terra') {
-    const k = Math.max(0, 1 - t / CELEBRATION_TIME);
-    renderer.shake(9 * k + 2, 0.1);
-    if (Math.random() < dt * 30 * k) {
-      P.add({ x: 180 + Math.random() * 920, y: 540, vx: (Math.random() - 0.5) * 40, vy: -40 - Math.random() * 60, life: 1.2, size: 8, grow: 22, color: 'rgba(150,120,90,0.35)' });
-    }
+    updateQuake(cel, dt, renderer);
   } else if (cel.element === 'agua') {
     const fx = tsunamiFront(t);
     const s = WAVE_SCALE;
@@ -86,7 +82,9 @@ export function drawCelebration(ctx, cel, layer) {
   else if (cel.element === 'ar' && layer === 'back') tornado(ctx, cel.t);
   else if (cel.element === 'agua' && layer === 'back') tsunami(ctx, cel.t);
   else if (cel.element === 'agua' && layer === 'mid') islandWash(ctx, cel.t);
-  else if (cel.element === 'terra' && layer === 'front') quake(ctx, cel.t);
+  else if (cel.element === 'terra' && layer === 'back') quakeBack(ctx, cel.t);
+  else if (cel.element === 'terra' && layer === 'mid') quakeMid(ctx, cel.t);
+  else if (cel.element === 'terra' && layer === 'front') quakeFront(ctx, cel.t);
   ctx.restore();
 }
 
@@ -808,49 +806,325 @@ function tornado(ctx, t) {
 
 // ---------------------------------------------------------------- terra
 
-const CRACKS = [
-  [[250, 540], [300, 560], [280, 600], [320, 640]],
-  [[620, 540], [600, 575], [650, 610], [630, 660], [670, 700]],
-  [[1020, 540], [990, 580], [1040, 620], [1010, 680]],
-  [[520, 540], [560, 570], [540, 600]],
-  [[760, 540], [730, 565], [770, 600], [750, 640]],
-];
+// Terremoto: o chão treme e racha, pilares de basalto sobem do abismo atrás
+// da ilha, e no golpe final uma fileira de espinhos de pedra rasga o chão
+// enquanto pedregulhos caem do céu e se quebram.
+const GROUND = 540;
+const RISE_TIME = 0.55;
+const SLAM = 2.3;
 
-function quake(ctx, t) {
-  // rachaduras brilhando que vão crescendo
-  const grow = Math.min(1, t / 1.2);
-  ctx.strokeStyle = '#ffb347';
-  ctx.shadowColor = '#ff7a1a';
-  ctx.shadowBlur = 12;
-  ctx.lineWidth = 3;
-  ctx.lineJoin = 'round';
-  for (const crack of CRACKS) {
-    const n = Math.max(2, Math.ceil(crack.length * grow));
-    ctx.beginPath();
-    crack.slice(0, n).forEach(([x, y], i) => (i ? ctx.lineTo(x, y) : ctx.moveTo(x, y)));
-    ctx.stroke();
+// [x, largura, altura do topo, quando começa a subir]
+const PILLARS = [
+  [-30, 110, 170, 0.8], [1310, 120, 150, 1.0], [470, 80, 330, 1.25],
+  [880, 90, 260, 1.45], [120, 70, 300, 1.65], [1160, 80, 320, 1.85],
+].map(([x, w, top, at]) => ({ x, w, top, at }));
+
+// [x, altura] — espinhos que rasgam o chão no golpe final (fora das poças)
+const SPIKES = [[225, 70], [290, 55], [505, 85], [560, 60], [745, 65], [790, 90], [1000, 75], [1060, 55]]
+  .map(([x, h]) => ({ x, h, at: SLAM + Math.abs(x - 640) * 0.0004 }));
+
+// Pedregulhos caindo do céu
+const BOULDERS = Array.from({ length: 16 }, (_, i) => {
+  const at = 0.4 + i * 0.17;
+  const x = 200 + rand(i, 8) * 880;
+  const s = 10 + rand(i, 9) * 14;
+  // tempo até encostar no chão da ilha (queda com gravidade 1600)
+  const fall = Math.sqrt((2 * (GROUND - s * 0.6 + 80)) / 1600);
+  return { at, x, s, land: at + fall, spin: 4 + rand(i, 10) * 4 };
+});
+
+// Rachaduras na parede da ilha: descem do chão em zigue-zague, com galhos
+const QUAKE_CRACKS = [210, 300, 400, 520, 640, 760, 880, 1000, 1070].map((x0, i) => {
+  const pts = [[x0, GROUND + 1]];
+  let x = x0;
+  let y = GROUND + 1;
+  const bottom = 610 + rand(i, 50) * 85;
+  while (y < bottom) {
+    y += 9 + rand(i, y) * 12;
+    x += (rand(i, y + 1) - 0.5) * 26;
+    pts.push([x, Math.min(y, bottom)]);
   }
-  ctx.shadowBlur = 0;
-  // pedras caindo do céu
-  for (let i = 0; i < 22; i++) {
-    const start = 0.3 + i * 0.13;
-    const life = t - start;
-    if (life < 0) continue;
-    const x = 200 + rand(i, 8) * 880;
-    const y = -80 + 0.5 * 1600 * life * life;
-    if (y > 560) continue;
-    const s = 8 + rand(i, 9) * 14;
-    ctx.save();
-    ctx.translate(x, y);
-    ctx.rotate(life * (4 + rand(i, 10) * 4));
-    ctx.fillStyle = '#7a5a3a';
-    ctx.strokeStyle = '#140a0a';
-    ctx.lineWidth = 2;
+  const b = Math.floor(pts.length / 2);
+  const branch = [pts[b]];
+  for (let k = 1; k <= 3; k++) {
+    const [px, py] = branch[k - 1];
+    branch.push([px + (rand(i, k + 70) < 0.5 ? -1 : 1) * (10 + rand(i, k + 80) * 14), py + 12 + rand(i, k + 90) * 10]);
+  }
+  return { pts, branch, at: 0.35 + rand(i, 60) * 0.9 };
+});
+
+// Momentos das pancadas (o som usa)
+export const QUAKE_HITS = { pillars: PILLARS.map((p) => p.at), slam: SLAM };
+
+function easeOutBack(k) {
+  const c = k - 1;
+  return 1 + 2.7 * c * c * c + 1.7 * c * c;
+}
+
+function updateQuake(cel, dt, renderer) {
+  const P = renderer.particles;
+  const t = cel.t;
+  const k = Math.max(0, 1 - t / CELEBRATION_TIME);
+  renderer.shake(2 + 3 * k, 0.1);
+  // pedrinhas pulando no chão e poeira caindo do alto
+  if (Math.random() < dt * 30 * k) {
+    P.add({ x: 190 + Math.random() * 900, y: GROUND - 2, vx: (Math.random() - 0.5) * 80, vy: -150 - Math.random() * 180, life: 0.5, size: 1.5 + Math.random() * 2, color: '#6e5236', gravity: 1500 });
+  }
+  if (Math.random() < dt * 18) {
+    P.add({ x: -100 + Math.random() * 1480, y: -30, vx: (Math.random() - 0.5) * 20, vy: 80 + Math.random() * 80, life: 2.5, size: 1.4, color: 'rgba(200,170,120,0.8)', gravity: 200 });
+  }
+  if (Math.random() < dt * 20 * k) {
+    P.add({ x: 180 + Math.random() * 920, y: GROUND, vx: (Math.random() - 0.5) * 40, vy: -40 - Math.random() * 60, life: 1, size: 5, grow: 16, color: 'rgba(150,120,90,0.2)' });
+  }
+  cel.done = cel.done ?? new Set();
+  const once = (key) => !cel.done.has(key) && cel.done.add(key);
+  // cada pilar que sobe dá um tranco e solta pedras do topo
+  PILLARS.forEach((p, i) => {
+    if (t < p.at || !once(`p${i}`)) return;
+    renderer.shake(7, 0.3);
+    P.burst(p.x, Math.min(GROUND, p.top + 80), { count: 10, speed: 380, angle: -Math.PI / 2, spread: 2.4, size: 3, color: '#5a4029', gravity: 1500, life: 1.1 });
+    if (p.x > 180 && p.x < 1100) {
+      P.burst(p.x, GROUND - 6, { count: 5, speed: 160, angle: -Math.PI / 2, spread: 2.6, size: 8, grow: 28, color: 'rgba(160,130,95,0.25)', life: 1 });
+    }
+  });
+  // golpe final: espinhos rasgando o chão
+  SPIKES.forEach((s, i) => {
+    if (t < s.at || !once(`s${i}`)) return;
+    P.burst(s.x, GROUND - 4, { count: 10, speed: 420, angle: -Math.PI / 2, spread: 1.8, size: 2.5, color: '#6e5236', gravity: 1500, life: 0.8 });
+    P.burst(s.x, GROUND - 8, { count: 3, speed: 120, angle: -Math.PI / 2, spread: 2.6, size: 6, grow: 24, color: 'rgba(170,140,100,0.25)', life: 0.9 });
+  });
+  if (t >= SLAM && once('slam')) {
+    renderer.shake(15, 0.6);
+    // poeira rolando pelo chão para os dois lados
+    for (let i = 0; i < 24; i++) {
+      const dir = i % 2 ? 1 : -1;
+      P.add({ x: 640 + dir * Math.random() * 60, y: GROUND - 6 - Math.random() * 14, vx: dir * (300 + Math.random() * 500), vy: -20 - Math.random() * 40, life: 1, size: 7, grow: 22, drag: 1.5, color: 'rgba(180,150,110,0.25)' });
+    }
+  }
+  // pedregulhos que batem no chão se quebram
+  BOULDERS.forEach((b, i) => {
+    if (t < b.land || !once(`b${i}`)) return;
+    P.burst(b.x, GROUND - 4, { count: 7, speed: 300, angle: -Math.PI / 2, spread: 2.2, size: 2 + b.s * 0.15, color: '#7a5a3a', gravity: 1600, life: 0.7 });
+    P.burst(b.x, GROUND - 6, { count: 2, speed: 60, angle: -Math.PI / 2, spread: 2, size: 8, grow: 24, color: 'rgba(160,130,95,0.3)', life: 0.8 });
+  });
+}
+
+// Atrás da ilha: céu empoeirado e pilares subindo do abismo
+function quakeBack(ctx, t) {
+  const k = Math.min(1, t / 0.8);
+  ctx.fillStyle = `rgba(60,38,16,${0.3 * k})`;
+  ctx.fillRect(-1200, -900, 3700, 2400);
+  for (const p of PILLARS) drawPillar(ctx, p, t);
+}
+
+function drawPillar(ctx, p, t) {
+  const e = t - p.at;
+  if (e < 0) return;
+  const k = Math.min(1, e / RISE_TIME);
+  const top = 820 + (p.top - 820) * easeOutBack(k);
+  const w = p.w;
+  const l = p.x - w / 2 + (k < 1 ? Math.sin(t * 70) * 2.5 : 0);
+  const bottom = 1200;
+  const capUp = top - w * 0.14;
+  const capDown = top + w * 0.12;
+  ctx.lineJoin = 'round';
+  // três faces da coluna (luz vindo da esquerda)
+  const faces = [
+    ['#7e5f40', [[l, top], [l + w * 0.28, capDown], [l + w * 0.28, bottom], [l, bottom]]],
+    ['#614731', [[l + w * 0.28, capDown], [l + w * 0.72, capDown], [l + w * 0.72, bottom], [l + w * 0.28, bottom]]],
+    ['#3f2e1e', [[l + w * 0.72, capDown], [l + w, top], [l + w, bottom], [l + w * 0.72, bottom]]],
+  ];
+  for (const [color, pts] of faces) {
+    ctx.fillStyle = color;
     ctx.beginPath();
-    ctx.moveTo(-s, 0); ctx.lineTo(-s * 0.5, -s * 0.8); ctx.lineTo(s * 0.6, -s * 0.7); ctx.lineTo(s, 0.1 * s); ctx.lineTo(s * 0.3, s * 0.8); ctx.lineTo(-s * 0.6, s * 0.6);
+    pts.forEach(([x, y], i) => (i ? ctx.lineTo(x, y) : ctx.moveTo(x, y)));
     ctx.closePath();
     ctx.fill();
-    ctx.stroke();
-    ctx.restore();
   }
+  // emendas do basalto
+  ctx.strokeStyle = 'rgba(30,19,11,0.7)';
+  ctx.lineWidth = 2;
+  ctx.beginPath();
+  for (let y = capDown + w * 1.1; y < bottom; y += w * 1.3) {
+    const tilt = Math.sin(y * 0.05 + p.x) * w * 0.05;
+    ctx.moveTo(l, y - w * 0.06 + tilt);
+    ctx.lineTo(l + w * 0.28, y + tilt);
+    ctx.lineTo(l + w * 0.72, y + tilt);
+    ctx.lineTo(l + w, y - w * 0.06 + tilt);
+  }
+  ctx.stroke();
+  // tampa de cima
+  ctx.fillStyle = '#9c7b55';
+  ctx.beginPath();
+  ctx.moveTo(l, top);
+  ctx.lineTo(l + w * 0.25, capUp);
+  ctx.lineTo(l + w * 0.75, capUp);
+  ctx.lineTo(l + w, top);
+  ctx.lineTo(l + w * 0.72, capDown);
+  ctx.lineTo(l + w * 0.28, capDown);
+  ctx.closePath();
+  ctx.fill();
+  // musgo no topo escorrendo pela face clara
+  ctx.fillStyle = '#5f9a3e';
+  ctx.beginPath();
+  ctx.moveTo(l + w * 0.05, top);
+  ctx.lineTo(l + w * 0.3, capUp + 2);
+  ctx.lineTo(l + w * 0.55, capUp + 3);
+  ctx.quadraticCurveTo(l + w * 0.5, capDown + w * 0.3, l + w * 0.35, capDown + 4);
+  ctx.quadraticCurveTo(l + w * 0.18, capDown + w * 0.45, l + w * 0.05, top + w * 0.2);
+  ctx.closePath();
+  ctx.fill();
+  // veio de brasa descendo pela face do meio, como no lutador de Terra
+  ctx.strokeStyle = 'rgba(255,179,71,0.8)';
+  ctx.shadowColor = '#ff8a1a';
+  ctx.shadowBlur = 8;
+  ctx.lineWidth = 2;
+  ctx.beginPath();
+  let vx = l + w * 0.5;
+  ctx.moveTo(vx, capDown + 6);
+  for (let y = capDown + 6; y < capDown + w * 2.4; y += 12) {
+    vx += Math.sin(y * 0.3 + p.x) * 5;
+    ctx.lineTo(vx, y);
+  }
+  ctx.stroke();
+  ctx.shadowBlur = 0;
+  // contorno
+  ctx.strokeStyle = '#1e130b';
+  ctx.lineWidth = 3;
+  ctx.beginPath();
+  ctx.moveTo(l, bottom);
+  ctx.lineTo(l, top);
+  ctx.lineTo(l + w * 0.25, capUp);
+  ctx.lineTo(l + w * 0.75, capUp);
+  ctx.lineTo(l + w, top);
+  ctx.lineTo(l + w, bottom);
+  ctx.moveTo(l, top);
+  ctx.lineTo(l + w * 0.28, capDown);
+  ctx.lineTo(l + w * 0.72, capDown);
+  ctx.lineTo(l + w, top);
+  ctx.stroke();
+}
+
+// Na frente da ilha: rachaduras brilhando, espinhos e a onda do golpe
+function quakeMid(ctx, t) {
+  const pulse = 0.75 + 0.25 * Math.sin(t * 9);
+  ctx.lineJoin = 'round';
+  ctx.lineCap = 'round';
+  for (const c of QUAKE_CRACKS) {
+    const grow = Math.min(1, Math.max(0, (t - c.at) / 0.6));
+    if (grow <= 0) continue;
+    const n = Math.max(2, Math.ceil(c.pts.length * grow));
+    const lines = [c.pts.slice(0, n)];
+    if (n > c.pts.length / 2 + 1) lines.push(c.branch);
+    for (const [width, color, blur] of [[8, 'rgba(25,12,4,0.9)', 0], [2.2, `rgba(255,170,60,${pulse})`, 12]]) {
+      ctx.strokeStyle = color;
+      ctx.lineWidth = width;
+      ctx.shadowColor = '#ff8a1a';
+      ctx.shadowBlur = blur;
+      ctx.beginPath();
+      for (const pts of lines) pts.forEach(([x, y], i) => (i ? ctx.lineTo(x, y) : ctx.moveTo(x, y)));
+      ctx.stroke();
+    }
+  }
+  ctx.shadowBlur = 0;
+
+  // espinhos saindo do chão (cortados na linha do chão)
+  ctx.save();
+  ctx.beginPath();
+  ctx.rect(-2000, -2000, 5000, 2000 + GROUND + 4);
+  ctx.clip();
+  for (const s of SPIKES) {
+    const e = t - s.at;
+    if (e < 0) continue;
+    const k = Math.min(1, e / 0.22);
+    drawSpike(ctx, s.x, GROUND + 4, s.h * easeOutBack(k), Math.sign(s.x - 640));
+  }
+  ctx.restore();
+
+  const e = t - SLAM;
+  if (e >= 0 && e < 0.7) {
+    const k = e / 0.7;
+    const rx = 30 + e * 1300;
+    ctx.strokeStyle = `rgba(216,178,122,${0.9 * (1 - k)})`;
+    ctx.lineWidth = 10 * (1 - k) + 2;
+    ctx.beginPath();
+    ctx.ellipse(640, GROUND - 4, rx, rx * 0.1, 0, Math.PI, Math.PI * 2);
+    ctx.stroke();
+  }
+}
+
+function drawSpike(ctx, x, base, h, lean) {
+  if (h <= 1) return;
+  const w = h * 0.32;
+  const tipX = x + lean * h * 0.18;
+  const tipY = base - h;
+  ctx.fillStyle = '#8a6844';
+  ctx.beginPath();
+  ctx.moveTo(x - w, base);
+  ctx.lineTo(tipX, tipY);
+  ctx.lineTo(x + w * 0.1, base);
+  ctx.closePath();
+  ctx.fill();
+  ctx.fillStyle = '#4f3a27';
+  ctx.beginPath();
+  ctx.moveTo(x + w * 0.1, base);
+  ctx.lineTo(tipX, tipY);
+  ctx.lineTo(x + w, base);
+  ctx.closePath();
+  ctx.fill();
+  ctx.strokeStyle = '#1e130b';
+  ctx.lineWidth = 2.5;
+  ctx.lineJoin = 'round';
+  ctx.beginPath();
+  ctx.moveTo(x - w, base);
+  ctx.lineTo(tipX, tipY);
+  ctx.lineTo(x + w, base);
+  ctx.stroke();
+  // veio brilhante como o do lutador de Terra
+  ctx.strokeStyle = 'rgba(255,179,71,0.85)';
+  ctx.lineWidth = 1.5;
+  ctx.beginPath();
+  ctx.moveTo(x - w * 0.3, base - h * 0.1);
+  ctx.lineTo(x - w * 0.15, base - h * 0.35);
+  ctx.lineTo(x - w * 0.3 + (tipX - x) * 0.5, base - h * 0.55);
+  ctx.stroke();
+}
+
+// Na frente de tudo: poeira no ar e pedregulhos caindo
+function quakeFront(ctx, t) {
+  const k = Math.min(1, t / 0.8);
+  const after = t > SLAM ? Math.min(1, (t - SLAM) / 0.4) : 0;
+  ctx.fillStyle = `rgba(120,92,60,${0.1 * k + 0.12 * after})`;
+  ctx.fillRect(-1200, -900, 3700, 2400);
+  for (const b of BOULDERS) {
+    const life = t - b.at;
+    if (life < 0 || t >= b.land) continue;
+    const y = -80 + 0.5 * 1600 * life * life;
+    drawBoulder(ctx, b.x, y, b.s, life * b.spin);
+  }
+}
+
+function drawBoulder(ctx, x, y, s, rot) {
+  ctx.save();
+  ctx.translate(x, y);
+  ctx.rotate(rot);
+  const shape = [[-s, 0], [-s * 0.55, -s * 0.85], [s * 0.6, -s * 0.75], [s, s * 0.1], [s * 0.35, s * 0.85], [-s * 0.6, s * 0.65]];
+  ctx.beginPath();
+  shape.forEach(([px, py], i) => (i ? ctx.lineTo(px, py) : ctx.moveTo(px, py)));
+  ctx.closePath();
+  ctx.fillStyle = '#7a5a3a';
+  ctx.fill();
+  ctx.fillStyle = '#a07a52';
+  ctx.beginPath();
+  ctx.moveTo(-s, 0); ctx.lineTo(-s * 0.55, -s * 0.85); ctx.lineTo(s * 0.6, -s * 0.75); ctx.lineTo(s * 0.1, -s * 0.1);
+  ctx.closePath();
+  ctx.fill();
+  ctx.strokeStyle = '#1e130b';
+  ctx.lineWidth = 2;
+  ctx.lineJoin = 'round';
+  ctx.beginPath();
+  shape.forEach(([px, py], i) => (i ? ctx.lineTo(px, py) : ctx.moveTo(px, py)));
+  ctx.closePath();
+  ctx.stroke();
+  ctx.restore();
 }

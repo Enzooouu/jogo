@@ -1,7 +1,7 @@
 // Efeitos sonoros sintetizados com Web Audio (sem arquivos de som).
 // M liga/desliga.
 
-import { FIRE_IMPACTS } from './render/celebrations.js';
+import { FIRE_IMPACTS, QUAKE_HITS } from './render/celebrations.js';
 
 let ctx = null;
 let master = null;
@@ -137,6 +137,13 @@ export function playEvents(events, localId) {
         } else if (e.winnerElement === 'terra') {
           tone({ freq: 50, to: 30, dur: 3, type: 'sawtooth', vol: 0.35 });
           noise({ dur: 3, vol: 0.3, freq: 200 });
+          // tranco de cada pilar subindo e a pancada final
+          for (const at of QUAKE_HITS.pillars) {
+            tone({ freq: 75, to: 35, dur: 0.35, type: 'sine', vol: 0.45, delay: at });
+            noise({ dur: 0.4, vol: 0.25, freq: 350, delay: at });
+          }
+          noise({ dur: 1.3, vol: 0.65, freq: 260, delay: QUAKE_HITS.slam });
+          tone({ freq: 60, to: 20, dur: 1.2, type: 'sawtooth', vol: 0.4, delay: QUAKE_HITS.slam });
         }
         tone({ freq: 523, dur: 0.15, type: 'triangle', vol: 0.2 });
         tone({ freq: 659, dur: 0.15, type: 'triangle', vol: 0.2, delay: 0.15 });
