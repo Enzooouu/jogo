@@ -78,7 +78,7 @@ export class MatchRunner {
 
   loop = (now) => {
     if (!this.running) return;
-    const dt = this.last === null ? 0 : Math.min(0.1, (now - this.last) / 1000);
+    const dt = this.last === null ? 0 : Math.max(0, Math.min(0.1, (now - this.last) / 1000));
     this.last = now;
 
     if (!this.paused) {

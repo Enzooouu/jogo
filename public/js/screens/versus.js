@@ -25,7 +25,7 @@ export class VersusScreen {
     this.right = setup.players.filter((p) => p.team !== me.team);
     const t0 = performance.now();
     const loop = (now) => {
-      this.draw((now - t0) / 1000 + 1);
+      this.draw(Math.max(0, (now - t0) / 1000) + 1);
       this.frame = requestAnimationFrame(loop);
     };
     this.stop();

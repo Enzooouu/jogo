@@ -106,6 +106,7 @@ export class StageRenderer {
 
   // Céu e camadas de fundo. `shake` é o tremor de tela em unidades lógicas.
   drawBackground(ctx, camera, time, shake = { x: 0, y: 0 }) {
+    time = Math.max(0, time);
     const s = this.scale;
     ctx.setTransform(1, 0, 0, 1, 0, 0);
     ctx.drawImage(this.sky, 0, 0);
@@ -128,6 +129,7 @@ export class StageRenderer {
 
   // Ilha, plataformas e enfeites (com a transformação do mundo já aplicada).
   drawTerrain(ctx, time) {
+    time = Math.max(0, time);
     this.art.behind(ctx, this.map, time);
     const r = this.terrainRect;
     ctx.drawImage(this.terrain, r.x, r.y, r.w, r.h);
@@ -626,8 +628,13 @@ const BOMBS = Array.from({ length: 14 }, (_, i) => ({
 }));
 const BOMB_GRAVITY = 520;
 
+// Resto da divisão sempre positivo (mesmo se o tempo vier negativo)
+function cycle(time, every) {
+  return ((time % every) + every) % every;
+}
+
 function eruption(ctx, time) {
-  const phase = time % ERUPT_EVERY;
+  const phase = cycle(time, ERUPT_EVERY);
   const cx = CRATER.x;
   const cy = CRATER.y;
 
@@ -772,7 +779,7 @@ function eruption(ctx, time) {
 
 // Força extra da lava descendo logo depois de uma erupção
 function lavaSurge(time) {
-  const phase = time % ERUPT_EVERY;
+  const phase = cycle(time, ERUPT_EVERY);
   return phase < 4 ? 1 - phase / 4 : 0;
 }
 

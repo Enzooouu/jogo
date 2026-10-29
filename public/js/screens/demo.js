@@ -45,7 +45,8 @@ export class DemoArena {
     let last = performance.now();
     let acc = 0;
     const loop = (now) => {
-      const dt = Math.min(0.1, (now - last) / 1000);
+      // o primeiro quadro pode vir com horário anterior ao início: nunca volta no tempo
+      const dt = Math.max(0, Math.min(0.1, (now - last) / 1000));
       last = now;
       acc += dt;
       while (acc >= DT) {
