@@ -129,20 +129,51 @@ export class Renderer {
           break;
         }
         case 'shoot': {
+          // estouro na ponta do cajado, do jeito de cada elemento
           const el = ELEMENTS[e.element];
-          P.burst(e.x, e.y, { count: 6, speed: 150, life: 0.25, size: 3, color: el.light });
+          const dir = g.playerById(e.id)?.facing ?? 1;
+          P.add({ type: 'ring', x: e.x, y: e.y, size: 4, grow: 110, life: 0.2, color: el.light });
+          if (e.element === 'fogo') {
+            P.burst(e.x, e.y, { type: 'spark', count: 10, speed: 320, angle: dir > 0 ? 0 : Math.PI, spread: 1.2, life: 0.3, size: 2.5, color: '#ffd25a', drag: 3 });
+            P.burst(e.x, e.y, { count: 5, speed: 90, life: 0.5, size: 6, grow: 14, color: 'rgba(70,40,40,0.45)', gravity: -80 });
+          } else if (e.element === 'agua') {
+            P.burst(e.x, e.y, { count: 12, speed: 260, angle: dir > 0 ? 0 : Math.PI, spread: 1.4, life: 0.45, size: 2.6, color: '#bfeaff', gravity: 700 });
+          } else if (e.element === 'terra') {
+            P.burst(e.x, e.y, { count: 6, speed: 140, life: 0.6, size: 7, grow: 16, color: 'rgba(170,140,100,0.45)', drag: 2 });
+            P.burst(e.x, e.y, { count: 5, speed: 220, angle: -Math.PI / 2, spread: 2.2, life: 0.5, size: 2.4, color: '#7a5a3a', gravity: 900 });
+          } else {
+            P.add({ type: 'ring', x: e.x, y: e.y, size: 10, grow: 180, life: 0.3, color: 'rgba(200,255,245,0.8)' });
+            P.burst(e.x, e.y, { type: 'spark', count: 8, speed: 260, life: 0.35, size: 1.8, color: '#e8fffb', drag: 3 });
+          }
           break;
         }
         case 'explosion': {
+          // explosão da bola de fogo: clarão, bolas de fogo, faíscas e fumaça
           P.add({ type: 'ring', x: e.x, y: e.y, size: 8, grow: e.radius * 4, life: 0.25, color: '#ffd25a' });
-          P.burst(e.x, e.y, { count: 22, speed: 380, life: 0.45, size: 4, color: '#ff7a1a', drag: 3 });
-          P.burst(e.x, e.y, { count: 10, speed: 120, life: 0.8, size: 7, grow: 10, color: 'rgba(60,40,40,0.6)', gravity: -60 });
+          P.add({ x: e.x, y: e.y, size: e.radius * 0.5, grow: e.radius * 2.5, life: 0.18, color: 'rgba(255,245,200,0.9)' });
+          P.burst(e.x, e.y, { count: 10, speed: 160, life: 0.45, size: 9, grow: 12, color: 'rgba(255,130,40,0.75)', drag: 3 });
+          P.burst(e.x, e.y, { type: 'spark', count: 22, speed: 480, life: 0.45, size: 2.6, color: '#ffd25a', drag: 3 });
+          P.burst(e.x, e.y, { count: 10, speed: 120, life: 0.9, size: 8, grow: 14, color: 'rgba(60,40,40,0.55)', gravity: -70 });
           this.shake(4, 0.12);
           break;
         }
         case 'projectileEnd':
           if (e.kind === 'magia' && e.element === 'agua') {
-            P.burst(e.x, e.y, { count: 12, speed: 260, life: 0.5, size: 3, color: '#9fe3ff', gravity: 800 });
+            // respingo: gotas, anel de espuma e névoa
+            P.burst(e.x, e.y, { count: 16, speed: 300, life: 0.55, size: 3, color: '#9fe3ff', gravity: 900 });
+            P.add({ type: 'ring', x: e.x, y: e.y, size: 6, grow: 160, life: 0.25, color: 'rgba(230,250,255,0.9)' });
+            P.burst(e.x, e.y, { count: 4, speed: 60, life: 0.6, size: 6, grow: 18, color: 'rgba(200,235,255,0.4)' });
+          } else if (e.kind === 'magia' && e.element === 'terra') {
+            // a pedra se parte em pedaços e levanta poeira
+            P.burst(e.x, e.y, { count: 9, speed: 320, angle: -Math.PI / 2, spread: 2.6, life: 0.7, size: 3.4, color: '#7a5a3a', gravity: 1300 });
+            P.burst(e.x, e.y, { count: 4, speed: 220, angle: -Math.PI / 2, spread: 2.2, life: 0.6, size: 2.4, color: '#ffd27a', gravity: 1200 });
+            P.burst(e.x, e.y, { count: 6, speed: 90, life: 0.8, size: 7, grow: 18, color: 'rgba(170,140,100,0.45)' });
+            this.shake(2, 0.08);
+          } else if (e.kind === 'magia' && e.element === 'ar') {
+            // o tornado se desfaz em anéis de vento e folhas
+            P.add({ type: 'ring', x: e.x, y: e.y, size: 10, grow: 150, life: 0.35, color: 'rgba(200,255,245,0.8)' });
+            P.add({ type: 'ring', x: e.x, y: e.y, size: 4, grow: 90, life: 0.3, color: 'rgba(255,255,255,0.8)' });
+            P.burst(e.x, e.y, { count: 6, speed: 180, life: 0.7, size: 2.2, color: '#a8d86a', gravity: 150, drag: 1 });
           } else if (e.kind === 'arremesso') {
             P.burst(e.x, e.y, { type: 'spark', count: 8, speed: 260, life: 0.3, size: 2, color: '#dddddd', drag: 3 });
           } else {
@@ -325,6 +356,10 @@ export class Renderer {
         P.add({ x: pr.x, y: pr.y + (Math.random() - 0.5) * 8, vx: -pr.vx * 0.05, vy: -30, life: 0.35, size: 4, grow: -8, color: Math.random() < 0.5 ? '#ff7a1a' : '#ffd25a' });
       } else if (pr.element === 'agua' && chance(50)) {
         P.add({ x: pr.x, y: pr.y + (Math.random() - 0.5) * 10, vx: -pr.vx * 0.05, vy: 0, life: 0.35, size: 2.5, color: '#9fe3ff', gravity: 400 });
+      } else if (pr.element === 'terra' && chance(30)) {
+        P.add({ x: pr.x, y: pr.y, vx: -pr.vx * 0.08, vy: -10, life: 0.5, size: 4, grow: 14, color: 'rgba(170,140,100,0.35)' });
+      } else if (pr.element === 'ar' && chance(25)) {
+        P.add({ x: pr.x + (Math.random() - 0.5) * 30, y: pr.y + 20, vx: -pr.vx * 0.2, vy: -40, life: 0.6, size: 1.8, color: Math.random() < 0.5 ? '#a8d86a' : 'rgba(230,255,250,0.9)', drag: 1 });
       }
     }
   }

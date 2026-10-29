@@ -635,19 +635,31 @@ export function drawFireball(ctx, x, y, r, t, tail) {
   ctx.save();
   ctx.translate(x, y);
   if (tail) {
-    // cauda de chamas para trás
-    for (let i = 0; i < 3; i++) {
-      const fl = Math.sin(t * 20 + i * 2) * r * 0.25;
-      ctx.fillStyle = ['rgba(255,90,20,0.75)', 'rgba(255,160,50,0.8)', 'rgba(255,230,140,0.9)'][i];
-      const len = r * (3.4 - i * 0.8);
-      const wid = r * (1.05 - i * 0.22);
+    // halo de calor
+    const halo = ctx.createRadialGradient(0, 0, r * 0.5, 0, 0, r * 2.6);
+    halo.addColorStop(0, 'rgba(255,140,40,0.45)');
+    halo.addColorStop(1, 'rgba(255,90,20,0)');
+    ctx.fillStyle = halo;
+    ctx.fillRect(-r * 2.6, -r * 2.6, r * 5.2, r * 5.2);
+    // línguas de fogo para trás, cada uma ondulando
+    const tongues = [
+      [3.9, 1.1, -0.35, 'rgba(200,40,10,0.8)'],
+      [3.6, 1.0, 0.4, 'rgba(255,80,20,0.85)'],
+      [3.0, 0.85, -0.1, 'rgba(255,150,40,0.9)'],
+      [2.2, 0.6, 0.15, 'rgba(255,220,120,0.95)'],
+    ];
+    tongues.forEach(([len, wid, bend, color], i) => {
+      const L = r * len * (0.9 + 0.1 * Math.sin(t * 22 + i));
+      const W = r * wid;
+      const wob = Math.sin(t * 18 + i * 1.7) * r * 0.35;
+      ctx.fillStyle = color;
       ctx.beginPath();
-      ctx.moveTo(0, -wid);
-      ctx.quadraticCurveTo(-len * 0.5, -wid * 0.9 + fl, -len, fl * 0.6);
-      ctx.quadraticCurveTo(-len * 0.5, wid * 0.9 + fl, 0, wid);
+      ctx.moveTo(r * 0.2, -W);
+      ctx.bezierCurveTo(-L * 0.3, -W * 1.05 + wob, -L * 0.7, -W * 0.5 + bend * r + wob, -L, bend * r + wob * 0.6);
+      ctx.bezierCurveTo(-L * 0.7, W * 0.5 + bend * r + wob, -L * 0.3, W * 1.05 + wob, r * 0.2, W);
       ctx.closePath();
       ctx.fill();
-    }
+    });
   } else {
     for (let i = 0; i < 3; i++) {
       const fl = Math.sin(t * 15 + i * 2) * 1.2;
@@ -660,83 +672,202 @@ export function drawFireball(ctx, x, y, r, t, tail) {
       ctx.fill();
     }
   }
+  // núcleo: borda vermelha escura, laranja e miolo quase branco
   ctx.shadowColor = '#ff6a00';
   ctx.shadowBlur = 16;
-  const g = ctx.createRadialGradient(r * 0.2, -r * 0.2, 1, 0, 0, r * 1.1);
-  g.addColorStop(0, '#fffbe0'); g.addColorStop(0.35, '#ffd25a'); g.addColorStop(0.8, '#ff7a1a'); g.addColorStop(1, '#c2300a');
+  const g = ctx.createRadialGradient(r * 0.25, -r * 0.2, 1, 0, 0, r * 1.1);
+  g.addColorStop(0, '#fffbe6'); g.addColorStop(0.3, '#ffe08a'); g.addColorStop(0.65, '#ff8a24'); g.addColorStop(1, '#b8280a');
   ctx.fillStyle = g;
   ctx.beginPath(); ctx.arc(0, 0, r, 0, Math.PI * 2); ctx.fill();
   ctx.shadowBlur = 0;
+  // chamas na frente do núcleo (a bola "ferve")
+  if (tail) {
+    ctx.fillStyle = 'rgba(255,250,220,0.45)';
+    for (let i = 0; i < 3; i++) {
+      const a = t * 9 + i * 2.1;
+      ctx.beginPath(); ctx.arc(Math.cos(a) * r * 0.35, Math.sin(a) * r * 0.35, r * 0.3, 0, Math.PI * 2); ctx.fill();
+    }
+    // brasas soltas atrás
+    ctx.fillStyle = '#ffd25a';
+    for (let i = 0; i < 4; i++) {
+      const k = (t * 3 + i / 4) % 1;
+      ctx.globalAlpha = 1 - k;
+      ctx.beginPath(); ctx.arc(-r * (1.2 + k * 3), Math.sin(i * 2.7 + t * 6) * r * 0.9, r * 0.12, 0, Math.PI * 2); ctx.fill();
+    }
+    ctx.globalAlpha = 1;
+  }
   ctx.restore();
 }
 
+// Jato d'água: bolha na frente com coroa de espuma, corrente girando dentro
+// e um rastro de gotas
 function waterShot(ctx, r, t) {
-  // jato alongado com espuma na frente
-  ctx.shadowColor = '#5ab8ff';
-  ctx.shadowBlur = 12;
-  const g = ctx.createLinearGradient(-r * 3.2, 0, r, 0);
-  g.addColorStop(0, 'rgba(90,180,255,0)'); g.addColorStop(0.5, 'rgba(90,180,255,0.75)'); g.addColorStop(1, '#d8f6ff');
+  // rastro de água afinando
+  const g = ctx.createLinearGradient(-r * 4, 0, r, 0);
+  g.addColorStop(0, 'rgba(90,180,255,0)');
+  g.addColorStop(0.55, 'rgba(70,160,250,0.7)');
+  g.addColorStop(1, 'rgba(200,240,255,0.95)');
   ctx.fillStyle = g;
   ctx.beginPath();
-  ctx.moveTo(r * 1.1, 0);
-  ctx.quadraticCurveTo(r * 0.6, -r, -r * 0.8, -r * 0.7 + Math.sin(t * 25) * 1.5);
-  ctx.quadraticCurveTo(-r * 2.4, -r * 0.4, -r * 3.4, 0);
-  ctx.quadraticCurveTo(-r * 2.4, r * 0.4, -r * 0.8, r * 0.7 + Math.cos(t * 25) * 1.5);
-  ctx.quadraticCurveTo(r * 0.6, r, r * 1.1, 0);
+  ctx.moveTo(r * 0.6, -r * 0.9);
+  ctx.bezierCurveTo(-r * 1.2, -r * 0.8 + Math.sin(t * 25) * 2, -r * 2.6, -r * 0.35, -r * 4, Math.sin(t * 14) * r * 0.2);
+  ctx.bezierCurveTo(-r * 2.6, r * 0.35, -r * 1.2, r * 0.8 + Math.cos(t * 25) * 2, r * 0.6, r * 0.9);
+  ctx.closePath();
   ctx.fill();
+  // bolha da frente
+  ctx.shadowColor = '#5ab8ff';
+  ctx.shadowBlur = 12;
+  const head = ctx.createRadialGradient(r * 0.3, -r * 0.3, 1, 0, 0, r);
+  head.addColorStop(0, '#f2fdff');
+  head.addColorStop(0.5, '#7fcfff');
+  head.addColorStop(1, '#2a7ae0');
+  ctx.fillStyle = head;
+  ctx.beginPath(); ctx.ellipse(0, 0, r * 1.05, r * 0.9, 0, 0, Math.PI * 2); ctx.fill();
   ctx.shadowBlur = 0;
+  // corrente girando dentro
+  ctx.save();
+  ctx.rotate(-t * 9);
+  ctx.strokeStyle = 'rgba(255,255,255,0.75)';
+  ctx.lineWidth = 1.6;
+  ctx.beginPath(); ctx.arc(0, 0, r * 0.55, 0, Math.PI * 1.1); ctx.stroke();
+  ctx.beginPath(); ctx.arc(0, 0, r * 0.28, Math.PI, Math.PI * 1.9); ctx.stroke();
+  ctx.restore();
+  // coroa de espuma na frente
+  ctx.fillStyle = '#ffffff';
+  for (let i = -2; i <= 2; i++) {
+    const a = i * 0.45;
+    const rr = r * (0.18 + (2 - Math.abs(i)) * 0.05) * (0.85 + 0.15 * Math.sin(t * 20 + i));
+    ctx.beginPath(); ctx.arc(Math.cos(a) * r * 1.02, Math.sin(a) * r * 0.9, rr, 0, Math.PI * 2); ctx.fill();
+  }
   ctx.strokeStyle = 'rgba(255,255,255,0.9)';
   ctx.lineWidth = 2;
-  ctx.beginPath(); ctx.arc(r * 0.2, 0, r * 0.85, -1.1, 1.1); ctx.stroke();
-  ctx.strokeStyle = 'rgba(255,255,255,0.6)';
-  ctx.lineWidth = 1.2;
-  for (let i = 0; i < 3; i++) {
-    const y = (i - 1) * r * 0.45;
-    const x = -r * (1 + ((t * 8 + i * 0.4) % 1) * 2);
-    ctx.beginPath(); ctx.moveTo(x, y); ctx.lineTo(x - r * 0.8, y); ctx.stroke();
+  ctx.beginPath(); ctx.arc(r * 0.15, 0, r * 0.85, -1.1, 1.1); ctx.stroke();
+  // gotas soltas para trás
+  ctx.fillStyle = 'rgba(190,235,255,0.95)';
+  for (let i = 0; i < 5; i++) {
+    const k = (t * 4 + i / 5) % 1;
+    const y = (i % 2 ? 1 : -1) * r * (0.5 + k * 0.6);
+    ctx.globalAlpha = 1 - k;
+    ctx.beginPath(); ctx.arc(-r * (1 + k * 3), y, r * 0.14, 0, Math.PI * 2); ctx.fill();
   }
+  ctx.globalAlpha = 1;
 }
 
+// Pedrada: pedra lapidada girando, rachaduras de âmbar acesas, pedrinhas
+// e poeira atrás
 function rockShot(ctx, r, t) {
-  ctx.fillStyle = 'rgba(140,110,80,0.35)';
-  for (let i = 0; i < 3; i++) {
-    ctx.beginPath(); ctx.arc(-r * (1.4 + i * 0.7), Math.sin(t * 9 + i) * 2, r * (0.5 - i * 0.12), 0, Math.PI * 2); ctx.fill();
+  // poeira
+  for (let i = 0; i < 4; i++) {
+    const k = (t * 3 + i / 4) % 1;
+    ctx.fillStyle = `rgba(150,120,90,${0.35 * (1 - k)})`;
+    ctx.beginPath(); ctx.arc(-r * (1.2 + k * 2.6), Math.sin(t * 9 + i) * 3, r * (0.35 + k * 0.4), 0, Math.PI * 2); ctx.fill();
+  }
+  // riscos de velocidade
+  ctx.strokeStyle = 'rgba(230,210,180,0.55)';
+  ctx.lineWidth = 1.4;
+  for (const y of [-0.7, 0.1, 0.8]) {
+    ctx.beginPath(); ctx.moveTo(-r * 1.2, y * r); ctx.lineTo(-r * 2.4, y * r); ctx.stroke();
+  }
+  // pedrinhas seguindo
+  for (let i = 0; i < 2; i++) {
+    const k = (t * 2.5 + i * 0.5) % 1;
+    ctx.fillStyle = '#6a4e32';
+    ctx.beginPath(); ctx.arc(-r * (1.4 + k * 1.6), (i ? 1 : -1) * r * 0.6, r * 0.2, 0, Math.PI * 2); ctx.fill();
   }
   ctx.save();
   ctx.rotate(t * 10);
-  ctx.fillStyle = '#7a5a3a';
-  ctx.beginPath();
-  ctx.moveTo(-r, r * 0.2); ctx.lineTo(-r * 0.7, -r * 0.8); ctx.lineTo(r * 0.3, -r); ctx.lineTo(r, -r * 0.2); ctx.lineTo(r * 0.7, r * 0.8); ctx.lineTo(-r * 0.3, r);
-  ctx.closePath();
+  const rock = [[-r, r * 0.2], [-r * 0.7, -r * 0.8], [r * 0.3, -r], [r, -r * 0.2], [r * 0.7, r * 0.8], [-r * 0.3, r]];
+  shape(ctx, rock);
+  ctx.fillStyle = '#8a6a48';
   ctx.fill();
-  outline(ctx, 2);
-  ctx.fillStyle = '#a8865c';
-  ctx.beginPath(); ctx.moveTo(-r * 0.6, -r * 0.6); ctx.lineTo(r * 0.2, -r * 0.8); ctx.lineTo(-r * 0.1, -r * 0.2); ctx.closePath(); ctx.fill();
-  ctx.fillStyle = '#ffd27a';
+  // facetas
+  ctx.fillStyle = '#b8966a';
+  shape(ctx, [[-r, r * 0.2], [-r * 0.7, -r * 0.8], [r * 0.3, -r], [0, 0]]);
+  ctx.fill();
+  ctx.fillStyle = '#5a4128';
+  shape(ctx, [[0, 0], [r, -r * 0.2], [r * 0.7, r * 0.8], [-r * 0.3, r]]);
+  ctx.fill();
+  // rachaduras de âmbar
+  ctx.strokeStyle = '#ffb347';
+  ctx.lineWidth = 1.6;
   ctx.shadowColor = '#ffb347';
   ctx.shadowBlur = 6;
-  ctx.beginPath(); ctx.moveTo(r * 0.2, r * 0.1); ctx.lineTo(r * 0.5, -r * 0.3); ctx.lineTo(r * 0.6, r * 0.4); ctx.closePath(); ctx.fill();
+  ctx.beginPath();
+  ctx.moveTo(-r * 0.5, -r * 0.3); ctx.lineTo(0, 0); ctx.lineTo(r * 0.5, -r * 0.1);
+  ctx.moveTo(0, 0); ctx.lineTo(-r * 0.1, r * 0.6);
+  ctx.stroke();
+  ctx.shadowBlur = 0;
+  shape(ctx, rock);
+  outline(ctx, 2);
   ctx.restore();
 }
 
+// Tornado: funil translúcido com faixas em espiral girando, poeira na base,
+// folhas voando em volta e linhas de sucção
 function windShot(ctx, r, t) {
-  // mini tornado: elipses empilhadas girando
-  for (let i = 0; i < 6; i++) {
-    const u = i / 5;
-    const y = -r * 1.4 + u * r * 2.8;
-    const w = r * (1.5 - u * 1.1);
-    const off = Math.sin(t * 18 + i) * r * 0.25;
-    ctx.strokeStyle = i % 2 ? 'rgba(255,255,255,0.9)' : 'rgba(127,255,224,0.85)';
-    ctx.lineWidth = 2;
+  const top = -r * 1.5;
+  const bottom = r * 1.4;
+  const widthAt = (u) => r * (0.25 + 1.2 * Math.pow(1 - u, 1.4)); // u: 0 = topo, 1 = base
+  const sway = (u) => Math.sin(t * 7 + u * 4) * r * 0.18 * u;
+  // linhas de sucção (puxa os inimigos)
+  ctx.strokeStyle = 'rgba(200,255,245,0.35)';
+  ctx.lineWidth = 1.2;
+  for (let i = 0; i < 4; i++) {
+    const a = t * 2 + (i * Math.PI) / 2;
+    const rr = r * (2.2 + ((t * 1.5 + i * 0.25) % 1) * -0.9);
+    ctx.beginPath(); ctx.arc(0, 0, Math.max(r * 1.2, rr), a, a + 0.8); ctx.stroke();
+  }
+  // brilho claro no meio do funil
+  const glow = ctx.createLinearGradient(-r, 0, r, 0);
+  glow.addColorStop(0, 'rgba(220,255,248,0)');
+  glow.addColorStop(0.5, 'rgba(235,255,252,0.35)');
+  glow.addColorStop(1, 'rgba(220,255,248,0)');
+  ctx.fillStyle = glow;
+  ctx.beginPath();
+  for (let i = 0; i <= 10; i++) {
+    const u = i / 10;
+    const y = top + (bottom - top) * u;
+    if (i === 0) ctx.moveTo(-widthAt(u) * 0.8 + sway(u), y);
+    else ctx.lineTo(-widthAt(u) * 0.8 + sway(u), y);
+  }
+  for (let i = 10; i >= 0; i--) {
+    const u = i / 10;
+    ctx.lineTo(widthAt(u) * 0.8 + sway(u), top + (bottom - top) * u);
+  }
+  ctx.closePath();
+  ctx.fill();
+  // faixas de vento em espiral girando (finas e grossas, brancas e turquesa)
+  ctx.lineCap = 'round';
+  for (let i = 0; i < 11; i++) {
+    const u = (i + ((t * 3) % 1)) / 11;
+    const y = top + (bottom - top) * u;
+    const w = widthAt(u);
+    const start = Math.PI * (0.05 + ((i * 0.37 + t * 2) % 0.4));
+    ctx.strokeStyle = i % 3 === 0 ? 'rgba(110,235,215,0.9)' : 'rgba(255,255,255,0.85)';
+    ctx.lineWidth = i % 2 ? 1.4 : 2.2;
     ctx.beginPath();
-    ctx.ellipse(off, y, w, r * 0.3, 0, Math.PI * (0.1 + ((t * 3 + i * 0.3) % 1)), Math.PI * (1.7 + ((t * 3 + i * 0.3) % 1)));
+    ctx.ellipse(sway(u), y, w, r * 0.2, 0, start, start + Math.PI * 0.75);
     ctx.stroke();
   }
-  ctx.strokeStyle = 'rgba(127,255,224,0.5)';
+  // redemoinho de vento na base
+  ctx.strokeStyle = 'rgba(235,255,250,0.7)';
   ctx.lineWidth = 1.2;
-  for (let i = 0; i < 2; i++) {
-    const y = (i - 0.5) * r;
-    ctx.beginPath(); ctx.moveTo(-r * 1.6, y); ctx.quadraticCurveTo(-r * 2.6, y - 3, -r * 3.4, y); ctx.stroke();
+  for (let i = 0; i < 3; i++) {
+    const a = t * 8 + i * 2.1;
+    ctx.beginPath(); ctx.ellipse(sway(1), bottom + 1, r * (0.5 + i * 0.25), r * 0.12, 0, a, a + 1.6); ctx.stroke();
+  }
+  // folhas girando em volta
+  for (let i = 0; i < 3; i++) {
+    const a = t * 6 + (i * Math.PI * 2) / 3;
+    const u = 0.25 + i * 0.25;
+    const x = Math.cos(a) * (widthAt(u) + 3) + sway(u);
+    const y = top + (bottom - top) * u + Math.sin(a) * 2;
+    ctx.save();
+    ctx.translate(x, y);
+    ctx.rotate(a * 2);
+    ctx.fillStyle = i % 2 ? '#7fbf4a' : '#a8d86a';
+    ctx.beginPath(); ctx.ellipse(0, 0, 2.6, 1.3, 0, 0, Math.PI * 2); ctx.fill();
+    ctx.restore();
   }
 }
 
