@@ -191,6 +191,31 @@ test('modo ADM: cada golpe do jogador ADM dá 999%, o dos outros não', () => {
   assert.equal(bot.lives, PLAYER.lives - 1, 'voou para fora do mapa');
 });
 
+test('plataforma que balança leva junto quem está em cima (Pico dos Ventos)', () => {
+  const g = newGame(['fogo', 'agua', 'agua', 'fogo'], { mapId: 'pico' });
+  park(g, 2, 3, 4);
+  for (const id of [2, 3, 4]) place(g.playerById(id), 640, 520);
+  const p = g.playerById(1);
+  const pl = g.platforms[0];
+  place(p, pl.x + pl.w / 2, pl.y);
+  run(g, 2);
+  assert.equal(p.standingOn, 'platform');
+  const offset = p.x - pl.x;
+  const x0 = pl.x;
+  run(g, 50);
+  assert.ok(Math.abs(pl.x - x0) > 20, 'a plataforma se mexeu');
+  assert.equal(p.standingOn, 'platform', 'continua em cima');
+  assert.ok(Math.abs(p.x - pl.x - offset) < 1, 'andou junto com a plataforma');
+  assert.ok(Math.abs(p.y + p.h - pl.y) < 1, 'pés em cima da plataforma');
+});
+
+test('na Caldeira as plataformas ficam paradas', () => {
+  const g = newGame();
+  const before = g.platforms.map((pl) => [pl.x, pl.y]);
+  run(g, 120);
+  assert.deepEqual(g.platforms.map((pl) => [pl.x, pl.y]), before);
+});
+
 test('quanto mais dano, maior o empurrão', () => {
   const kbAt = (damage) => {
     const g = newGame(['fogo', 'agua', 'fogo', 'agua']);

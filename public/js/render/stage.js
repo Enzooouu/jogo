@@ -129,12 +129,13 @@ export class StageRenderer {
   }
 
   // Ilha, plataformas e enfeites (com a transformação do mundo já aplicada).
-  drawTerrain(ctx, time) {
+  // `platforms` = posição atual das plataformas no jogo (algumas se mexem)
+  drawTerrain(ctx, time, platforms = null, alpha = 1) {
     time = Math.max(0, time);
     this.art.behind(ctx, this.map, time);
     const r = this.terrainRect;
     ctx.drawImage(this.terrain, r.x, r.y, r.w, r.h);
-    this.art.front(ctx, this.map, time);
+    this.art.front(ctx, this.map, time, platforms, alpha);
   }
 
   // Perigos animados. `front` desenha uma camada translúcida por cima dos

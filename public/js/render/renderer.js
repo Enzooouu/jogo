@@ -229,7 +229,7 @@ export class Renderer {
       updateCelebration(this.celebration, dt, this);
       drawCelebration(ctx, this.celebration, 'back');
     }
-    this.stage.drawTerrain(ctx, this.time);
+    this.stage.drawTerrain(ctx, this.time, this.game.platforms, alpha);
     this.stage.drawHazards(ctx, this.time, false);
     this.drawWinds(ctx);
     drawCelebration(ctx, this.celebration, 'mid');

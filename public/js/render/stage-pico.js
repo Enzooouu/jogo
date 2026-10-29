@@ -439,17 +439,40 @@ function midAnimated(ctx, time) {
 // Mundo: ilhas, plataformas e enfeites
 
 function drawTerrain(ctx, map, rand) {
-  // cordas e balões das plataformas (atrás das ilhas)
+  // balões parados no céu (as plataformas balançam penduradas neles e são
+  // desenhadas a cada quadro, em hangingPlatforms)
   for (const p of map.platforms) balloon(ctx, p);
 
   // ilhas
   const islands = islandsOf(map);
   for (const isl of islands) drawIsland(ctx, isl, map, rand);
 
-  // plataformas de madeira
-  for (const p of map.platforms) woodPlatform(ctx, p);
-
   for (const d of map.decor ?? []) decorStatic(ctx, d);
+}
+
+// Ponto onde as cordas se prendem no balão (cesto), fixo no céu
+function anchorOf(p) {
+  return { x: p.x + p.w / 2, y: p.y - (p.swing?.length ?? 120) };
+}
+
+// Cordas e plataformas na posição atual (`plats` vem do jogo; `alpha` suaviza
+// entre um passo de simulação e outro)
+function hangingPlatforms(ctx, map, plats, alpha) {
+  map.platforms.forEach((base, i) => {
+    const cur = plats?.[i];
+    const x = cur ? cur.px + (cur.x - cur.px) * alpha : base.x;
+    const y = cur ? cur.py + (cur.y - cur.py) * alpha : base.y;
+    const a = anchorOf(base);
+    ctx.strokeStyle = '#6b4a3e';
+    ctx.lineWidth = 1.8;
+    for (const [ax, px] of [[a.x - 9, x + 10], [a.x + 9, x + base.w - 10]]) {
+      ctx.beginPath();
+      ctx.moveTo(ax, a.y);
+      ctx.lineTo(px, y);
+      ctx.stroke();
+    }
+    woodPlatform(ctx, { x, y, w: base.w });
+  });
 }
 
 // Junta os blocos sólidos que se encostam numa ilha só
@@ -543,7 +566,7 @@ function drawIsland(ctx, isl, map, rand) {
   }
 
   // grama em cima com tufos caindo pelas bordas
-  const gaps = map.hazards.filter((h) => h.type === 'agua' && h.x >= x && h.x < x + w);
+  const gaps = map.hazards.filter((h) => (h.type === 'agua' || h.type === 'lava') && h.x >= x && h.x < x + w);
   const inGap = (px) => gaps.some((h) => px > h.x && px < h.x + h.w);
   ctx.fillStyle = GRASS.dark;
   ctx.fillRect(x - 3, y, w + 6, 12);
@@ -610,16 +633,9 @@ function windCrystal(ctx, x, y, w, h) {
 
 // Plataforma de tábuas, presa por cordas a um balão
 function balloon(ctx, p) {
-  const cx = p.x + p.w / 2;
-  const by = p.y - 120;
-  ctx.strokeStyle = '#6b4a3e';
-  ctx.lineWidth = 1.5;
-  for (const ax of [p.x + 10, p.x + p.w - 10]) {
-    ctx.beginPath();
-    ctx.moveTo(ax, p.y);
-    ctx.lineTo(cx + (ax < cx ? -14 : 14), by + 40);
-    ctx.stroke();
-  }
+  const a = anchorOf(p);
+  const cx = a.x;
+  const by = a.y - 46;
   // balão listrado
   ctx.save();
   ctx.beginPath();
@@ -802,7 +818,8 @@ export const PICO_ART = {
       cloudPuff(ctx, x, 720 + i * 40, 46 + i * 10, 'rgba(255,236,232,0.85)', 'rgba(255,250,240,0.9)');
     }
   },
-  front(ctx, map, time) {
+  front(ctx, map, time, plats, alpha) {
+    hangingPlatforms(ctx, map, plats, alpha);
     for (const d of map.decor ?? []) decorAnimated(ctx, d, time);
   },
   haze: ['rgba(255,214,168,0)', 'rgba(255,214,190,0.35)'],

@@ -61,6 +61,8 @@ export class Game {
     this.winds = [];
     this.nextWindIn = this.map.wind ? this.map.wind.first : Infinity;
     this.respawnIndex = 0;
+    // Plataformas com posição atual (algumas balançam presas a um balão)
+    this.platforms = this.map.platforms.map((pl) => ({ ...pl, baseX: pl.x, baseY: pl.y, px: pl.x, py: pl.y, dx: 0, dy: 0 }));
 
     const seen = new Set();
     this.players = players.map((cfg, index) => {
@@ -123,6 +125,7 @@ export class Game {
       items: this.items.map((i) => ({ ...i })),
       winds: this.winds.map((w) => ({ ...w })),
       projectiles: this.projectiles.map((pr) => ({ ...pr, hitIds: [...pr.hitIds] })),
+      platforms: this.platforms.map((pl) => ({ x: pl.x, y: pl.y })),
       result: this.result,
     };
   }
@@ -137,6 +140,12 @@ export class Game {
     for (const p of this.players) {
       p.px = p.x;
       p.py = p.y;
+    }
+    for (const pl of this.platforms) {
+      pl.px = pl.x;
+      pl.py = pl.y;
+      pl.dx = 0;
+      pl.dy = 0;
     }
 
     if (this.phase === 'countdown') {
@@ -159,12 +168,39 @@ export class Game {
     }
 
     this.time += DT;
+    this.updatePlatforms();
     this.updateWinds();
     for (const p of this.players) this.updatePlayer(p, inputs[p.id] ?? EMPTY_INPUT);
     this.updateProjectiles();
     this.updateItems();
     this.spawnItems();
     this.checkEnd();
+  }
+
+  // ---------------------------------------------------------------- plataformas
+
+  // Plataformas com `swing` balançam como um balanço preso no balão: o ponto
+  // de apoio fica `length` acima da plataforma e o ângulo vai e volta.
+  updatePlatforms() {
+    for (const pl of this.platforms) {
+      const sw = pl.swing;
+      if (!sw) continue;
+      const angle = sw.amp * Math.sin((2 * Math.PI * this.time) / sw.period + (sw.phase ?? 0));
+      const x = pl.baseX + sw.length * Math.sin(angle);
+      const y = pl.baseY - sw.length * (1 - Math.cos(angle));
+      pl.dx = x - pl.x;
+      pl.dy = y - pl.y;
+      pl.x = x;
+      pl.y = y;
+    }
+    // quem está em cima vai junto
+    for (const p of this.players) {
+      if (p.state !== 'alive' || !p.onGround || p.standingOn !== 'platform') continue;
+      const pl = this.platforms[p.platform];
+      if (!pl) continue;
+      p.x += pl.dx;
+      p.y += pl.dy;
+    }
   }
 
   // ---------------------------------------------------------------- jogadores
@@ -355,7 +391,8 @@ export class Game {
   }
 
   moveAndCollide(p) {
-    const { solids, platforms } = this.map;
+    const { solids } = this.map;
+    const platforms = this.platforms;
 
     const mvx = p.vx + p.windVx;
     p.x += mvx * DT;
@@ -386,13 +423,15 @@ export class Game {
     if (p.vy >= 0 && p.dropTimer <= 0) {
       const bottom = p.y + p.h;
       for (const pl of platforms) {
-        const crossing = prevBottom <= pl.y + 0.5 && bottom >= pl.y;
+        // compara com onde a plataforma estava (ela pode ter subido neste passo)
+        const crossing = prevBottom <= Math.max(pl.y, pl.y - pl.dy) + 0.5 && bottom >= pl.y;
         const inside = p.x + p.w > pl.x && p.x < pl.x + pl.w;
         if (crossing && inside) {
           p.y = pl.y - p.h;
           p.vy = 0;
           p.onGround = true;
           p.standingOn = 'platform';
+          p.platform = platforms.indexOf(pl);
         }
       }
     }
@@ -832,18 +871,24 @@ export class Game {
         const prevBottom = item.y + item.h;
         item.y += ITEMS.fallSpeed * DT;
         const bottom = item.y + item.h;
-        const surfaces = [...this.map.solids, ...this.map.platforms];
+        const surfaces = [...this.map.solids, ...this.platforms];
         for (const s of surfaces) {
           const inside = item.x + item.w > s.x && item.x < s.x + s.w;
           if (inside && prevBottom <= s.y + 0.5 && bottom >= s.y) {
             item.y = s.y - item.h;
             item.landed = true;
+            item.platform = this.platforms.indexOf(s);
             this.emit('itemLand', { itemId: item.id, x: item.x + item.w / 2, y: s.y });
             break;
           }
         }
       } else {
         item.life -= DT;
+        const pl = this.platforms[item.platform];
+        if (pl) {
+          item.x += pl.dx;
+          item.y += pl.dy;
+        }
       }
       if (item.life > 0 && item.y < this.map.blast.bottom) keep.push(item);
     }
@@ -930,6 +975,7 @@ function createPlayer(cfg, index, lives) {
     facing: 1,
     onGround: false,
     standingOn: null,
+    platform: -1,           // índice da plataforma onde está em pé
     jumpsLeft: PHYS.maxJumps,
     dropTimer: 0,
     onWall: 0,              // -1/1 = pendurado numa parede à esquerda/direita

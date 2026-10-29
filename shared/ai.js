@@ -37,6 +37,7 @@ export class BotController {
     }
     if (!this.stage) {
       this.stage = stageBounds(game.map);
+      this.islands = islandsOf(game.map);
     }
 
     this.thinkTimer--;
@@ -53,23 +54,29 @@ export class BotController {
     const feet = me.y + me.h;
     const stage = this.stage;
 
-    const offStage = cx < stage.left - 2 || cx > stage.right + 2;
-    // Cabeça abaixo do chão do palco (e fora das piscinas) = embaixo da ilha.
-    const underStage = !offStage && me.y > stage.top + 60;
+    // Mapas com várias ilhas: a ilha embaixo de mim, ou a mais perto para
+    // onde voltar se eu estiver no ar fora de todas.
+    const home = this.islands.find((i) => cx >= i.left - 2 && cx <= i.right + 2);
+    const back = home ? null : recoveryTarget(this.islands, game.map, me.element, cx);
+    const island = home ?? back.island;
+    const offStage = !home;
+    // Cabeça abaixo do chão da ilha (e fora das piscinas) = embaixo dela.
+    const underStage = !offStage && me.y > island.top + 60;
 
     if (underStage) {
-      // Preso embaixo do palco: sai pela borda mais próxima.
-      dir = cx - stage.left < stage.right - cx ? -1 : 1;
+      // Preso embaixo da ilha: sai pela borda mais próxima.
+      dir = cx - island.left < island.right - cx ? -1 : 1;
     } else if (offStage) {
-      // Recuperação: volta para o palco usando os pulos e a parede (segurar
-      // na direção do palco já faz o bot se pendurar; pular dali sobe).
-      dir = cx < stage.centerX ? 1 : -1;
+      // Recuperação: volta para a ilha usando os pulos e a parede (segurar
+      // na direção dela já faz o bot se pendurar; pular dali sobe).
+      // mira na parte segura da ilha (fora das piscinas mortais)
+      dir = cx < back.x ? 1 : -1;
       if (me.onWall && me.wallHang <= 0.2) jump = true;
-      else if (me.vy > -60 && feet > stage.top - 90 && me.jumpsLeft > 0) jump = true;
-      else if (me.jumpsLeft === 0 && me.airDashes > 0 && me.dashCooldown <= 0 && me.vy > 0 && feet > stage.top - 30) {
+      else if (me.vy > -60 && feet > island.top - 90 && me.jumpsLeft > 0) jump = true;
+      else if (me.jumpsLeft === 0 && me.airDashes > 0 && me.dashCooldown <= 0 && me.vy > 0 && feet > island.top - 30) {
         // Sem pulos: usa o dash para voltar. Perto da parede vai reto para
         // cima (na diagonal cairia direto nas piscinas da borda).
-        const gap = cx < stage.left ? stage.left - cx : cx - stage.right;
+        const gap = cx < island.left ? island.left - cx : cx - island.right;
         dash = { up: true, straight: gap < 90 };
       }
     } else if (this.idleTimer > 0) {
@@ -231,7 +238,7 @@ export class BotController {
       if (!best || y < best.y) best = { y, kind, type };
     };
     for (const s of game.map.solids) if (x >= s.x && x <= s.x + s.w) consider(s.y, 'solid');
-    for (const p of game.map.platforms) if (x >= p.x && x <= p.x + p.w) consider(p.y, 'platform');
+    for (const p of game.platforms) if (x >= p.x && x <= p.x + p.w) consider(p.y, 'platform');
     for (const h of game.map.hazards) if (x >= h.x && x <= h.x + h.w) consider(h.y, 'hazard', h.type);
     if (!best) {
       // Sem nada embaixo: só é seguro se ainda estou em cima do chão atual.
@@ -277,4 +284,50 @@ function minBy(list, fn) {
     }
   }
   return best;
+}
+
+// Junta os blocos sólidos que se encostam em ilhas (left, right, top)
+function islandsOf(map) {
+  const sorted = [...map.solids].sort((a, b) => a.x - b.x);
+  const out = [];
+  for (const s of sorted) {
+    const last = out[out.length - 1];
+    if (last && s.x <= last.right + 1) {
+      last.right = Math.max(last.right, s.x + s.w);
+      last.top = Math.min(last.top, s.y);
+    } else {
+      out.push({ left: s.x, right: s.x + s.w, top: s.y });
+    }
+  }
+  return out;
+}
+
+// Para onde voltar quando estou no ar fora de todas as ilhas: o pedaço de
+// chão seguro (para o meu elemento) mais perto na horizontal. Empate: o maior.
+function recoveryTarget(islands, map, element, x) {
+  let best = null;
+  for (const island of islands) {
+    for (const [l, r] of safeSpans(island, map, element)) {
+      // pedaço pequeno de chão é difícil de acertar: conta como mais longe
+      const size = r - l;
+      const gap = (x < l ? l - x : x > r ? x - r : 0) + (size < 100 ? 120 : 0);
+      if (!best || gap < best.gap - 1 || (Math.abs(gap - best.gap) <= 1 && size > best.size)) {
+        best = { island, gap, size, x: Math.max(l + 15, Math.min(r - 15, x)) };
+      }
+    }
+  }
+  return best;
+}
+
+// Trechos de chão de uma ilha fora dos perigos que matam este elemento
+function safeSpans(island, map, element) {
+  let spans = [[island.left, island.right]];
+  for (const h of map.hazards) {
+    if (hazardReaction(element, h.type) !== 'morre') continue;
+    spans = spans.flatMap(([l, r]) => {
+      if (h.x + h.w <= l || h.x >= r) return [[l, r]];
+      return [[l, h.x], [h.x + h.w, r]].filter(([a, b]) => b - a > 24);
+    });
+  }
+  return spans.length ? spans : [[island.left, island.right]];
 }

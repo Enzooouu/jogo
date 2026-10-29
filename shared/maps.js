@@ -75,7 +75,8 @@ export const MAPS = {
   },
 
   // Protótipo (ainda não aparece no menu): ilhas no céu ao entardecer, com
-  // muito vento, espinhos na ilhota da esquerda e um lago de chuva na direita.
+  // muito vento, lava na ilhota da esquerda, lago de chuva na da direita,
+  // espinhos na ilha do meio e plataformas balançando presas em balões.
   pico: {
     id: 'pico',
     name: 'Pico dos Ventos',
@@ -85,47 +86,53 @@ export const MAPS = {
     blast: { left: -260, right: 1540, top: -560, bottom: 1000 },
     solids: [
       { x: 360, y: 520, w: 560, h: 150 },  // ilha principal
-      { x: 110, y: 450, w: 170, h: 80 },   // ilhota da esquerda
-      { x: 1000, y: 450, w: 36, h: 80 },   // ilhota da direita (bordas do lago)
-      { x: 1036, y: 474, w: 98, h: 56 },   // fundo do lago
-      { x: 1134, y: 450, w: 36, h: 80 },
+      { x: 80, y: 450, w: 80, h: 80 },     // ilhota da esquerda (bordas da lava)
+      { x: 160, y: 474, w: 60, h: 56 },    // fundo da lava
+      { x: 220, y: 450, w: 80, h: 80 },
+      { x: 980, y: 450, w: 80, h: 80 },    // ilhota da direita (bordas do lago)
+      { x: 1060, y: 474, w: 60, h: 56 },   // fundo do lago
+      { x: 1120, y: 450, w: 80, h: 80 },
     ],
+    // swing: balança como um balanço preso no balão (length = tamanho da
+    // corda, amp = ângulo máximo, period = segundos de uma ida e volta)
     platforms: [
-      { x: 420, y: 390, w: 150 },
-      { x: 710, y: 390, w: 150 },
-      { x: 560, y: 270, w: 160 },
+      { x: 420, y: 390, w: 150, swing: { length: 130, amp: 0.48, period: 3.4, phase: 0 } },
+      { x: 710, y: 390, w: 150, swing: { length: 130, amp: 0.48, period: 3.4, phase: Math.PI } },
+      { x: 560, y: 270, w: 160, swing: { length: 130, amp: 0.4, period: 4, phase: Math.PI / 2 } },
     ],
     hazards: [
-      { type: 'espinhos', x: 155, y: 438, w: 80, h: 12 },
-      { type: 'agua', x: 1036, y: 458, w: 98, h: 16 },
+      { type: 'lava', x: 160, y: 458, w: 60, h: 16 },
+      { type: 'agua', x: 1060, y: 458, w: 60, h: 16 },
+      { type: 'espinhos', x: 455, y: 508, w: 100, h: 12 },
+      { type: 'espinhos', x: 725, y: 508, w: 100, h: 12 },
     ],
     spawns: [
-      { x: 420, y: 520 }, { x: 860, y: 520 },
-      { x: 520, y: 520 }, { x: 760, y: 520 },
+      { x: 405, y: 520, near: 'espinhos' }, { x: 875, y: 520, near: 'espinhos' },
+      { x: 600, y: 520, near: 'espinhos' }, { x: 680, y: 520, near: 'espinhos' },
       { x: 495, y: 390 }, { x: 785, y: 390 },
-      { x: 190, y: 450, near: 'espinhos' }, { x: 1085, y: 450, near: 'agua' },
+      { x: 260, y: 450, near: 'lava' }, { x: 1020, y: 450, near: 'agua' },
     ],
     respawns: [
       { x: 560, y: 150 }, { x: 720, y: 150 }, { x: 400, y: 150 }, { x: 880, y: 150 },
     ],
+    // bem mais vento que na Caldeira
     wind: {
-      first: 5, every: [5, 8], warn: 1.2, active: 3, max: 3,
-      w: 190, h: 150, strength: 340,
+      first: 3, every: [2.5, 4.5], warn: 1.1, active: 3.2, max: 4,
+      w: 210, h: 160, strength: 380,
       surfaces: [
         { y: 520, x0: 370, x1: 910 },
-        { y: 450, x0: 115, x1: 275 },
-        { y: 450, x0: 1005, x1: 1165 },
-        { y: 390, x0: 420, x1: 570 },
-        { y: 390, x0: 710, x1: 860 },
-        { y: 270, x0: 560, x1: 720 },
+        { y: 450, x0: 85, x1: 295 },
+        { y: 450, x0: 985, x1: 1195 },
+        { y: 390, x0: 400, x1: 880 },
+        { y: 270, x0: 540, x1: 740 },
       ],
     },
     itemSpawn: { minX: 380, maxX: 900, y: -40 },
     decor: [
-      { type: 'moinho', x: 1150, y: 450 },
+      { type: 'moinho', x: 1170, y: 450 },
       { type: 'bandeira', x: 380, y: 520 },
       { type: 'bandeira', x: 900, y: 520 },
-      { type: 'arvore', x: 240, y: 450 },
+      { type: 'arvore', x: 272, y: 450 },
       { type: 'santuario', x: 640, y: 520 },
     ],
     theme: { skyTop: '#3a4f9e', skyBottom: '#ffb98a', haze: '#ffd6a8' },
