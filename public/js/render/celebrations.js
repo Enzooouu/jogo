@@ -28,10 +28,24 @@ export function updateCelebration(cel, dt, renderer) {
       P.add({ x: 180 + Math.random() * 920, y: 540, vx: (Math.random() - 0.5) * 40, vy: -40 - Math.random() * 60, life: 1.2, size: 8, grow: 22, color: 'rgba(150,120,90,0.35)' });
     }
   } else if (cel.element === 'agua') {
-    const front = tsunamiFront(t);
-    if (Math.random() < dt * 60) {
-      const y = 720 - tsunamiHeight(t) + Math.random() * 30;
-      P.add({ x: front - Math.random() * 60, y, vx: 200 + Math.random() * 200, vy: -150 - Math.random() * 200, life: 0.8, size: 3, color: 'rgba(225,250,255,0.9)', gravity: 600 });
+    const fx = tsunamiFront(t);
+    const s = WAVE_SCALE;
+    // respingos saindo da ponta da onda
+    for (let i = 0; i < 3; i++) {
+      if (Math.random() > dt * 40) continue;
+      P.add({
+        x: fx + (100 + Math.random() * 60) * s, y: WAVE_BASE - (430 + Math.random() * 120) * s,
+        vx: 250 + Math.random() * 300, vy: -120 + Math.random() * 260,
+        life: 0.9, size: 2.5 + Math.random() * 3.5, color: 'rgba(235,252,255,0.95)', gravity: 900,
+      });
+    }
+    if (Math.random() < dt * 8) {
+      P.add({ x: fx + 120 * s, y: WAVE_BASE - 480 * s, vx: 180, vy: -30, life: 1.2, size: 16, grow: 40, color: 'rgba(220,245,255,0.25)' });
+    }
+    // depois que a crista passa, cai uma chuvinha de gotas
+    if (fx > 200 && Math.random() < dt * 50) {
+      const x = -100 + Math.random() * Math.min(1500, fx + 100);
+      P.add({ x, y: -40 + Math.random() * 200, vx: 60, vy: 300 + Math.random() * 200, life: 1.2, size: 1.6, color: 'rgba(200,240,255,0.8)', gravity: 400 });
     }
   } else if (cel.element === 'ar') {
     if (Math.random() < dt * 25) {
@@ -49,7 +63,8 @@ export function drawCelebration(ctx, cel, layer) {
   ctx.globalAlpha = Math.max(0, fade);
   if (cel.element === 'fogo' && layer === 'back') meteors(ctx, cel.t);
   else if (cel.element === 'ar' && layer === 'back') tornado(ctx, cel.t);
-  else if (cel.element === 'agua' && layer === 'mid') tsunami(ctx, cel.t);
+  else if (cel.element === 'agua' && layer === 'back') tsunami(ctx, cel.t);
+  else if (cel.element === 'agua' && layer === 'mid') islandWash(ctx, cel.t);
   else if (cel.element === 'terra' && layer === 'front') quake(ctx, cel.t);
   ctx.restore();
 }
@@ -103,55 +118,158 @@ function meteors(ctx, t) {
 
 // ---------------------------------------------------------------- água
 
+// Onda gigante passando atrás da ilha, da esquerda para a direita, com a
+// crista curvando para a frente (como um tubo de surf).
+const WAVE_BASE = 860;
+const WAVE_SCALE = 1;
+
 function tsunamiFront(t) {
-  return -500 + Math.max(0, t - 0.2) * 900;
+  // começa devagar e acelera um pouco
+  const u = Math.max(0, t - 0.15);
+  return -700 + u * 520 + u * u * 30;
 }
 
-function tsunamiHeight(t) {
-  return 420 + Math.sin(t * 2) * 30;
+function wavePath(ctx, fx, base, s, wob) {
+  ctx.beginPath();
+  ctx.moveTo(fx - 1700 * s, base);
+  ctx.bezierCurveTo(fx - 1100 * s, base, fx - 650 * s, base - 300 * s, fx - 330 * s, base - 480 * s);
+  ctx.bezierCurveTo(fx - 210 * s, base - 590 * s, fx - 20 * s, base - 650 * s, fx + 100 * s, base - 600 * s);
+  ctx.bezierCurveTo(fx + 190 * s, base - 560 * s, fx + 210 * s, base - 455 * s, fx + 150 * s + wob, base - 395 * s);
+  ctx.bezierCurveTo(fx + 110 * s, base - 360 * s, fx + 60 * s, base - 410 * s, fx + 25 * s, base - 440 * s);
+  ctx.bezierCurveTo(fx - 60 * s, base - 420 * s, fx - 95 * s, base - 280 * s, fx - 35 * s, base - 180 * s);
+  ctx.bezierCurveTo(fx + 20 * s, base - 90 * s, fx + 140 * s, base - 20 * s, fx + 290 * s, base);
+  ctx.closePath();
+}
+
+// Ponto numa curva de Bézier cúbica (para espalhar a espuma pela crista)
+function bez(p0, p1, p2, p3, u) {
+  const v = 1 - u;
+  return v * v * v * p0 + 3 * v * v * u * p1 + 3 * v * u * u * p2 + u * u * u * p3;
+}
+
+function drawWave(ctx, fx, base, s, t, dark) {
+  const wob = Math.sin(t * 7) * 6 * s;
+  const top = base - 650 * s;
+
+  // corpo da onda
+  wavePath(ctx, fx, base, s, wob);
+  const g = ctx.createLinearGradient(0, top, 0, base);
+  if (dark) {
+    g.addColorStop(0, 'rgba(70,150,210,0.9)');
+    g.addColorStop(1, 'rgba(8,30,80,0.95)');
+  } else {
+    g.addColorStop(0, '#c8f4ff');
+    g.addColorStop(0.18, '#5cc0f5');
+    g.addColorStop(0.55, '#1f78d6');
+    g.addColorStop(1, '#0a2d72');
+  }
+  ctx.fillStyle = g;
+  ctx.fill();
+
+  ctx.save();
+  wavePath(ctx, fx, base, s, wob);
+  ctx.clip();
+  // brilho na face (luz atravessando a água perto da crista)
+  const glow = ctx.createRadialGradient(fx - 120 * s, base - 480 * s, 10, fx - 120 * s, base - 480 * s, 300 * s);
+  glow.addColorStop(0, 'rgba(180,255,240,0.45)');
+  glow.addColorStop(1, 'rgba(180,255,240,0)');
+  ctx.fillStyle = glow;
+  ctx.fillRect(fx - 500 * s, base - 700 * s, 800 * s, 600 * s);
+  // listras de água subindo pela face
+  ctx.strokeStyle = 'rgba(255,255,255,0.22)';
+  ctx.lineWidth = 3 * s;
+  ctx.lineCap = 'round';
+  for (let i = 0; i < 14; i++) {
+    const k = (t * 0.9 + i / 14) % 1;
+    const x = fx - (900 - i * 55) * s;
+    const y = base - k * 520 * s;
+    ctx.beginPath();
+    ctx.moveTo(x, y);
+    ctx.quadraticCurveTo(x + 40 * s, y - 30 * s, x + 90 * s, y - 40 * s);
+    ctx.stroke();
+  }
+  // sombra dentro do tubo
+  ctx.strokeStyle = 'rgba(5,25,70,0.55)';
+  ctx.lineWidth = 60 * s;
+  ctx.beginPath();
+  ctx.moveTo(fx + 25 * s, base - 440 * s);
+  ctx.bezierCurveTo(fx - 60 * s, base - 420 * s, fx - 95 * s, base - 280 * s, fx - 35 * s, base - 180 * s);
+  ctx.stroke();
+  ctx.restore();
+
+  if (dark) return;
+
+  // espuma grossa na crista e na ponta
+  ctx.strokeStyle = 'rgba(245,253,255,0.95)';
+  ctx.lineCap = 'round';
+  ctx.lineWidth = 16 * s;
+  ctx.beginPath();
+  ctx.moveTo(fx - 330 * s, base - 480 * s);
+  ctx.bezierCurveTo(fx - 210 * s, base - 590 * s, fx - 20 * s, base - 650 * s, fx + 100 * s, base - 600 * s);
+  ctx.bezierCurveTo(fx + 190 * s, base - 560 * s, fx + 210 * s, base - 455 * s, fx + 150 * s + wob, base - 395 * s);
+  ctx.stroke();
+  ctx.fillStyle = '#ffffff';
+  for (let i = 0; i < 26; i++) {
+    const u = i / 25;
+    const seg = u < 0.6 ? 0 : 1;
+    const v = seg === 0 ? u / 0.6 : (u - 0.6) / 0.4;
+    const x = seg === 0
+      ? bez(fx - 330 * s, fx - 210 * s, fx - 20 * s, fx + 100 * s, v)
+      : bez(fx + 100 * s, fx + 190 * s, fx + 210 * s, fx + 150 * s + wob, v);
+    const y = seg === 0
+      ? bez(base - 480 * s, base - 590 * s, base - 650 * s, base - 600 * s, v)
+      : bez(base - 600 * s, base - 560 * s, base - 455 * s, base - 395 * s, v);
+    const r = (6 + Math.abs(Math.sin(t * 9 + i * 1.7)) * 9) * s;
+    ctx.beginPath();
+    ctx.arc(x + Math.sin(t * 6 + i) * 4, y + Math.cos(t * 5 + i) * 4, r, 0, Math.PI * 2);
+    ctx.fill();
+  }
+  // espuma na base da onda
+  ctx.fillStyle = 'rgba(235,250,255,0.8)';
+  for (let i = 0; i < 10; i++) {
+    const x = fx + (160 + i * 14) * s;
+    ctx.beginPath();
+    ctx.arc(x, base - (10 + Math.abs(Math.sin(t * 8 + i)) * 20) * s, (8 + (i % 3) * 4) * s, 0, Math.PI * 2);
+    ctx.fill();
+  }
 }
 
 function tsunami(ctx, t) {
-  const front = tsunamiFront(t);
-  const H = tsunamiHeight(t);
-  const base = 900;
-  const top = 720 - H;
-  const back = front - 1600;
+  const fx = tsunamiFront(t);
+  // céu escurecendo/azulando enquanto a onda passa
+  const k = Math.min(1, t / 0.8);
+  ctx.fillStyle = `rgba(10,50,110,${0.28 * k})`;
+  ctx.fillRect(-1200, -900, 3700, 2400);
+  // onda de trás (mais longe, menor e escura) e a onda principal
+  drawWave(ctx, fx - 520, WAVE_BASE + 40, 0.7, t + 1.3, true);
+  drawWave(ctx, fx, WAVE_BASE, WAVE_SCALE, t, false);
+}
+
+// Lâmina de água com espuma escorrendo por cima da ilha depois da crista
+function islandWash(ctx, t) {
+  const fx = tsunamiFront(t);
+  const right = Math.min(1100, fx + 40);
+  if (right <= 180) return;
+  const fade = Math.max(0, Math.min(1, (3.7 - t) / 0.8));
+  ctx.save();
+  ctx.globalAlpha *= 0.6 * fade;
+  ctx.fillStyle = '#4fb2f0';
   ctx.beginPath();
-  ctx.moveTo(back, base);
-  for (let x = back; x <= front - 120; x += 30) {
-    const u = (x - back) / (front - 120 - back);
-    const y = 720 - H * (0.35 + 0.65 * u * u) + Math.sin(x * 0.02 + t * 6) * 10;
-    ctx.lineTo(x, y);
-  }
-  // crista curvando para a frente
-  ctx.quadraticCurveTo(front - 40, top - 70, front + 60, top + 10);
-  ctx.quadraticCurveTo(front + 10, top + 30, front - 10, top + 90);
-  ctx.quadraticCurveTo(front + 40, top + 260, front + 140, base);
+  ctx.moveTo(180, 548);
+  for (let x = 180; x <= right; x += 12) ctx.lineTo(x, 532 + Math.sin(x * 0.05 + t * 8) * 4);
+  ctx.lineTo(right, 548);
   ctx.closePath();
-  const g = ctx.createLinearGradient(0, top, 0, base);
-  g.addColorStop(0, 'rgba(120,210,255,0.78)');
-  g.addColorStop(0.4, 'rgba(30,110,220,0.72)');
-  g.addColorStop(1, 'rgba(10,40,120,0.8)');
-  ctx.fillStyle = g;
   ctx.fill();
-  // espuma na crista
-  ctx.strokeStyle = 'rgba(240,252,255,0.95)';
-  ctx.lineWidth = 6;
-  ctx.lineCap = 'round';
+  ctx.strokeStyle = '#eafcff';
+  ctx.lineWidth = 3;
   ctx.beginPath();
-  ctx.moveTo(front - 260, top + 40 + Math.sin(t * 6) * 6);
-  ctx.quadraticCurveTo(front - 60, top - 60, front + 60, top + 10);
-  ctx.stroke();
-  ctx.strokeStyle = 'rgba(255,255,255,0.35)';
-  ctx.lineWidth = 2;
-  for (let i = 0; i < 6; i++) {
-    const y = top + 80 + i * 45;
-    ctx.beginPath();
-    ctx.moveTo(front - 900 + ((t * 300 + i * 120) % 700), y);
-    ctx.lineTo(front - 820 + ((t * 300 + i * 120) % 700), y - 6);
-    ctx.stroke();
+  for (let x = 180; x <= right; x += 12) {
+    const y = 532 + Math.sin(x * 0.05 + t * 8) * 4;
+    if (x === 180) ctx.moveTo(x, y);
+    else ctx.lineTo(x, y);
   }
+  ctx.stroke();
+  ctx.restore();
 }
 
 // ---------------------------------------------------------------- ar
