@@ -317,6 +317,33 @@ test('arma arremessada para fora do mapa se perde', () => {
   assert.equal(g.items.filter((i) => i.dropped).length, 0);
 });
 
+test('modo ADM: pulos e dashes no ar infinitos', () => {
+  const players = [
+    { id: 1, name: 'Adm', element: 'fogo', team: 'fogo', admin: true },
+    { id: 2, name: 'Bot', element: 'agua', team: 'agua' },
+  ];
+  const g = new Game({ players, seed: 42 });
+  while (g.phase === 'countdown') g.step({});
+  g.nextWindIn = Infinity;
+  const adm = g.playerById(1);
+  place(g.playerById(2), 300, 540);
+  place(adm, 640, 300);
+  // pula 6 vezes seguidas no ar: sobe sempre
+  let lastY = adm.y;
+  for (let i = 0; i < 6; i++) {
+    run(g, 1, { 1: makeInput({ up: true }) });
+    run(g, 12);
+    assert.ok(adm.y < lastY, `pulo ${i + 1} subiu`);
+    lastY = adm.y;
+  }
+  // 4 dashes no ar (o fogo normal só tem 1)
+  for (let i = 0; i < 4; i++) {
+    run(g, 1, { 1: makeInput({ dash: true, right: true }) });
+    assert.ok(adm.dashTime > 0, `dash ${i + 1} saiu`);
+    run(g, 40);
+  }
+});
+
 test('quanto mais dano, maior o empurrão', () => {
   const kbAt = (damage) => {
     const g = newGame(['fogo', 'agua', 'fogo', 'agua']);

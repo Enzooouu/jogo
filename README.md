@@ -83,7 +83,8 @@ alguém anda em cima ou o vento bate, correntes de vento que atravessam o mapa
 de ponta a ponta além das rajadas comuns, lava, lago e espinhos no meio).
 
 **Modo ADM (testes):** em Configurações, ligue "Modo ADM (testes)". Cada golpe seu
-passa a dar 999% de dano e o seu lutador fica intangível: nenhum golpe, lava,
+passa a dar 999% de dano, você tem pulos e dashes no ar infinitos e o seu
+lutador fica intangível: nenhum golpe, lava,
 água, espinho ou vento pega nele (cair para fora do mapa ainda tira vida). Os
 bots continuam normais e essas partidas não contam nas estatísticas da conta.
 

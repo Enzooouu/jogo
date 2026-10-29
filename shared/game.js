@@ -284,6 +284,11 @@ export class Game {
     p.spikeTimer = Math.max(0, p.spikeTimer - DT);
     p.dashCooldown = Math.max(0, p.dashCooldown - DT);
     this.updateStatus(p);
+    // Modo ADM (testes): pulos e dashes no ar sem limite
+    if (p.admin) {
+      p.jumpsLeft = PHYS.maxJumps;
+      p.airDashes = statsOf(p).airDashes;
+    }
 
     const control = p.hitstun <= 0 && !p.status.atordoado;
     const st = statsOf(p);
