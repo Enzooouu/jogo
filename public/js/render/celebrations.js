@@ -1,5 +1,5 @@
 // Comemoração de vitória: cada elemento tem a sua, tocada no fim da partida.
-//   fogo  -> chuva de meteoros atrás da ilha
+//   fogo  -> chuva de meteoros e um meteoro gigante explodindo atrás da ilha
 //   agua  -> tsunami atravessando a tela
 //   ar    -> tornado gigante
 //   terra -> terremoto (tremor, rachaduras, pedras caindo)
@@ -7,8 +7,6 @@
 // Camadas (todas em coordenadas do mundo):
 //   'back'  -> atrás da ilha     'mid' -> entre a ilha e os lutadores
 //   'front' -> na frente de tudo (menos o placar)
-
-import { drawFireball } from './weapons-art.js';
 
 export const CELEBRATION_TIME = 4;
 
@@ -21,7 +19,9 @@ export function updateCelebration(cel, dt, renderer) {
   cel.t += dt;
   const P = renderer.particles;
   const t = cel.t;
-  if (cel.element === 'terra') {
+  if (cel.element === 'fogo') {
+    updateFire(cel, dt, renderer);
+  } else if (cel.element === 'terra') {
     const k = Math.max(0, 1 - t / CELEBRATION_TIME);
     renderer.shake(9 * k + 2, 0.1);
     if (Math.random() < dt * 30 * k) {
@@ -80,7 +80,9 @@ export function drawCelebration(ctx, cel, layer) {
   if (fade <= 0) return;
   ctx.save();
   ctx.globalAlpha = Math.max(0, fade);
-  if (cel.element === 'fogo' && layer === 'back') meteors(ctx, cel.t);
+  if (cel.element === 'fogo' && layer === 'back') fireBack(ctx, cel.t);
+  else if (cel.element === 'fogo' && layer === 'mid') fireMid(ctx, cel.t);
+  else if (cel.element === 'fogo' && layer === 'front') fireFront(ctx, cel.t);
   else if (cel.element === 'ar' && layer === 'back') tornado(ctx, cel.t);
   else if (cel.element === 'agua' && layer === 'back') tsunami(ctx, cel.t);
   else if (cel.element === 'agua' && layer === 'mid') islandWash(ctx, cel.t);
@@ -95,43 +97,341 @@ function rand(i, k = 0) {
 
 // ---------------------------------------------------------------- fogo
 
-function meteors(ctx, t) {
-  // brilho vermelho no céu
-  const sky = ctx.createLinearGradient(0, -400, 0, 600);
-  sky.addColorStop(0, 'rgba(255,80,30,0.25)');
-  sky.addColorStop(1, 'rgba(255,80,30,0)');
-  ctx.fillStyle = sky;
-  ctx.fillRect(-600, -400, 2500, 1000);
+// Chuva de meteoros: riscos ao longe, meteoros menores que acertam a ilha
+// e deixam crateras pegando fogo, e um meteoro gigante que cai atrás da
+// ilha e sobe um cogumelo de fogo.
+const ISLAND_TOP = 540;
+const HERO = { x: 980, y: 565, t0: 0.9, t1: 2.2, dx: 1250, dy: 950, r: 44 };
 
-  for (let i = 0; i < 34; i++) {
-    const start = i * 0.1;
-    const life = t - start;
-    if (life < 0) continue;
-    const x0 = -300 + rand(i) * 1600;
-    const vx = 380 + rand(i, 1) * 160;
-    const vy = 720 + rand(i, 2) * 200;
-    const groundY = 380 + rand(i, 3) * 240;
-    const r = 7 + rand(i, 4) * 12;
-    const hitT = (groundY + 300) / vy;
-    if (life < hitT) {
-      const x = x0 + vx * life;
-      const y = -300 + vy * life;
-      ctx.save();
-      ctx.translate(x, y);
-      ctx.rotate(Math.atan2(vy, vx));
-      drawFireball(ctx, 0, 0, r, t + i, 1);
-      ctx.restore();
-    } else if (life < hitT + 0.6) {
-      // impacto atrás da ilha
-      const k = (life - hitT) / 0.6;
-      const x = x0 + vx * hitT;
-      const g = ctx.createRadialGradient(x, groundY, 2, x, groundY, r * 7 * (0.5 + k));
-      g.addColorStop(0, `rgba(255,230,150,${0.9 * (1 - k)})`);
-      g.addColorStop(0.4, `rgba(255,110,30,${0.6 * (1 - k)})`);
+// [quando bate, x] — fora das poças de lava e água
+const METEORS = [
+  [0.4, 520], [0.65, 1040], [0.9, 250], [1.1, 760], [1.4, 610], [1.65, 1000],
+  [1.9, 300], [2.75, 700], [2.95, 1060], [3.15, 215], [3.3, 560],
+].map(([at, x], i) => ({ at, x, r: 9 + rand(i, 4) * 7, vx: 380 + rand(i, 1) * 160, vy: 1000 + rand(i, 2) * 200 }));
+
+// Momentos das batidas (o som usa)
+export const FIRE_IMPACTS = { small: METEORS.map((m) => m.at), bigStart: HERO.t0, big: HERO.t1 };
+
+function heroPos(t) {
+  const k = Math.min(1, Math.max(0, (t - HERO.t0) / (HERO.t1 - HERO.t0)));
+  const u = Math.pow(k, 1.2); // acelera chegando
+  return { x: HERO.x - HERO.dx * (1 - u), y: HERO.y - HERO.dy * (1 - u) };
+}
+
+function meteorPos(m, t) {
+  const left = m.at - t;
+  return { x: m.x - m.vx * left, y: ISLAND_TOP - m.vy * left };
+}
+
+function updateFire(cel, dt, renderer) {
+  const P = renderer.particles;
+  const t = cel.t;
+  // cinzas caindo e brasas subindo
+  if (Math.random() < dt * 25) {
+    P.add({ x: -200 + Math.random() * 1700, y: -60 + Math.random() * 120, vx: 30 + Math.random() * 30, vy: 60 + Math.random() * 70, life: 3, size: 1.4 + Math.random() * 1.4, color: 'rgba(110,95,95,0.85)' });
+  }
+  if (Math.random() < dt * 25) {
+    P.add({ x: Math.random() * 1280, y: 720, vx: (Math.random() - 0.5) * 40, vy: -90 - Math.random() * 90, life: 2.5, size: 1.6, color: Math.random() < 0.5 ? '#ff9a3c' : '#ffd25a' });
+  }
+  // fagulhas soltas pelo meteoro gigante
+  if (t > HERO.t0 && t < HERO.t1 && Math.random() < dt * 70) {
+    const h = heroPos(t);
+    P.add({ x: h.x + (Math.random() - 0.5) * 40, y: h.y + (Math.random() - 0.5) * 40, vx: -200 - Math.random() * 200, vy: -150 - Math.random() * 150, life: 0.6, size: 2, type: 'spark', color: '#ffb347', gravity: 300 });
+  }
+  // batidas dos meteoros menores
+  cel.hit = cel.hit ?? new Set();
+  METEORS.forEach((m, i) => {
+    if (t < m.at || cel.hit.has(i)) return;
+    cel.hit.add(i);
+    const y = ISLAND_TOP - 2;
+    P.burst(m.x, y, { count: 16, speed: 520, angle: -Math.PI / 2, spread: 2.2, type: 'spark', size: 2.5, color: '#ffc65a', gravity: 1300, life: 0.7 });
+    P.burst(m.x, y, { count: 5, speed: 420, angle: -Math.PI / 2, spread: 1.6, size: 3 + m.r * 0.2, color: '#2e1a12', gravity: 1500, life: 0.9 });
+    P.burst(m.x, y - 10, { count: 3, speed: 70, angle: -Math.PI / 2, spread: 1.5, size: 5, grow: 22, color: 'rgba(70,50,45,0.3)', life: 1 });
+    renderer.shake(3, 0.12);
+  });
+  // batida do gigante
+  if (t >= HERO.t1 && !cel.bigHit) {
+    cel.bigHit = true;
+    const x = HERO.x;
+    const y = ISLAND_TOP - 4;
+    renderer.shake(16, 0.7);
+    P.burst(x, y, { count: 70, speed: 1150, angle: -Math.PI / 2, spread: 2.7, type: 'spark', size: 3, color: '#ffd27a', gravity: 900, life: 1.3 });
+    P.burst(x, y, { count: 26, speed: 950, angle: -Math.PI / 2, spread: 2.2, size: 6, color: '#2a1810', gravity: 1700, life: 1.7 });
+    P.burst(x, y - 30, { count: 14, speed: 320, angle: -Math.PI / 2, spread: 2.4, size: 22, grow: 60, color: 'rgba(255,120,40,0.45)', life: 0.8 });
+  }
+  // depois do gigante, chove brasa do céu
+  const e = t - HERO.t1;
+  if (e > 0 && e < 1.5 && Math.random() < dt * 60) {
+    P.add({ x: HERO.x - 600 + Math.random() * 1200, y: -40 + Math.random() * 120, vx: (Math.random() - 0.5) * 120, vy: 150 + Math.random() * 150, life: 1.6, size: 2, type: 'spark', color: '#ff9a3c', gravity: 500 });
+  }
+}
+
+// Atrás da ilha: céu, riscos distantes, meteoro gigante e o cogumelo
+function fireBack(ctx, t) {
+  const k = Math.min(1, t / 0.8);
+  ctx.fillStyle = `rgba(45,0,0,${0.35 * k})`;
+  ctx.fillRect(-1200, -900, 3700, 2400);
+  const glow = ctx.createLinearGradient(0, 150, 0, 800);
+  glow.addColorStop(0, 'rgba(255,90,20,0)');
+  glow.addColorStop(1, `rgba(255,90,20,${0.4 * k})`);
+  ctx.fillStyle = glow;
+  ctx.fillRect(-1200, 150, 3700, 1500);
+
+  farStreaks(ctx, t);
+
+  // brilho no canto do céu antes de o gigante aparecer
+  if (t > HERO.t0 - 0.5 && t < HERO.t1) {
+    const h = heroPos(Math.max(t, HERO.t0));
+    const a = Math.min(1, (t - HERO.t0 + 0.5) / 0.5);
+    const g = ctx.createRadialGradient(h.x, h.y, 10, h.x, h.y, 520);
+    g.addColorStop(0, `rgba(255,190,90,${0.45 * a})`);
+    g.addColorStop(1, 'rgba(255,90,20,0)');
+    ctx.fillStyle = g;
+    ctx.fillRect(h.x - 520, h.y - 520, 1040, 1040);
+    if (t >= HERO.t0) drawMeteor(ctx, h.x, h.y, Math.atan2(HERO.dy, HERO.dx), HERO.r, t, 99);
+  }
+  bigBlast(ctx, t);
+}
+
+function farStreaks(ctx, t) {
+  ctx.lineCap = 'round';
+  for (let i = 0; i < 30; i++) {
+    const life = t - (i * 0.12 - 0.3);
+    if (life < 0 || life > 1.6) continue;
+    const x = -500 + rand(i, 20) * 1800 + 480 * life;
+    const y = -450 + 1000 * life;
+    const len = 0.14 + rand(i, 21) * 0.08;
+    const g = ctx.createLinearGradient(x - 480 * len, y - 1000 * len, x, y);
+    g.addColorStop(0, 'rgba(255,150,70,0)');
+    g.addColorStop(1, 'rgba(255,225,160,0.7)');
+    ctx.strokeStyle = g;
+    ctx.lineWidth = 1.5 + rand(i, 22) * 1.5;
+    ctx.beginPath();
+    ctx.moveTo(x - 480 * len, y - 1000 * len);
+    ctx.lineTo(x, y);
+    ctx.stroke();
+  }
+}
+
+// Meteoro: rastro de fumaça, cauda de fogo feita de bolhas que brilham
+// somando luz, e uma pedra com a frente em brasa. Desenhado deitado no
+// sentido do movimento (+x).
+function drawMeteor(ctx, x, y, ang, r, t, seed) {
+  ctx.save();
+  ctx.translate(x, y);
+  ctx.rotate(ang);
+  const N = 14;
+  for (let k = N; k >= 1; k--) {
+    const u = k / N;
+    const wob = Math.sin(t * 6 + k * 0.9 + seed) * r * 0.3 * u;
+    ctx.fillStyle = `rgba(70,45,40,${0.3 * (1 - u)})`;
+    ctx.beginPath();
+    ctx.arc(-k * r * 0.8, wob, r * (0.7 + 0.9 * u), 0, Math.PI * 2);
+    ctx.fill();
+  }
+  // pedra arredondada com a frente em brasa
+  const pts = [];
+  for (let i = 0; i < 7; i++) {
+    const a = (i / 7) * Math.PI * 2;
+    const rr = r * 0.7 * (0.85 + rand(seed, i + 40) * 0.3);
+    pts.push([Math.cos(a) * rr, Math.sin(a) * rr]);
+  }
+  ctx.beginPath();
+  for (let i = 0; i < 7; i++) {
+    const [ax, ay] = pts[i];
+    const [bx, by] = pts[(i + 1) % 7];
+    if (i === 0) ctx.moveTo((pts[6][0] + ax) / 2, (pts[6][1] + ay) / 2);
+    ctx.quadraticCurveTo(ax, ay, (ax + bx) / 2, (ay + by) / 2);
+  }
+  ctx.closePath();
+  ctx.fillStyle = '#3a1a0e';
+  ctx.fill();
+  const hot = ctx.createRadialGradient(r * 0.6, 0, 0, r * 0.6, 0, r * 1.4);
+  hot.addColorStop(0, '#fff6d0');
+  hot.addColorStop(0.45, '#ffa040');
+  hot.addColorStop(1, 'rgba(255,80,20,0.2)');
+  ctx.fillStyle = hot;
+  ctx.fill();
+  // cauda de fogo: bolhas com borda suave somando luz por cima da pedra
+  ctx.globalCompositeOperation = 'lighter';
+  for (let k = N; k >= 2; k--) {
+    const u = k / N;
+    const px = -k * r * 0.45;
+    const py = Math.sin(t * 14 + k * 1.3 + seed) * r * 0.2 * u;
+    const rr = r * (1.25 - 0.8 * u);
+    const g = ctx.createRadialGradient(px, py, 0, px, py, rr);
+    g.addColorStop(0, `rgba(255,${Math.round(220 - 160 * u)},${Math.round(130 - 110 * u)},${0.55 * (1 - u)})`);
+    g.addColorStop(1, 'rgba(255,60,20,0)');
+    ctx.fillStyle = g;
+    ctx.fillRect(px - rr, py - rr, rr * 2, rr * 2);
+  }
+  const halo = ctx.createRadialGradient(0, 0, r * 0.3, 0, 0, r * 3.5);
+  halo.addColorStop(0, 'rgba(255,170,80,0.55)');
+  halo.addColorStop(1, 'rgba(255,90,20,0)');
+  ctx.fillStyle = halo;
+  ctx.fillRect(-r * 3.5, -r * 3.5, r * 7, r * 7);
+  ctx.globalCompositeOperation = 'source-over';
+  ctx.restore();
+}
+
+// Preenche a união de vários círculos de uma vez (sem bordas por dentro)
+function blob(ctx, puffs, scale, fill) {
+  ctx.fillStyle = fill;
+  ctx.beginPath();
+  for (const [x, y, r] of puffs) {
+    ctx.moveTo(x + r * scale, y);
+    ctx.arc(x, y, r * scale, 0, Math.PI * 2);
+  }
+  ctx.fill();
+}
+
+// Explosão do gigante: clarão e cogumelo de fogo que vira fumaça
+function bigBlast(ctx, t) {
+  const e = t - HERO.t1;
+  if (e < 0) return;
+  const heat = Math.max(0, 1 - e / 1.5);
+  const R = 250 + e * 700;
+  const g = ctx.createRadialGradient(HERO.x, 480, 0, HERO.x, 480, R);
+  g.addColorStop(0, `rgba(255,220,140,${0.7 * heat})`);
+  g.addColorStop(0.4, `rgba(255,100,30,${0.35 * heat})`);
+  g.addColorStop(1, 'rgba(255,60,20,0)');
+  ctx.fillStyle = g;
+  ctx.fillRect(HERO.x - R, 480 - R, R * 2, R * 2);
+
+  const rise = 1 - Math.pow(1 - Math.min(1, e / 1.1), 3);
+  const capY = 500 - 290 * rise;
+  const capR = 55 + 95 * rise;
+  const cx = HERO.x;
+  const puffs = [];
+  // coluna afinando para cima
+  for (let k = 0; k <= 8; k++) {
+    const u = k / 8;
+    const y = 590 + (capY + capR * 0.3 - 590) * u;
+    puffs.push([cx + Math.sin(k * 1.7 + e * 4) * 6, y, (48 - u * 18) * (0.6 + 0.4 * rise)]);
+  }
+  // saia de poeira na base
+  for (let j = -2; j <= 2; j++) puffs.push([cx + j * 26 * (0.5 + rise), 562 - Math.abs(j) * 4, 34 * (0.5 + 0.5 * rise)]);
+  // chapéu do cogumelo girando devagar
+  for (let j = 0; j < 12; j++) {
+    const a = (j / 12) * Math.PI * 2 + e * 0.5;
+    puffs.push([cx + Math.cos(a) * capR * 0.75, capY + Math.sin(a) * capR * 0.32, capR * (0.4 + rand(j, 30) * 0.18)]);
+  }
+  puffs.push([cx, capY - capR * 0.12, capR * 0.62]);
+  const cap = puffs.slice(-13);
+
+  blob(ctx, puffs, 1.12, `rgba(48,28,22,${Math.min(0.92, 0.35 + e)})`);
+  // luz de cima na fumaça, para dar volume (aparece quando o fogo apaga)
+  blob(ctx, cap.map(([x, y, r]) => [x - r * 0.12, y - r * 0.18, r]), 0.8, `rgba(95,62,50,${0.6 * (1 - heat)})`);
+  if (heat <= 0) return;
+  const a0 = ctx.globalAlpha;
+  ctx.globalAlpha = a0 * heat;
+  const fire = ctx.createRadialGradient(cx, capY, capR * 0.1, cx, capY + 120, capR * 2.2);
+  fire.addColorStop(0, '#ffe08a');
+  fire.addColorStop(0.45, '#ff8a24');
+  fire.addColorStop(1, '#b8280a');
+  blob(ctx, puffs, 0.95 - 0.25 * (1 - heat), fire);
+  ctx.globalAlpha = a0 * heat * heat;
+  const core = ctx.createRadialGradient(cx, capY, 0, cx, capY, capR * 1.3);
+  core.addColorStop(0, '#fffbe6');
+  core.addColorStop(1, 'rgba(255,214,120,0.2)');
+  blob(ctx, cap, 0.55, core);
+  ctx.globalAlpha = a0;
+}
+
+// Na frente da ilha: meteoros menores batendo, crateras em chamas e a
+// onda de choque do gigante passando pelo chão
+function fireMid(ctx, t) {
+  for (let i = 0; i < METEORS.length; i++) {
+    const m = METEORS[i];
+    const left = m.at - t;
+    if (left > 0) {
+      if (left < 1.2) {
+        const p = meteorPos(m, t);
+        drawMeteor(ctx, p.x, p.y, Math.atan2(m.vy, m.vx), m.r, t, i);
+      }
+      continue;
+    }
+    const e = -left;
+    // marca queimada e fogo na cratera
+    ctx.fillStyle = 'rgba(20,8,5,0.6)';
+    ctx.beginPath();
+    ctx.ellipse(m.x, ISLAND_TOP + 1, m.r * 2.6, 4, 0, 0, Math.PI * 2);
+    ctx.fill();
+    const grow = Math.min(1, e / 0.25);
+    for (let f = 0; f < 3; f++) {
+      const fx = m.x + (f - 1) * m.r * 0.9;
+      const h = m.r * (f === 1 ? 3.2 : 2.2) * grow * (0.8 + 0.2 * Math.sin(t * 17 + f * 2 + i));
+      flame(ctx, fx, ISLAND_TOP, h, m.r * 0.7, t + f + i);
+    }
+    // estouro da batida
+    if (e < 0.45) {
+      const k = e / 0.45;
+      const R = m.r * 6 * (0.4 + k);
+      const g = ctx.createRadialGradient(m.x, ISLAND_TOP, 0, m.x, ISLAND_TOP, R);
+      g.addColorStop(0, `rgba(255,245,200,${1 - k})`);
+      g.addColorStop(0.4, `rgba(255,130,40,${0.8 * (1 - k)})`);
       g.addColorStop(1, 'rgba(255,60,20,0)');
       ctx.fillStyle = g;
-      ctx.fillRect(x - r * 8, groundY - r * 8, r * 16, r * 16);
+      ctx.fillRect(m.x - R, ISLAND_TOP - R, R * 2, R * 2);
     }
+  }
+
+  const e = t - HERO.t1;
+  if (e < 0) return;
+  // chão iluminado pela explosão
+  const heat = Math.max(0, 1 - e / 1.4);
+  if (heat > 0) {
+    ctx.save();
+    ctx.translate(HERO.x, ISLAND_TOP);
+    ctx.scale(1, 0.12);
+    const g = ctx.createRadialGradient(0, 0, 0, 0, 0, 700);
+    g.addColorStop(0, `rgba(255,200,110,${0.8 * heat})`);
+    g.addColorStop(1, 'rgba(255,90,20,0)');
+    ctx.fillStyle = g;
+    ctx.fillRect(-700, -700, 1400, 1400);
+    ctx.restore();
+  }
+  // onda de choque
+  if (e < 0.8) {
+    const k = e / 0.8;
+    const rx = 40 + e * 1500;
+    ctx.strokeStyle = `rgba(255,225,160,${0.9 * (1 - k)})`;
+    ctx.lineWidth = 12 * (1 - k) + 2;
+    ctx.beginPath();
+    ctx.ellipse(HERO.x, ISLAND_TOP - 6, rx, rx * 0.16, 0, Math.PI, Math.PI * 2);
+    ctx.stroke();
+  }
+}
+
+function flame(ctx, x, y, h, w, t) {
+  if (h <= 1) return;
+  const sway = Math.sin(t * 9) * w * 0.4;
+  ctx.fillStyle = 'rgba(255,90,20,0.9)';
+  ctx.beginPath();
+  ctx.moveTo(x - w, y);
+  ctx.quadraticCurveTo(x - w * 0.8, y - h * 0.6, x + sway, y - h);
+  ctx.quadraticCurveTo(x + w * 0.8, y - h * 0.6, x + w, y);
+  ctx.fill();
+  ctx.fillStyle = '#ffd25a';
+  ctx.beginPath();
+  ctx.moveTo(x - w * 0.5, y);
+  ctx.quadraticCurveTo(x - w * 0.4, y - h * 0.4, x + sway * 0.6, y - h * 0.6);
+  ctx.quadraticCurveTo(x + w * 0.4, y - h * 0.4, x + w * 0.5, y);
+  ctx.fill();
+}
+
+// Na frente de tudo: tela avermelhada e o clarão do gigante
+function fireFront(ctx, t) {
+  const k = Math.min(1, t / 0.8);
+  const v = ctx.createRadialGradient(640, 380, 300, 640, 380, 1000);
+  v.addColorStop(0, 'rgba(120,20,0,0)');
+  v.addColorStop(1, `rgba(120,20,0,${0.35 * k})`);
+  ctx.fillStyle = v;
+  ctx.fillRect(-1200, -900, 3700, 2400);
+  const e = t - HERO.t1;
+  if (e >= 0 && e < 0.35) {
+    ctx.fillStyle = `rgba(255,240,200,${0.85 * (1 - e / 0.35)})`;
+    ctx.fillRect(-1200, -900, 3700, 2400);
   }
 }
 

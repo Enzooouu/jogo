@@ -1,6 +1,8 @@
 // Efeitos sonoros sintetizados com Web Audio (sem arquivos de som).
 // M liga/desliga.
 
+import { FIRE_IMPACTS } from './render/celebrations.js';
+
 let ctx = null;
 let master = null;
 let muted = readMuted();
@@ -122,7 +124,11 @@ export function playEvents(events, localId) {
       case 'matchEnd':
         // som da comemoração de cada elemento
         if (e.winnerElement === 'fogo') {
-          for (let i = 0; i < 6; i++) noise({ dur: 0.4, vol: 0.25, freq: 600, delay: 0.5 + i * 0.4 });
+          for (const at of FIRE_IMPACTS.small) noise({ dur: 0.35, vol: 0.22, freq: 600, delay: at });
+          // assobio do meteoro gigante chegando e o estrondo
+          tone({ freq: 1400, to: 250, dur: FIRE_IMPACTS.big - FIRE_IMPACTS.bigStart, type: 'sine', vol: 0.07, delay: FIRE_IMPACTS.bigStart });
+          noise({ dur: 1.6, vol: 0.7, freq: 400, delay: FIRE_IMPACTS.big });
+          tone({ freq: 90, to: 25, dur: 1.4, type: 'sawtooth', vol: 0.4, delay: FIRE_IMPACTS.big });
         } else if (e.winnerElement === 'agua') {
           noise({ dur: 2.5, vol: 0.3, freq: 900, delay: 0.2 });
         } else if (e.winnerElement === 'ar') {
