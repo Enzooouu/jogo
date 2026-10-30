@@ -117,6 +117,7 @@ async function openProfile() {
 
 function closePanels() {
   for (const p of document.querySelectorAll('.side-panel')) p.hidden = true;
+  $('#panel-backdrop').hidden = true;
 }
 
 function togglePanel(id) {
@@ -124,7 +125,10 @@ function togglePanel(id) {
   const open = panel.hidden;
   closePanels();
   panel.hidden = !open;
-  if (id === '#controls-panel') controls.refresh();
+  if (id === '#controls-panel') {
+    controls.refresh();
+    $('#panel-backdrop').hidden = panel.hidden;
+  }
   if (id === '#settings-panel') {
     $('#opt-sound').checked = !isMuted();
     $('#opt-demo').checked = state.demo;
@@ -540,6 +544,7 @@ function init() {
   $('#home-play').addEventListener('click', () => show('mode'));
   $('#home-profile').addEventListener('click', openProfile);
   $('#home-controls').addEventListener('click', () => togglePanel('#controls-panel'));
+  $('#panel-backdrop').addEventListener('click', closePanels);
   $('#home-settings').addEventListener('click', () => togglePanel('#settings-panel'));
   $('#opt-sound').addEventListener('change', (e) => {
     if (e.target.checked === isMuted()) toggleMute();
