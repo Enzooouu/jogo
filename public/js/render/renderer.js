@@ -55,6 +55,7 @@ export class Renderer {
   resize() {
     const dpr = Math.min(window.devicePixelRatio || 1, 2);
     const rect = this.canvas.getBoundingClientRect();
+    this.cssW = this.canvas.clientWidth;
     const w = Math.max(320, Math.round(rect.width * dpr));
     this.canvas.width = w;
     this.canvas.height = Math.round((w * VIEW_H) / VIEW_W);
@@ -265,6 +266,9 @@ export class Renderer {
   // ------------------------------------------------------------ desenho
 
   frame(dt, alpha) {
+    // a área do jogo mudou de tamanho (ex.: painel arrastado) sem aviso de
+    // "resize": ajusta antes de desenhar, senão o jogo fica pequeno num canto
+    if (this.canvas.clientWidth && this.canvas.clientWidth !== this.cssW) this.resize();
     this.time += dt;
     this.fps += (1 / Math.max(dt, 1e-3) - this.fps) * 0.05;
     this.particles.update(dt);

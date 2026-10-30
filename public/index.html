@@ -34,15 +34,17 @@
       <!-- Primeira vez no jogo: convite para o tutorial -->
       <div id="welcome" class="welcome" hidden>
         <div class="welcome-card" role="dialog" aria-labelledby="welcome-title">
+          <span class="welcome-tag">PRIMEIRA VEZ?</span>
           <canvas id="welcome-art" class="welcome-art" aria-hidden="true"></canvas>
-          <small>BEM-VINDO AO</small>
-          <h2 id="welcome-title">BRAWL DOS ELEMENTOS</h2>
-          <p>É a sua primeira vez aqui? O tutorial ensina tudo em poucos minutos: andar, pular, dash, paredes, armas e os perigos de cada elemento.</p>
-          <div class="welcome-actions">
-            <button type="button" class="btn" id="welcome-yes">FAZER O TUTORIAL</button>
-            <button type="button" class="btn ghost" id="welcome-no">Agora não</button>
+          <div class="welcome-body">
+            <h2 id="welcome-title"><small>BEM-VINDO AO</small><b>BRAWL<br>DOS ELEMENTOS</b></h2>
+            <p>Aprenda o básico no <strong>Campo de Treino</strong>: andar, pular, dash, paredes, armas e os perigos de cada elemento. Leva uns 5 minutos.</p>
+            <div class="welcome-actions">
+              <button type="button" class="welcome-go" id="welcome-yes">FAZER O TUTORIAL</button>
+              <button type="button" class="welcome-skip" id="welcome-no">AGORA NÃO</button>
+            </div>
+            <button type="button" class="welcome-login" id="welcome-login">Já tem conta? Entrar</button>
           </div>
-          <button type="button" class="welcome-login" id="welcome-login">Já tem conta? Entrar</button>
         </div>
       </div>
       <div id="controls-panel" class="side-panel controls-panel" hidden>
@@ -148,7 +150,7 @@
           <div class="tut-top"><small id="tut-step"></small><span id="tut-progress" class="tut-progress" hidden></span></div>
           <h2 id="tut-title"></h2>
           <p id="tut-text"></p>
-          <div class="tut-bar"><i id="tut-bar"></i></div>
+          <div class="tut-pegs" id="tut-pegs" aria-hidden="true"></div>
         </div>
         <div class="tut-corner">
           <button type="button" class="btn ghost small" id="tut-skip">Pular etapa ›</button>

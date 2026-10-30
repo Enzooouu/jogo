@@ -222,7 +222,7 @@ export class TutorialScreen {
     const t = this.current;
     if (!t) return;
     const step = t.step;
-    $('#tut-step').textContent = `ETAPA ${this.index + 1} DE ${STEPS.length}`;
+    $('#tut-step').textContent = `ETAPA ${this.index + 1}/${STEPS.length}`;
     $('#tut-title').textContent = step.title;
     const html = withKeys(step.text(t.state), loadBindings());
     if (html !== this.lastText) {
@@ -233,7 +233,12 @@ export class TutorialScreen {
     $('#tut-progress').hidden = !progress;
     if (progress) $('#tut-progress').textContent = progress;
     $('#tut-card').classList.toggle('done', this.completed);
-    $('#tut-bar').style.width = `${((this.index + (this.completed ? 1 : 0)) / STEPS.length) * 100}%`;
+    // um pino por etapa: feitas, a atual e as que faltam
+    const pegs = $('#tut-pegs');
+    if (pegs.childElementCount !== STEPS.length) pegs.replaceChildren(...STEPS.map(() => document.createElement('i')));
+    [...pegs.children].forEach((peg, i) => {
+      peg.className = i < this.index || (i === this.index && this.completed) ? 'done' : i === this.index ? 'now' : '';
+    });
     if (fresh) {
       const card = $('#tut-card');
       card.classList.remove('enter');
