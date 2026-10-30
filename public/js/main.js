@@ -126,10 +126,8 @@ function togglePanel(id) {
   const open = panel.hidden;
   closePanels();
   panel.hidden = !open;
-  if (id === '#controls-panel') {
-    controls.refresh();
-    $('#panel-backdrop').hidden = panel.hidden;
-  }
+  $('#panel-backdrop').hidden = panel.hidden;
+  if (id === '#controls-panel') controls.refresh();
   if (id === '#settings-panel') {
     $('#opt-sound').checked = !isMuted();
     $('#opt-demo').checked = state.demo;
