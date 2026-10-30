@@ -380,6 +380,74 @@ test('caixa que cai do céu se quebra no chão e deixa a arma com as cargas chei
   assert.deepEqual(p.weapon, { id: item.weapon, uses: WEAPONS[item.weapon].uses });
 });
 
+// Dispara um projétil de cajado do jogador `id` (elemento dele) virado para `dir`
+function shootStaff(g, id, dir) {
+  const p = g.playerById(id);
+  p.facing = dir;
+  p.weapon = { id: 'cajado', uses: 5 };
+  p.cooldown = 0;
+  p.attack = null;
+  run(g, 1, { [id]: makeInput({ attack: true }) });
+  run(g, 1);
+}
+
+// Dois jogadores frente a frente (FFA, um de cada elemento) atirando um no outro
+function staffDuel(a, b) {
+  const players = [a, b].map((element, i) => ({ id: i + 1, name: element, element }));
+  const g = new Game({ players, mode: 'ffa', seed: 7 });
+  while (g.phase === 'countdown') g.step({});
+  g.nextWindIn = Infinity;
+  g.nextItemIn = Infinity;
+  // no chão firme do meio (fora da lava e da água)
+  place(g.playerById(1), 520, 540);
+  place(g.playerById(2), 760, 540);
+  run(g, 2);
+  return g;
+}
+
+test('fogo + água no ar viram vapor (os dois somem)', () => {
+  const g = staffDuel('fogo', 'agua');
+  const events = [];
+  shootStaff(g, 1, 1);
+  shootStaff(g, 2, -1);
+  for (let i = 0; i < 40; i++) {
+    g.step({});
+    events.push(...g.drainEvents());
+  }
+  assert.ok(events.some((e) => e.type === 'combo' && e.kind === 'vapor'), 'teve vapor');
+  assert.equal(g.playerById(1).damage + g.playerById(2).damage, 0, 'ninguém foi acertado');
+});
+
+test('terra + ar viram tempestade de areia: o tornado continua', () => {
+  const g2 = staffDuel('terra', 'ar');
+  const events = [];
+  shootStaff(g2, 1, 1);   // pedra da Terra indo para a direita
+  shootStaff(g2, 2, -1);  // tornado do Ar indo para a esquerda
+  for (let i = 0; i < 90; i++) {
+    g2.step({});
+    events.push(...g2.drainEvents());
+  }
+  const combo = events.find((e) => e.type === 'combo');
+  assert.equal(combo?.kind, 'areia');
+  assert.equal(combo.carrier, 'ar', 'o tornado continua');
+  assert.ok(g2.projectiles.some((pr) => pr.element === 'ar' && pr.combo === 'terra') || events.some((e) => e.type === 'hit'));
+});
+
+test('disparo combinado aplica o efeito do outro elemento ao acertar', () => {
+  const g = staffDuel('agua', 'fogo');
+  // tornado de fogo do jogador 1 (fingindo ser do Ar) acertando o jogador de água
+  const target = g.playerById(1);
+  const shooter = g.playerById(2);
+  g.projectiles.push({
+    id: 999, kind: 'magia', owner: shooter.id, team: shooter.team, element: 'ar', weapon: 'cajado',
+    combo: 'terra', x: target.x + target.w / 2 + 30, y: target.y + 30, vx: -380, vy: 0, r: 18,
+    gravity: 0, life: 1, pierce: true, hitIds: [],
+  });
+  target.invuln = 0;
+  run(g, 10);
+  assert.ok(target.status.atordoado, 'ficou atordoado pela areia');
+});
+
 test('quanto mais dano, maior o empurrão', () => {
   const kbAt = (damage) => {
     const g = newGame(['fogo', 'agua', 'fogo', 'agua']);

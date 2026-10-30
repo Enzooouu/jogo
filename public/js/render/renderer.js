@@ -16,6 +16,16 @@ export const VIEW_H = 720;
 export const TEAM_COLORS = ['#ffd23f', '#d65bff', '#3fffa2', '#ff5b7a', '#5bd2ff', '#ff9f43', '#a3ff5b', '#ff5bd2'];
 const TEAM_NAMES = ['Time Dourado', 'Time Violeta', 'Time Verde', 'Time Rosa'];
 
+// Nome e cores do efeito quando dois disparos se combinam
+const COMBO_FX = {
+  vapor: { name: 'VAPOR!', ring: 'rgba(235,245,255,0.9)', spark: '#ffffff', puff: 'rgba(235,240,245,0.5)', text: '#eaf6ff' },
+  tornadoDeFogo: { name: 'TORNADO DE FOGO!', ring: '#ffb347', spark: '#ffd25a', puff: 'rgba(255,120,40,0.5)', text: '#ffd27a' },
+  magma: { name: 'MAGMA!', ring: '#ff7a1a', spark: '#ffb347', puff: 'rgba(90,40,30,0.5)', text: '#ffb347' },
+  lama: { name: 'LAMA!', ring: '#9a7450', spark: '#6a4a30', puff: 'rgba(110,80,50,0.5)', text: '#d8b27a' },
+  tempestade: { name: 'TEMPESTADE!', ring: '#9fd0ff', spark: '#e8f6ff', puff: 'rgba(150,170,200,0.5)', text: '#bfe2ff' },
+  areia: { name: 'TEMPESTADE DE AREIA!', ring: '#e0c08a', spark: '#d8b27a', puff: 'rgba(220,190,140,0.5)', text: '#f0d8a8' },
+};
+
 export class Renderer {
   constructor(canvas, game, { localPlayerId = null, debug = false } = {}) {
     this.canvas = canvas;
@@ -180,6 +190,23 @@ export class Renderer {
             P.burst(e.x, e.y, { count: 6, speed: 120, life: 0.3, size: 3, color: ELEMENTS[e.element].light });
           }
           break;
+        case 'combo': {
+          // dois disparos de elementos diferentes se encontraram no ar
+          const info = COMBO_FX[e.kind];
+          if (!info) break;
+          P.add({ type: 'ring', x: e.x, y: e.y, size: 8, grow: 260, life: 0.35, color: info.ring });
+          P.add({ x: e.x, y: e.y, size: 14, grow: 120, life: 0.2, color: 'rgba(255,255,255,0.7)' });
+          if (e.kind === 'vapor') {
+            P.burst(e.x, e.y, { count: 16, speed: 140, life: 1.3, size: 10, grow: 30, color: 'rgba(235,240,245,0.55)', gravity: -60, drag: 1.5 });
+            P.burst(e.x, e.y, { count: 10, speed: 260, life: 0.5, size: 2.5, color: '#bfeaff', gravity: 600 });
+          } else {
+            P.burst(e.x, e.y, { type: 'spark', count: 16, speed: 380, life: 0.45, size: 2.6, color: info.spark, drag: 3 });
+            P.burst(e.x, e.y, { count: 8, speed: 140, life: 0.7, size: 6, grow: 16, color: info.puff });
+          }
+          P.add({ type: 'text', text: info.name, x: e.x, y: e.y - 34, vy: -50, life: 1.1, size: 18, color: info.text });
+          this.shake(3, 0.12);
+          break;
+        }
         case 'crateOpen':
           // tábuas voando, poeira e brilho onde a arma aparece
           P.burst(e.x, e.y - 12, { type: 'spark', count: 10, speed: 300, angle: -Math.PI / 2, spread: 2.6, life: 0.6, size: 4, color: '#8f5c2c', gravity: 1100 });
@@ -359,6 +386,13 @@ export class Renderer {
     }
     for (const pr of g.projectiles) {
       if (pr.kind !== 'magia') continue;
+      if (pr.combo === 'fogo' && chance(40)) {
+        P.add({ x: pr.x + (Math.random() - 0.5) * 20, y: pr.y + (Math.random() - 0.5) * 20, vx: -pr.vx * 0.1, vy: -60, life: 0.4, size: 3, grow: -6, color: Math.random() < 0.5 ? '#ff7a1a' : '#ffd25a' });
+      } else if (pr.combo === 'agua' && chance(35)) {
+        P.add({ x: pr.x + (Math.random() - 0.5) * 20, y: pr.y + 10, vx: -pr.vx * 0.1, vy: 40, life: 0.4, size: 2, color: pr.element === 'terra' ? '#6a4a30' : '#9fd0ff', gravity: 600 });
+      } else if (pr.combo === 'terra' && chance(40)) {
+        P.add({ x: pr.x + (Math.random() - 0.5) * 30, y: pr.y + (Math.random() - 0.5) * 30, vx: -pr.vx * 0.2, vy: -20, life: 0.5, size: 1.6, color: '#d8b27a', drag: 1 });
+      }
       if (pr.element === 'fogo' && chance(70)) {
         P.add({ x: pr.x, y: pr.y + (Math.random() - 0.5) * 8, vx: -pr.vx * 0.05, vy: -30, life: 0.35, size: 4, grow: -8, color: Math.random() < 0.5 ? '#ff7a1a' : '#ffd25a' });
       } else if (pr.element === 'agua' && chance(50)) {
@@ -679,7 +713,7 @@ export class Renderer {
         if (pr.weapon === 'espada') drawSwordArt(ctx, pr.element, this.time);
         else drawStaffArt(ctx, pr.element, this.time);
       } else {
-        drawShot(ctx, pr.element, pr.x, pr.y, pr.r, Math.sign(pr.vx) || 1, this.time);
+        drawShot(ctx, pr.element, pr.x, pr.y, pr.r, Math.sign(pr.vx) || 1, this.time, pr.combo);
       }
       ctx.restore();
     }

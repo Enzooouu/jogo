@@ -619,16 +619,28 @@ function windStaff(ctx, t) {
 // ====================================================================== disparos
 // Desenhados no centro (x, y); dir = 1 indo para a direita, -1 esquerda.
 
-export function drawShot(ctx, element, x, y, r, dir, t) {
+// combo = elemento absorvido quando dois disparos se combinaram no ar
+export function drawShot(ctx, element, x, y, r, dir, t, combo = null) {
   ctx.save();
   ctx.translate(x, y);
   ctx.scale(dir || 1, 1);
   if (element === 'agua') waterShot(ctx, r, t);
-  else if (element === 'terra') rockShot(ctx, r, t);
-  else if (element === 'ar') windShot(ctx, r, t);
+  else if (element === 'terra') {
+    if (combo === 'fogo') magmaShot(ctx, r, t);
+    else if (combo === 'agua') mudShot(ctx, r, t);
+    else rockShot(ctx, r, t);
+  } else if (element === 'ar') windShot(ctx, r, t, combo);
   else drawFireball(ctx, 0, 0, r, t, 1);
   ctx.restore();
 }
+
+// Cores do tornado: normal, de fogo, de chuva e de areia
+const TORNADO_COLORS = {
+  ar: { bands: ['rgba(110,235,215,0.9)', 'rgba(255,255,255,0.85)'], glow: '235,255,252', base: 'rgba(235,255,250,0.7)', suction: 'rgba(200,255,245,0.35)' },
+  fogo: { bands: ['rgba(255,110,30,0.95)', 'rgba(255,220,120,0.9)'], glow: '255,170,80', base: 'rgba(255,180,90,0.8)', suction: 'rgba(255,170,90,0.35)' },
+  agua: { bands: ['rgba(80,150,230,0.9)', 'rgba(225,240,255,0.85)'], glow: '170,200,240', base: 'rgba(200,225,255,0.7)', suction: 'rgba(170,210,255,0.35)' },
+  terra: { bands: ['rgba(180,140,80,0.95)', 'rgba(240,215,165,0.9)'], glow: '230,200,150', base: 'rgba(220,190,140,0.75)', suction: 'rgba(220,190,140,0.35)' },
+};
 
 // Bola de fogo; tail = tamanho da cauda (0 = parada no cajado)
 export function drawFireball(ctx, x, y, r, t, tail) {
@@ -802,15 +814,93 @@ function rockShot(ctx, r, t) {
   ctx.restore();
 }
 
+// Pedra de magma (Terra + Fogo): pedra escura com rachaduras grossas em
+// brasa, halo de calor e fogo atrás
+function magmaShot(ctx, r, t) {
+  const halo = ctx.createRadialGradient(0, 0, r * 0.4, 0, 0, r * 2.2);
+  halo.addColorStop(0, 'rgba(255,120,30,0.5)');
+  halo.addColorStop(1, 'rgba(255,80,20,0)');
+  ctx.fillStyle = halo;
+  ctx.fillRect(-r * 2.2, -r * 2.2, r * 4.4, r * 4.4);
+  for (let i = 0; i < 3; i++) {
+    const L = r * (2.6 - i * 0.6);
+    const W = r * (0.8 - i * 0.18);
+    const wob = Math.sin(t * 18 + i) * r * 0.2;
+    ctx.fillStyle = ['rgba(255,80,20,0.8)', 'rgba(255,150,40,0.85)', 'rgba(255,220,120,0.9)'][i];
+    ctx.beginPath();
+    ctx.moveTo(-r * 0.4, -W);
+    ctx.quadraticCurveTo(-L * 0.6, -W + wob, -L - r * 0.4, wob);
+    ctx.quadraticCurveTo(-L * 0.6, W + wob, -r * 0.4, W);
+    ctx.closePath();
+    ctx.fill();
+  }
+  ctx.save();
+  ctx.rotate(t * 10);
+  const rock = [[-r, r * 0.2], [-r * 0.7, -r * 0.8], [r * 0.3, -r], [r, -r * 0.2], [r * 0.7, r * 0.8], [-r * 0.3, r]];
+  shape(ctx, rock);
+  ctx.fillStyle = '#2a1410';
+  ctx.fill();
+  ctx.fillStyle = '#4a2418';
+  shape(ctx, [[-r, r * 0.2], [-r * 0.7, -r * 0.8], [r * 0.3, -r], [0, 0]]);
+  ctx.fill();
+  const pulse = 0.75 + Math.sin(t * 9) * 0.25;
+  for (const [w, c] of [[3.6, `rgba(255,90,20,${pulse})`], [1.6, '#ffe08a']]) {
+    ctx.strokeStyle = c;
+    ctx.lineWidth = w;
+    ctx.beginPath();
+    ctx.moveTo(-r * 0.7, -r * 0.3); ctx.lineTo(0, 0); ctx.lineTo(r * 0.7, -r * 0.1);
+    ctx.moveTo(0, 0); ctx.lineTo(-r * 0.1, r * 0.75);
+    ctx.moveTo(r * 0.2, -r * 0.05); ctx.lineTo(r * 0.3, -r * 0.7);
+    ctx.stroke();
+  }
+  shape(ctx, rock);
+  outline(ctx, 2);
+  ctx.restore();
+}
+
+// Lama (Terra + Água): bola marrom molenga balançando, brilho de molhado e
+// pingos caindo
+function mudShot(ctx, r, t) {
+  ctx.fillStyle = 'rgba(90,64,44,0.85)';
+  for (let i = 0; i < 4; i++) {
+    const k = (t * 3 + i / 4) % 1;
+    ctx.beginPath(); ctx.arc(-r * (0.8 + k * 1.5), r * (0.2 + k * 1.2), r * 0.18 * (1 - k * 0.5), 0, Math.PI * 2); ctx.fill();
+  }
+  ctx.beginPath();
+  for (let i = 0; i <= 16; i++) {
+    const a = (i / 16) * Math.PI * 2;
+    const rr = r * (1 + Math.sin(a * 3 + t * 12) * 0.08 + Math.sin(a * 5 - t * 9) * 0.05);
+    const x = Math.cos(a) * rr * 1.08;
+    const y = Math.sin(a) * rr * 0.92;
+    if (i === 0) ctx.moveTo(x, y);
+    else ctx.lineTo(x, y);
+  }
+  ctx.closePath();
+  const g = ctx.createRadialGradient(-r * 0.3, -r * 0.3, 1, 0, 0, r * 1.1);
+  g.addColorStop(0, '#9a7450');
+  g.addColorStop(0.6, '#6a4a30');
+  g.addColorStop(1, '#3e2a1a');
+  ctx.fillStyle = g;
+  ctx.fill();
+  outline(ctx, 2);
+  ctx.fillStyle = 'rgba(255,255,255,0.45)';
+  ctx.beginPath(); ctx.ellipse(-r * 0.35, -r * 0.4, r * 0.28, r * 0.14, -0.5, 0, Math.PI * 2); ctx.fill();
+  ctx.fillStyle = 'rgba(40,25,15,0.5)';
+  for (const [x, y, rr] of [[0.3, 0.2, 0.15], [-0.2, 0.4, 0.1], [0.5, -0.3, 0.09]]) {
+    ctx.beginPath(); ctx.arc(x * r, y * r, rr * r, 0, Math.PI * 2); ctx.fill();
+  }
+}
+
 // Tornado: funil translúcido com faixas em espiral girando, poeira na base,
 // folhas voando em volta e linhas de sucção
-function windShot(ctx, r, t) {
+function windShot(ctx, r, t, combo = null) {
+  const col = TORNADO_COLORS[combo] ?? TORNADO_COLORS.ar;
   const top = -r * 1.5;
   const bottom = r * 1.4;
   const widthAt = (u) => r * (0.25 + 1.2 * Math.pow(1 - u, 1.4)); // u: 0 = topo, 1 = base
   const sway = (u) => Math.sin(t * 7 + u * 4) * r * 0.18 * u;
   // linhas de sucção (puxa os inimigos)
-  ctx.strokeStyle = 'rgba(200,255,245,0.35)';
+  ctx.strokeStyle = col.suction;
   ctx.lineWidth = 1.2;
   for (let i = 0; i < 4; i++) {
     const a = t * 2 + (i * Math.PI) / 2;
@@ -819,9 +909,9 @@ function windShot(ctx, r, t) {
   }
   // brilho claro no meio do funil
   const glow = ctx.createLinearGradient(-r, 0, r, 0);
-  glow.addColorStop(0, 'rgba(220,255,248,0)');
-  glow.addColorStop(0.5, 'rgba(235,255,252,0.35)');
-  glow.addColorStop(1, 'rgba(220,255,248,0)');
+  glow.addColorStop(0, `rgba(${col.glow},0)`);
+  glow.addColorStop(0.5, `rgba(${col.glow},${combo ? 0.5 : 0.35})`);
+  glow.addColorStop(1, `rgba(${col.glow},0)`);
   ctx.fillStyle = glow;
   ctx.beginPath();
   for (let i = 0; i <= 10; i++) {
@@ -843,21 +933,62 @@ function windShot(ctx, r, t) {
     const y = top + (bottom - top) * u;
     const w = widthAt(u);
     const start = Math.PI * (0.05 + ((i * 0.37 + t * 2) % 0.4));
-    ctx.strokeStyle = i % 3 === 0 ? 'rgba(110,235,215,0.9)' : 'rgba(255,255,255,0.85)';
+    ctx.strokeStyle = i % 3 === 0 ? col.bands[0] : col.bands[1];
     ctx.lineWidth = i % 2 ? 1.4 : 2.2;
     ctx.beginPath();
     ctx.ellipse(sway(u), y, w, r * 0.2, 0, start, start + Math.PI * 0.75);
     ctx.stroke();
   }
   // redemoinho de vento na base
-  ctx.strokeStyle = 'rgba(235,255,250,0.7)';
+  ctx.strokeStyle = col.base;
   ctx.lineWidth = 1.2;
   for (let i = 0; i < 3; i++) {
     const a = t * 8 + i * 2.1;
     ctx.beginPath(); ctx.ellipse(sway(1), bottom + 1, r * (0.5 + i * 0.25), r * 0.12, 0, a, a + 1.6); ctx.stroke();
   }
+  if (combo === 'fogo') {
+    // chamas na base e brasas girando
+    for (let i = 0; i < 3; i++) {
+      const fx = (i - 1) * r * 0.45 + sway(1);
+      const fh = r * (0.7 + 0.3 * Math.sin(t * 16 + i * 2));
+      ctx.fillStyle = i === 1 ? '#ffd25a' : '#ff6a1a';
+      ctx.beginPath();
+      ctx.moveTo(fx - r * 0.25, bottom);
+      ctx.quadraticCurveTo(fx, bottom - fh * 1.2, fx + Math.sin(t * 9 + i) * 3, bottom - fh * 1.5);
+      ctx.quadraticCurveTo(fx + r * 0.1, bottom - fh * 0.7, fx + r * 0.25, bottom);
+      ctx.fill();
+    }
+    ctx.fillStyle = '#ffd25a';
+    for (let i = 0; i < 5; i++) {
+      const a = t * 7 + i * 1.3;
+      const u = (i + 0.5) / 5;
+      ctx.beginPath(); ctx.arc(Math.cos(a) * widthAt(u) + sway(u), top + (bottom - top) * u, 1.6, 0, Math.PI * 2); ctx.fill();
+    }
+  } else if (combo === 'agua') {
+    // nuvenzinha em cima e chuva caindo dentro
+    ctx.fillStyle = 'rgba(150,170,200,0.85)';
+    for (const [dx, rr] of [[-0.6, 0.45], [0, 0.6], [0.6, 0.45]]) {
+      ctx.beginPath(); ctx.arc(dx * r * 1.2 + sway(0), top - r * 0.2, rr * r, 0, Math.PI * 2); ctx.fill();
+    }
+    ctx.strokeStyle = 'rgba(190,225,255,0.9)';
+    ctx.lineWidth = 1.2;
+    for (let i = 0; i < 6; i++) {
+      const k = (t * 3 + i / 6) % 1;
+      const x = (i / 5 - 0.5) * r * 1.6;
+      const y = top + (bottom - top) * k;
+      ctx.beginPath(); ctx.moveTo(x, y); ctx.lineTo(x - 2, y + 5); ctx.stroke();
+    }
+  } else if (combo === 'terra') {
+    // grãos de areia girando
+    ctx.fillStyle = '#d8b27a';
+    for (let i = 0; i < 12; i++) {
+      const a = t * 9 + i * 0.9;
+      const u = ((i * 0.37) % 1);
+      ctx.beginPath(); ctx.arc(Math.cos(a) * (widthAt(u) + 2) + sway(u), top + (bottom - top) * u + Math.sin(a) * 2, 1.1, 0, Math.PI * 2); ctx.fill();
+    }
+  }
   // folhas girando em volta
-  for (let i = 0; i < 3; i++) {
+  for (let i = 0; i < 3 && !combo; i++) {
     const a = t * 6 + (i * Math.PI * 2) / 3;
     const u = 0.25 + i * 0.25;
     const x = Math.cos(a) * (widthAt(u) + 3) + sway(u);

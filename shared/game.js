@@ -15,6 +15,22 @@ import { EMPTY_INPUT } from './input.js';
 import { createRng } from './rng.js';
 import { rectsOverlap, circleRectOverlap, approach } from './geometry.js';
 
+// Combinação de disparos: quem continua (o primeiro da lista ganha), o nome
+// de cada par e o efeito extra que o elemento absorvido dá ao acertar
+const COMBO_CARRIER = ['ar', 'terra', 'fogo', 'agua'];
+const COMBO_NAMES = {
+  'ar+fogo': 'tornadoDeFogo',
+  'fogo+terra': 'magma',
+  'agua+terra': 'lama',
+  'agua+ar': 'tempestade',
+  'ar+terra': 'areia',
+};
+const COMBO_STATUS = {
+  fogo: { type: 'queimadura', duration: 2.5, dps: 4 },
+  agua: { type: 'encharcado', duration: 2, slow: 0.3 },
+  terra: { type: 'atordoado', duration: 0.5 },
+};
+
 // Espinhos espetam em "pancadas" a cada meio segundo (fica fácil de perceber)
 const SPIKE_TICK = 0.5;
 const NO_STATS = { speed: 1, jump: 1, weight: 1, airDashes: PHYS.airDashes };
@@ -837,9 +853,41 @@ export class Game {
     });
   }
 
+  // Disparos de elementos diferentes se encontrando no ar se combinam:
+  // fogo + água viram vapor (os dois somem); nos outros pares o disparo mais
+  // forte continua e ganha o efeito do outro (ver COMBOS)
+  combineProjectiles() {
+    const list = this.projectiles.filter((p) => p.kind === 'magia' && !p.gone && !p.combo);
+    for (let i = 0; i < list.length; i++) {
+      for (let j = i + 1; j < list.length; j++) {
+        const a = list[i];
+        const b = list[j];
+        if (a.gone || b.gone || a.combo || b.combo || a.element === b.element) continue;
+        const reach = (a.r + b.r) * 0.9;
+        if ((a.x - b.x) ** 2 + (a.y - b.y) ** 2 > reach * reach) continue;
+        const x = (a.x + b.x) / 2;
+        const y = (a.y + b.y) / 2;
+        const pair = [a.element, b.element].sort().join('+');
+        if (pair === 'agua+fogo') {
+          a.gone = true;
+          b.gone = true;
+          this.emit('combo', { kind: 'vapor', x, y });
+          continue;
+        }
+        const keep = COMBO_CARRIER.indexOf(a.element) < COMBO_CARRIER.indexOf(b.element) ? a : b;
+        const lost = keep === a ? b : a;
+        lost.gone = true;
+        keep.combo = lost.element;
+        this.emit('combo', { kind: COMBO_NAMES[pair], x, y, carrier: keep.element, with: lost.element, id: keep.id });
+      }
+    }
+  }
+
   updateProjectiles() {
+    this.combineProjectiles();
     const keep = [];
     for (const pr of this.projectiles) {
+      if (pr.gone) continue;
       pr.vy += pr.gravity * DT;
       pr.x += pr.vx * DT;
       pr.y += pr.vy * DT;
@@ -859,6 +907,8 @@ export class Game {
           } else {
             const profile = weaponProfile(pr.weapon, pr.element);
             this.applyHit(owner, t, profile, dir);
+            // disparo combinado: também aplica o efeito do outro elemento
+            if (pr.combo) this.applyStatus(t, COMBO_STATUS[pr.combo], owner.id);
           }
           if (!pr.pierce) {
             alive = false;

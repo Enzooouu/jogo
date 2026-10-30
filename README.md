@@ -71,6 +71,12 @@ arremessado longe continua voando e só perde a vida se cair.
 - **Vento**: rajadas aparecem em lugares aleatórios (com 1 s de aviso piscando) e
   empurram para fora da ilha. Ande contra o vento para resistir.
 
+**Combinações:** quando disparos de cajado de elementos diferentes se encontram no
+ar, eles se combinam: Fogo + Água viram **vapor** (os dois somem); nos outros pares o
+disparo mais forte continua e ganha o efeito do outro ao acertar — **tornado de fogo**
+e **pedra de magma** queimam, **lama** e **tempestade** deixam lento e **tempestade de
+areia** atordoa.
+
 **Armas** caem do céu numa caixa de paraquedas (sem mostrar o que tem dentro). Quando
 a caixa bate no chão ela se quebra e a arma fica caída no chão: encoste para pegar.
 O efeito muda com o seu elemento.
