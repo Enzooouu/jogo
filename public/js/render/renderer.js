@@ -18,12 +18,12 @@ const TEAM_NAMES = ['Time Dourado', 'Time Violeta', 'Time Verde', 'Time Rosa'];
 
 // Nome e cores do efeito quando dois disparos se combinam
 const COMBO_FX = {
-  vapor: { name: 'VAPOR!', ring: 'rgba(235,245,255,0.9)', spark: '#ffffff', puff: 'rgba(235,240,245,0.5)', text: '#eaf6ff' },
-  tornadoDeFogo: { name: 'TORNADO DE FOGO!', ring: '#ffb347', spark: '#ffd25a', puff: 'rgba(255,120,40,0.5)', text: '#ffd27a' },
-  magma: { name: 'MAGMA!', ring: '#ff7a1a', spark: '#ffb347', puff: 'rgba(90,40,30,0.5)', text: '#ffb347' },
-  lama: { name: 'LAMA!', ring: '#9a7450', spark: '#6a4a30', puff: 'rgba(110,80,50,0.5)', text: '#d8b27a' },
-  tempestade: { name: 'TEMPESTADE!', ring: '#9fd0ff', spark: '#e8f6ff', puff: 'rgba(150,170,200,0.5)', text: '#bfe2ff' },
-  areia: { name: 'TEMPESTADE DE AREIA!', ring: '#e0c08a', spark: '#d8b27a', puff: 'rgba(220,190,140,0.5)', text: '#f0d8a8' },
+  vapor: { name: 'vapor', ring: 'rgba(235,245,255,0.9)', spark: '#ffffff', puff: 'rgba(235,240,245,0.5)', text: '#eaf6ff' },
+  tornadoDeFogo: { name: 'tornado de fogo', ring: '#ffb347', spark: '#ffd25a', puff: 'rgba(255,120,40,0.5)', text: '#ffd27a' },
+  magma: { name: 'magma', ring: '#ff7a1a', spark: '#ffb347', puff: 'rgba(90,40,30,0.5)', text: '#ffb347' },
+  lama: { name: 'lama', ring: '#9a7450', spark: '#6a4a30', puff: 'rgba(110,80,50,0.5)', text: '#d8b27a' },
+  tempestade: { name: 'tempestade', ring: '#9fd0ff', spark: '#e8f6ff', puff: 'rgba(150,170,200,0.5)', text: '#bfe2ff' },
+  areia: { name: 'tempestade de areia', ring: '#e0c08a', spark: '#d8b27a', puff: 'rgba(220,190,140,0.5)', text: '#f0d8a8' },
 };
 
 export class Renderer {
@@ -194,8 +194,8 @@ export class Renderer {
           // dois disparos de elementos diferentes se encontraram no ar
           const info = COMBO_FX[e.kind];
           if (!info) break;
-          P.add({ type: 'ring', x: e.x, y: e.y, size: 8, grow: 260, life: 0.35, color: info.ring });
-          P.add({ x: e.x, y: e.y, size: 14, grow: 120, life: 0.2, color: 'rgba(255,255,255,0.7)' });
+          P.add({ type: 'ring', x: e.x, y: e.y, size: 6, grow: 140, life: 0.3, color: info.ring });
+          P.add({ x: e.x, y: e.y, size: 10, grow: 70, life: 0.16, color: 'rgba(255,255,255,0.6)' });
           if (e.kind === 'vapor') {
             P.burst(e.x, e.y, { count: 16, speed: 140, life: 1.3, size: 10, grow: 30, color: 'rgba(235,240,245,0.55)', gravity: -60, drag: 1.5 });
             P.burst(e.x, e.y, { count: 10, speed: 260, life: 0.5, size: 2.5, color: '#bfeaff', gravity: 600 });
@@ -203,8 +203,9 @@ export class Renderer {
             P.burst(e.x, e.y, { type: 'spark', count: 16, speed: 380, life: 0.45, size: 2.6, color: info.spark, drag: 3 });
             P.burst(e.x, e.y, { count: 8, speed: 140, life: 0.7, size: 6, grow: 16, color: info.puff });
           }
-          P.add({ type: 'text', text: info.name, x: e.x, y: e.y - 34, vy: -50, life: 1.1, size: 18, color: info.text });
-          this.shake(3, 0.12);
+          // nome pequeno e discreto de quem combinou
+          P.add({ type: 'text', text: info.name, x: e.x, y: e.y - 24, vy: -30, life: 0.8, size: 10, alpha: 0.75, color: info.text });
+          this.shake(2, 0.08);
           break;
         }
         case 'crateOpen':
