@@ -12,6 +12,7 @@ import { buildLocalSetup, outcomeFor } from './setup.js';
 import { api } from './api.js';
 import { renderAccountBox, initAuthScreen, setAuthMode, focusAuth, loadProfile } from './screens/account.js';
 import { DemoArena } from './screens/demo.js';
+import { initControls } from './screens/controls.js';
 import { VersusScreen } from './screens/versus.js';
 
 const $ = (sel) => document.querySelector(sel);
@@ -35,6 +36,7 @@ const state = {
 };
 
 const demo = new DemoArena($('#menu-bg'));
+const controls = initControls($('#controls-panel'));
 const versus = new VersusScreen($('#versus-canvas'));
 
 // ------------------------------------------------------------ telas
@@ -122,6 +124,7 @@ function togglePanel(id) {
   const open = panel.hidden;
   closePanels();
   panel.hidden = !open;
+  if (id === '#controls-panel') controls.refresh();
   if (id === '#settings-panel') {
     $('#opt-sound').checked = !isMuted();
     $('#opt-demo').checked = state.demo;
@@ -493,7 +496,9 @@ function formatTime(sec) {
 window.addEventListener('keydown', (e) => {
   const typing = e.target instanceof HTMLInputElement;
   if (e.code === 'KeyM' && !typing) toggleMute();
-  if (state.screen === 'game' && (e.code === 'Escape' || e.code === 'KeyP')) {
+  // P também pausa, a não ser que o jogador tenha colocado P num movimento
+  const pauseKey = e.code === 'Escape' || (e.code === 'KeyP' && !state.runner?.keyboard?.codeToAction.has('KeyP'));
+  if (state.screen === 'game' && pauseKey) {
     e.preventDefault();
     setPaused(!state.runner?.paused);
     return;

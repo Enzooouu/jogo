@@ -32,20 +32,24 @@ que mata o seu elemento. Para os lados e para cima não tem limite: quem é
 arremessado longe continua voando e só perde a vida se cair.
 
 
+Teclas padrão (dá para trocar em **Controles**, na tela inicial: cada movimento tem
+uma tecla principal, obrigatória, e uma extra, opcional; se a tecla já estiver em
+outro movimento, os dois trocam):
+
 | Ação | Teclas |
 | --- | --- |
 | Andar | `A` `D` ou `←` `→` |
-| Pular (2x no ar) | `W`, `↑` ou `Espaço` |
+| Pular (2x no ar) | `W` ou `Espaço` |
 | Descer da plataforma / cair rápido | `S` ou `↓` |
 | Se pendurar na parede (no ar) | segurar a direção da parede |
 | Pulo de parede | pular enquanto pendurado |
-| Dash (na direção segurada, ex.: ↗ para voltar à ilha) | `Shift` ou `L` |
-| Atacar | clique esquerdo, `J` ou `Z` |
-| Arremessar a arma | clique direito, `K` ou `X` |
+| Dash (na direção segurada, ex.: ↗ para voltar à ilha) | `Shift esq.` ou `L` |
+| Atacar | clique esquerdo ou `J` |
+| Arremessar a arma | clique direito ou `K` |
 | Placar completo (dano causado, recebido...) | segurar `Tab` |
-| Pausar | `Esc` ou `P` |
+| Pausar | `Esc` (ou `P`, se não estiver num movimento) |
 | Som liga/desliga | `M` |
-| Acelerar (depois de eliminado) | `F` |
+| Acelerar (depois de eliminado) | `F` (se não estiver num movimento) |
 
 **Regras**
 

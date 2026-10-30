@@ -142,6 +142,30 @@ kbd {
 .keys { list-style: none; margin: 0; padding: 0; display: grid; gap: 9px; font-size: 14px; }
 .keys li { display: grid; grid-template-columns: 170px 1fr; align-items: center; gap: 10px; }
 .keys li > span { color: var(--muted); font-size: 12px; }
+/* tela de controles: trocar as teclas */
+.controls-panel { width: min(460px, calc(100% - 32px)); max-height: calc(100vh - 40px); overflow-y: auto; }
+.bind-head, .bind-row { display: grid; grid-template-columns: 1fr 112px 112px; gap: 8px; align-items: center; }
+.bind-head { font-size: 11px; letter-spacing: .12em; text-transform: uppercase; color: var(--muted); margin: 10px 0 6px; }
+.bind-list { display: grid; gap: 6px; }
+.bind-row .name { font-size: 14px; font-weight: 600; }
+.bind-slot { position: relative; display: flex; }
+.bind-btn {
+  flex: 1; min-width: 0; padding: 7px 8px; border-radius: 8px; border: 1px solid rgba(255,255,255,.22); border-bottom-width: 3px;
+  background: rgba(255,255,255,.07); color: #fff; font: 700 13px system-ui, sans-serif; cursor: pointer; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.bind-btn:hover, .bind-btn:focus-visible { border-color: #ffd25a; outline: none; }
+.bind-btn.empty { color: var(--muted); font-weight: 500; border-style: dashed; }
+.bind-btn.listening { background: #ffd25a; color: #1a0f05; border-color: #ffd25a; animation: bindPulse .8s ease-in-out infinite alternate; }
+@keyframes bindPulse { to { background: #fff1b0; } }
+.bind-clear {
+  position: absolute; top: -6px; right: -6px; width: 18px; height: 18px; border-radius: 50%; border: 0; padding: 0;
+  background: #e8263a; color: #fff; font: 800 11px/18px system-ui; cursor: pointer;
+}
+.bind-msg { min-height: 1.3em; margin: 8px 0 4px; font-size: 13px; color: #ffd25a; }
+.bind-msg.error { color: var(--bad); }
+.fixed-keys { margin-top: 6px; }
+.bind-actions { display: flex; gap: 8px; justify-content: space-between; margin-top: 12px; }
+
 .toggle { display: flex; align-items: center; gap: 10px; margin-bottom: 14px; font-weight: 600; }
 .toggle input { width: 18px; height: 18px; accent-color: #ff6a1f; }
 

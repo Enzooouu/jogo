@@ -10,6 +10,7 @@ import { BotController } from '/shared/ai.js';
 import { DT } from '/shared/constants.js';
 import { Renderer } from './render/renderer.js';
 import { KeyboardController } from './input/keyboard.js';
+import { loadBindings, keymapFrom } from './input/bindings.js';
 import { playEvents, beep } from './audio.js';
 
 export class MatchRunner {
@@ -32,7 +33,8 @@ export class MatchRunner {
       if (p.isBot) {
         this.controllers.set(p.id, new BotController(p.id, { difficulty: setup.difficulty, seed: setup.seed + p.id * 7919 }));
       } else if (p.id === this.localId) {
-        this.keyboard = new KeyboardController();
+        // teclas escolhidas na tela de controles
+        this.keyboard = new KeyboardController(keymapFrom(loadBindings()));
         this.controllers.set(p.id, this.keyboard);
       }
     }
@@ -60,7 +62,7 @@ export class MatchRunner {
         e.preventDefault();
         this.renderer.showScores = true;
       }
-      if (e.code === 'KeyF') {
+      if (e.code === 'KeyF' && !this.keyboard?.codeToAction.has('KeyF')) {
         const me = this.game.playerById(this.localId);
         if (me?.state === 'out') this.speed = this.speed === 1 ? 3 : 1;
       }

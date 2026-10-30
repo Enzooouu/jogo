@@ -29,21 +29,21 @@
       </nav>
       <div id="account-box" class="account-box"></div>
 
-      <div id="controls-panel" class="side-panel" hidden>
+      <div id="controls-panel" class="side-panel controls-panel" hidden>
         <h2>Controles</h2>
-        <ul class="keys">
-          <li><span><kbd>A</kbd><kbd>D</kbd> <kbd>←</kbd><kbd>→</kbd></span> andar</li>
-          <li><span><kbd>W</kbd> <kbd>↑</kbd> <kbd>Espaço</kbd></span> pular (2x no ar)</li>
-          <li><span><kbd>S</kbd> <kbd>↓</kbd></span> descer / cair rápido</li>
-          <li><span>segurar p/ parede</span> se pendurar · pular sai</li>
-          <li><span><kbd>Shift</kbd> <kbd>L</kbd></span> dash (+ direção; 1 no ar, Ar tem 2)</li>
-          <li><span><kbd>Clique esq.</kbd> <kbd>J</kbd></span> atacar</li>
-          <li><span><kbd>Clique dir.</kbd> <kbd>K</kbd></span> lançar a arma</li>
+        <p class="hint">Clique num botão e aperte a tecla (ou um botão do mouse). <kbd>Esc</kbd> cancela.</p>
+        <div class="bind-head"><span></span><span>Principal</span><span>Extra</span></div>
+        <div id="bind-list" class="bind-list"></div>
+        <p class="bind-msg" id="bind-msg" aria-live="polite"></p>
+        <ul class="keys fixed-keys">
+          <li><span>segurar na parede</span> se pendurar · pular sai</li>
           <li><span><kbd>Tab</kbd> (segurar)</span> placar completo</li>
-          <li><span><kbd>Esc</kbd></span> pausar · <kbd>M</kbd> som</li>
+          <li><span><kbd>Esc</kbd> · <kbd>M</kbd></span> pausar · som</li>
         </ul>
-        <p class="hint">Armas caem do céu: encoste para pegar. O efeito delas muda com o seu elemento.</p>
-        <button type="button" class="btn ghost small" data-close>Fechar</button>
+        <div class="bind-actions">
+          <button type="button" class="btn ghost small" id="bind-reset">Restaurar padrão</button>
+          <button type="button" class="btn ghost small" data-close>Fechar</button>
+        </div>
       </div>
 
       <div id="settings-panel" class="side-panel" hidden>
