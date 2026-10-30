@@ -7,7 +7,7 @@ import { StageRenderer, roundRect } from './stage.js';
 import { Particles } from './particles.js';
 import { Camera } from './camera.js';
 import { startCelebration, updateCelebration, drawCelebration, CELEBRATION_TIME } from './celebrations.js';
-import { drawFighter, drawSword, drawStaff, hexA } from './fighter.js';
+import { drawFighter, hexA } from './fighter.js';
 import { drawSwordArt, drawStaffArt, drawShot } from './weapons-art.js';
 import { drawUniversalSword, drawUniversalStaff, prismColor } from './universal-art.js';
 
@@ -179,6 +179,13 @@ export class Renderer {
           } else {
             P.burst(e.x, e.y, { count: 6, speed: 120, life: 0.3, size: 3, color: ELEMENTS[e.element].light });
           }
+          break;
+        case 'crateOpen':
+          // tábuas voando, poeira e brilho onde a arma aparece
+          P.burst(e.x, e.y - 12, { type: 'spark', count: 10, speed: 300, angle: -Math.PI / 2, spread: 2.6, life: 0.6, size: 4, color: '#8f5c2c', gravity: 1100 });
+          P.burst(e.x, e.y - 8, { count: 8, speed: 120, angle: -Math.PI / 2, spread: Math.PI, life: 0.6, size: 6, grow: 16, color: 'rgba(210,190,170,0.5)' });
+          P.add({ type: 'ring', x: e.x, y: e.y - 10, size: 6, grow: 140, life: 0.3, color: 'rgba(255,240,190,0.9)' });
+          P.burst(e.x, e.y - 14, { type: 'spark', count: 8, speed: 200, life: 0.4, size: 2, color: '#fff4c2', drag: 3 });
           break;
         case 'itemLand':
           P.burst(e.x, e.y, { count: 8, speed: 120, angle: -Math.PI / 2, spread: Math.PI, life: 0.4, size: 3, color: 'rgba(210,190,170,0.7)', gravity: 300 });
@@ -479,61 +486,121 @@ export class Renderer {
         this.drawDroppedWeapon(ctx, item);
         continue;
       }
-      const cx = item.x + item.w / 2;
-      ctx.save();
-      if (!item.landed) {
-        const sway = Math.sin(this.time * 2.5 + item.id) * 0.08;
-        ctx.translate(cx, item.y);
-        ctx.rotate(sway);
-        // paraquedas
-        ctx.strokeStyle = 'rgba(255,255,255,0.7)';
-        ctx.lineWidth = 1;
-        ctx.beginPath();
-        ctx.moveTo(-15, 2); ctx.lineTo(-26, -34);
-        ctx.moveTo(15, 2); ctx.lineTo(26, -34);
-        ctx.moveTo(0, 0); ctx.lineTo(0, -40);
-        ctx.stroke();
-        for (let i = 0; i < 4; i++) {
-          ctx.fillStyle = i % 2 ? '#f4f1ea' : '#e2483d';
-          ctx.beginPath();
-          ctx.moveTo(0, -36);
-          ctx.arc(0, -36, 32, Math.PI + (i * Math.PI) / 4, Math.PI + ((i + 1) * Math.PI) / 4);
-          ctx.closePath();
-          ctx.fill();
-        }
-        ctx.translate(-cx, -item.y);
-      } else {
-        const pulse = 0.5 + Math.sin(this.time * 5 + item.id) * 0.5;
-        ctx.fillStyle = `rgba(255,230,140,${0.15 + pulse * 0.2})`;
-        ctx.beginPath();
-        ctx.ellipse(cx, item.y + item.h, 30, 8, 0, 0, Math.PI * 2);
-        ctx.fill();
-      }
-      // caixote
-      ctx.fillStyle = '#8a5a2b';
-      ctx.strokeStyle = '#2b170a';
-      ctx.lineWidth = 3;
-      roundRect(ctx, item.x, item.y, item.w, item.h, 4);
-      ctx.fill();
-      ctx.stroke();
-      ctx.strokeStyle = 'rgba(43,23,10,0.6)';
-      ctx.lineWidth = 2;
-      ctx.beginPath();
-      ctx.moveTo(item.x + 4, item.y + 4); ctx.lineTo(item.x + item.w - 4, item.y + item.h - 4);
-      ctx.stroke();
-      // ícone
-      ctx.translate(cx, item.y + item.h / 2);
-      ctx.rotate(Math.PI / 4);
-      ctx.scale(0.42, 0.42);
-      ctx.translate(0, 18);
-      const neutral = { color: '#ffd25a', light: '#fff4c2', dark: '#7a5a10' };
-      if (item.weapon === 'espada') drawSword(ctx, neutral, this.time);
-      else drawStaff(ctx, neutral, this.time);
-      ctx.restore();
+      this.drawCrate(ctx, item);
     }
   }
 
-  // Estrelinhas girando em cima de quem está atordoado
+  // Caixa de suprimentos descendo de paraquedas (não mostra o que tem dentro;
+  // ao tocar o chão ela se quebra e a arma fica caída)
+  drawCrate(ctx, item) {
+    const cx = item.x + item.w / 2;
+    const sway = Math.sin(this.time * 2.5 + item.id) * 0.1;
+    ctx.save();
+    ctx.translate(cx, item.y);
+    ctx.rotate(sway);
+    const ink = '#1a0f0a';
+    // cordas dos cantos da caixa até a borda do paraquedas
+    ctx.strokeStyle = 'rgba(245,235,215,0.85)';
+    ctx.lineWidth = 1.2;
+    ctx.beginPath();
+    for (const [x0, x1] of [[-16, -30], [-6, -12], [6, 12], [16, 30]]) {
+      ctx.moveTo(x0, 1);
+      ctx.lineTo(x1, -38);
+    }
+    ctx.stroke();
+    // paraquedas: gomos listrados com sombra do lado direito e borda ondulada
+    const R = 36;
+    const top = -40;
+    for (let i = 0; i < 6; i++) {
+      const a0 = Math.PI + (i * Math.PI) / 6;
+      const a1 = Math.PI + ((i + 1) * Math.PI) / 6;
+      ctx.fillStyle = i % 2 ? '#f6efe2' : '#e5533f';
+      ctx.beginPath();
+      ctx.moveTo(0, top);
+      ctx.arc(0, top, R, a0, a1);
+      ctx.closePath();
+      ctx.fill();
+    }
+    ctx.fillStyle = 'rgba(60,20,30,0.18)';
+    ctx.beginPath(); ctx.moveTo(0, top); ctx.arc(0, top, R, Math.PI * 1.5, Math.PI * 2); ctx.closePath(); ctx.fill();
+    ctx.fillStyle = 'rgba(255,255,255,0.3)';
+    ctx.beginPath(); ctx.ellipse(-12, top - 20, 8, 4, -0.4, 0, Math.PI * 2); ctx.fill();
+    // borda ondulada
+    ctx.fillStyle = '#c23f30';
+    ctx.beginPath();
+    ctx.moveTo(-R, top);
+    for (let i = 0; i < 6; i++) {
+      const x0 = -R + (i * 2 * R) / 6;
+      ctx.quadraticCurveTo(x0 + R / 6, top + 6, x0 + (2 * R) / 6, top);
+    }
+    ctx.closePath();
+    ctx.fill();
+    ctx.strokeStyle = ink;
+    ctx.lineWidth = 2;
+    ctx.beginPath(); ctx.arc(0, top, R, Math.PI, 0); ctx.stroke();
+    ctx.strokeStyle = 'rgba(26,15,10,0.4)';
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    for (let i = 1; i < 6; i++) {
+      const a = Math.PI + (i * Math.PI) / 6;
+      ctx.moveTo(0, top);
+      ctx.lineTo(Math.cos(a) * R, top + Math.sin(a) * R);
+    }
+    ctx.stroke();
+    ctx.translate(-cx, -item.y);
+
+    // caixa de tábuas
+    const { x, y, w, h } = item;
+    ctx.fillStyle = '#9a6634';
+    ctx.fillRect(x, y, w, h);
+    for (let i = 0; i < 3; i++) {
+      const py = y + (i * h) / 3;
+      ctx.fillStyle = i % 2 ? '#a8723c' : '#8f5c2c';
+      ctx.fillRect(x, py, w, h / 3);
+      ctx.fillStyle = 'rgba(255,230,190,0.18)';
+      ctx.fillRect(x, py, w, 1.5);
+      ctx.fillStyle = 'rgba(40,20,5,0.35)';
+      ctx.fillRect(x, py + h / 3 - 1.5, w, 1.5);
+      // veios da madeira
+      ctx.strokeStyle = 'rgba(60,30,10,0.3)';
+      ctx.lineWidth = 0.8;
+      ctx.beginPath();
+      ctx.moveTo(x + 4, py + 4 + i);
+      ctx.quadraticCurveTo(x + w / 2, py + 2 + i, x + w - 6, py + 6);
+      ctx.stroke();
+    }
+    // travessa em diagonal
+    ctx.strokeStyle = '#6b4220';
+    ctx.lineWidth = 3.4;
+    ctx.beginPath(); ctx.moveTo(x + 4, y + h - 4); ctx.lineTo(x + w - 4, y + 4); ctx.stroke();
+    // cantoneiras de metal com rebites
+    ctx.fillStyle = '#9aa0aa';
+    ctx.strokeStyle = ink;
+    ctx.lineWidth = 1;
+    for (const [qx, qy, sx, sy] of [[x, y, 1, 1], [x + w, y, -1, 1], [x, y + h, 1, -1], [x + w, y + h, -1, -1]]) {
+      ctx.beginPath();
+      ctx.moveTo(qx, qy); ctx.lineTo(qx + sx * 8, qy); ctx.lineTo(qx, qy + sy * 8); ctx.closePath();
+      ctx.fill(); ctx.stroke();
+      ctx.fillStyle = '#e8ecf2';
+      ctx.beginPath(); ctx.arc(qx + sx * 2.4, qy + sy * 2.4, 0.9, 0, Math.PI * 2); ctx.fill();
+      ctx.fillStyle = '#9aa0aa';
+    }
+    // emblema redondo com as quatro cores dos elementos
+    const ex = x + w / 2;
+    const ey = y + h / 2;
+    ctx.fillStyle = '#c9a14a';
+    ctx.beginPath(); ctx.arc(ex, ey, 6.5, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+    ['#ff7a2a', '#4fb0ff', '#d8b27a', '#9fe9dc'].forEach((c, i) => {
+      const a = (i * Math.PI) / 2 + this.time * 0.8;
+      ctx.fillStyle = c;
+      ctx.beginPath(); ctx.arc(ex + Math.cos(a) * 3.2, ey + Math.sin(a) * 3.2, 1.5, 0, Math.PI * 2); ctx.fill();
+    });
+    ctx.strokeStyle = ink;
+    ctx.lineWidth = 2.2;
+    ctx.strokeRect(x, y, w, h);
+    ctx.restore();
+  }
+
   // Arma arremessada que caiu no chão: espada ou cajado universal (sem ser de
   // time nenhum), deitada no chão com a ponta para o lado em que ia, do
   // mesmo tamanho que fica na mão; as bolinhas são as cargas que sobraram
@@ -544,15 +611,26 @@ export class Renderer {
     const dir = item.dir ?? 1;
     ctx.save();
     if (item.landed) {
+      // cargas: bolinhas até 5; mais que isso, um número
       const n = item.uses ?? 0;
-      for (let i = 0; i < n; i++) {
+      if (n > 5) {
+        ctx.font = '800 11px system-ui, sans-serif';
+        ctx.textAlign = 'center';
+        ctx.lineWidth = 3;
+        ctx.strokeStyle = 'rgba(11,7,16,0.85)';
+        ctx.strokeText(`×${n}`, cx, ground - 18);
         ctx.fillStyle = '#ffffff';
-        ctx.strokeStyle = 'rgba(11,7,16,0.8)';
-        ctx.lineWidth = 1.2;
-        ctx.beginPath();
-        ctx.arc(cx - (n - 1) * 3.5 + i * 7, ground - 22, 2.2, 0, Math.PI * 2);
-        ctx.fill();
-        ctx.stroke();
+        ctx.fillText(`×${n}`, cx, ground - 18);
+      } else {
+        for (let i = 0; i < n; i++) {
+          ctx.fillStyle = '#ffffff';
+          ctx.strokeStyle = 'rgba(11,7,16,0.8)';
+          ctx.lineWidth = 1.2;
+          ctx.beginPath();
+          ctx.arc(cx - (n - 1) * 3.5 + i * 7, ground - 22, 2.2, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.stroke();
+        }
       }
       // deitada: a arma aponta para -y, gira 90° para ficar na horizontal
       ctx.translate(cx - dir * 20, ground - (item.weapon === 'espada' ? 5 : 4));

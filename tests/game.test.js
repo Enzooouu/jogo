@@ -5,7 +5,7 @@ import assert from 'node:assert/strict';
 import { Game } from '../shared/game.js';
 import { BotController } from '../shared/ai.js';
 import { MATCH, PLAYER } from '../shared/constants.js';
-import { weaponProfile } from '../shared/weapons.js';
+import { weaponProfile, WEAPONS } from '../shared/weapons.js';
 import { hazardReaction } from '../shared/elements.js';
 import { encodeInput, decodeInput, makeInput } from '../shared/input.js';
 
@@ -359,6 +359,25 @@ test('só cair lá embaixo tira vida (lados e cima não têm limite)', () => {
   p.y = g.map.blast.bottom + 10;
   run(g, 1);
   assert.equal(p.lives, PLAYER.lives - 1, 'caiu lá embaixo e perdeu uma vida');
+});
+
+test('caixa que cai do céu se quebra no chão e deixa a arma com as cargas cheias', () => {
+  const g = newGame();
+  park(g, 1, 2, 3, 4);
+  g.items = [];
+  g.nextItemIn = 0;
+  run(g, 1);
+  const item = g.items[0];
+  assert.ok(item && !item.dropped, 'a caixa apareceu caindo');
+  item.x = 600 - item.w / 2;
+  run(g, 60 * 6);
+  assert.ok(item.landed && item.dropped, 'virou arma no chão');
+  assert.equal(item.uses, WEAPONS[item.weapon].uses);
+  const p = g.playerById(1);
+  place(p, item.x + item.w / 2, item.y + item.h);
+  p.pickupCooldown = 0;
+  run(g, 2);
+  assert.deepEqual(p.weapon, { id: item.weapon, uses: WEAPONS[item.weapon].uses });
 });
 
 test('quanto mais dano, maior o empurrão', () => {

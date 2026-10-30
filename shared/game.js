@@ -902,6 +902,7 @@ export class Game {
       weapon: pr.weapon,
       uses: pr.uses ?? WEAPONS[pr.weapon].uses,
       dropped: true,
+      thrown: true,
       dir: Math.sign(pr.vx) || 1,   // lado para onde ia (a ponta fica para esse lado)
       x: Math.round(x - 17),
       y: Math.round(y - 15),
@@ -933,7 +934,8 @@ export class Game {
     this.nextItemIn -= DT;
     if (this.nextItemIn > 0) return;
     this.nextItemIn = this.rng.range(ITEMS.spawnMin, ITEMS.spawnMax);
-    if (this.items.filter((i) => !i.dropped).length >= ITEMS.maxOnMap) return;
+    // armas arremessadas que ficaram no chão não contam no limite
+    if (this.items.filter((i) => !i.thrown).length >= ITEMS.maxOnMap) return;
     const { minX, maxX, y } = this.map.itemSpawn;
     const item = {
       id: this.nextEntityId++,
@@ -964,7 +966,15 @@ export class Game {
             item.y = s.y - item.h;
             item.landed = true;
             item.platform = this.platforms.indexOf(s);
-            this.emit('itemLand', { itemId: item.id, x: item.x + item.w / 2, y: s.y });
+            if (!item.dropped) {
+              // a caixa se quebra no chão e a arma fica caída, com as cargas cheias
+              item.dropped = true;
+              item.uses = WEAPONS[item.weapon].uses;
+              item.dir = this.rng.chance(0.5) ? 1 : -1;
+              this.emit('crateOpen', { itemId: item.id, weapon: item.weapon, x: item.x + item.w / 2, y: s.y });
+            } else {
+              this.emit('itemLand', { itemId: item.id, x: item.x + item.w / 2, y: s.y });
+            }
             break;
           }
         }

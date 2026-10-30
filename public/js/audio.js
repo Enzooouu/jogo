@@ -106,6 +106,10 @@ export function playEvents(events, localId) {
       case 'shoot':
         tone({ freq: e.element === 'agua' ? 900 : 300, to: e.element === 'agua' ? 300 : 120, dur: 0.18, type: 'sawtooth', vol: 0.12 });
         break;
+      case 'crateOpen':
+        noise({ dur: 0.18, vol: 0.3, freq: 900 });
+        tone({ freq: 660, to: 990, dur: 0.15, type: 'triangle', vol: 0.1, delay: 0.08 });
+        break;
       case 'itemLost':
         noise({ dur: 0.35, vol: 0.18, freq: 2200 });
         break;

@@ -71,7 +71,9 @@ arremessado longe continua voando e só perde a vida se cair.
 - **Vento**: rajadas aparecem em lugares aleatórios (com 1 s de aviso piscando) e
   empurram para fora da ilha. Ande contra o vento para resistir.
 
-**Armas** caem do céu de paraquedas. Encoste para pegar. O efeito muda com o seu elemento.
+**Armas** caem do céu numa caixa de paraquedas (sem mostrar o que tem dentro). Quando
+a caixa bate no chão ela se quebra e a arma fica caída no chão: encoste para pegar.
+O efeito muda com o seu elemento.
 Se você arremessar a arma e ela não acertar ninguém (nem cair para fora do mapa,
 na lava ou na água), ela fica no chão como uma espada ou cajado universal, sem
 time, e quem pegar recebe ela com as mesmas cargas que tinha:
