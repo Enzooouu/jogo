@@ -29,29 +29,47 @@ const floor = (x, w, y = GROUND) => ({ x, y, w, h: 760 - y });
 export const TUTORIAL_MAPS = {
   'treino-andar': arena('treino-andar', {
     solids: [floor(80, 1120)],
-    decor: [{ type: 'placa', x: 150 }, { type: 'arbusto', x: 460 }, { type: 'flores', x: 760 }, { type: 'arvore', x: 1170 }],
+    decor: [
+      { type: 'estandarte', x: 110 }, { type: 'placa', x: 190 }, { type: 'cogumelos', x: 300 }, { type: 'flores', x: 420 },
+      { type: 'arbusto', x: 560 }, { type: 'pedras', x: 700 }, { type: 'flores', x: 860 }, { type: 'arvore', x: 1160 },
+    ],
   }),
   'treino-pular': arena('treino-pular', {
     solids: [floor(80, 1120), { x: 430, y: 470, w: 120, h: 90 }, { x: 780, y: 350, w: 420, h: 210 }],
-    decor: [{ type: 'flores', x: 250 }, { type: 'arbusto', x: 900, y: 350 }],
+    decor: [
+      { type: 'estandarte', x: 110, el: 'ar' }, { type: 'flores', x: 260 }, { type: 'pedras', x: 360 }, { type: 'cogumelos', x: 520, y: 470 },
+      { type: 'arbusto', x: 860, y: 350 }, { type: 'arvore', x: 1150, y: 350 }, { type: 'flores', x: 680 },
+    ],
   }),
   'treino-descer': arena('treino-descer', {
     solids: [floor(80, 1120)],
     platforms: [{ x: 440, y: 410, w: 400 }, { x: 440, y: 260, w: 400 }],
-    decor: [{ type: 'arvore', x: 200 }, { type: 'feno', x: 1040 }],
+    decor: [
+      { type: 'arvore', x: 200 }, { type: 'suporte', x: 340 }, { type: 'flores', x: 640 }, { type: 'pedras', x: 900 },
+      { type: 'feno', x: 1050 }, { type: 'estandarte', x: 1150, el: 'terra' },
+    ],
   }),
   'treino-dash': arena('treino-dash', {
     solids: [floor(80, 440), floor(980, 220)],
-    decor: [{ type: 'placa', x: 150 }, { type: 'flores', x: 360 }],
+    decor: [
+      { type: 'estandarte', x: 110, el: 'agua' }, { type: 'placa', x: 190 }, { type: 'flores', x: 340 }, { type: 'cogumelos', x: 470 },
+      { type: 'pedras', x: 1020 }, { type: 'arbusto', x: 1160 },
+    ],
   }),
   'treino-parede': arena('treino-parede', {
     solids: [floor(80, 460, 220), floor(540, 200, 600), floor(740, 460, 220)],
     respawns: [{ x: 640, y: 600 }],
-    decor: [{ type: 'arvore', x: 200, y: 220 }, { type: 'arbusto', x: 1150, y: 220 }],
+    decor: [
+      { type: 'arvore', x: 200, y: 220 }, { type: 'estandarte', x: 420, y: 220, el: 'fogo' }, { type: 'cogumelos', x: 610, y: 600 },
+      { type: 'flores', x: 880, y: 220 }, { type: 'arbusto', x: 1150, y: 220 },
+    ],
   }),
   'treino-campo': arena('treino-campo', {
     solids: [floor(80, 1120)],
-    decor: [{ type: 'feno', x: 140 }, { type: 'arvore', x: 1170 }, { type: 'flores', x: 520 }],
+    decor: [
+      { type: 'feno', x: 140 }, { type: 'suporte', x: 250 }, { type: 'flores', x: 560 }, { type: 'estandarte', x: 660 },
+      { type: 'alvo', x: 1010 }, { type: 'arvore', x: 1160 },
+    ],
   }),
   'treino-perigos': arena('treino-perigos', {
     solids: [
@@ -69,12 +87,15 @@ export const TUTORIAL_MAPS = {
       w: 200, h: 150, strength: 300,
       surfaces: [{ y: GROUND, x0: 470, x1: 690 }],
     },
-    decor: [{ type: 'placa', x: 150 }],
+    decor: [
+      { type: 'placa', x: 190 }, { type: 'estandarte', x: 110, el: 'fogo' }, { type: 'flores', x: 560 }, { type: 'pedras', x: 640 },
+      { type: 'estandarte', x: 1060, el: 'agua' }, { type: 'cogumelos', x: 1175 },
+    ],
   }),
   'treino-voltar': arena('treino-voltar', {
     solids: [{ x: 440, y: 520, w: 400, h: 170 }],
     blast: { left: -700, right: 1980, top: -700, bottom: 1000 },
-    decor: [{ type: 'arvore', x: 480, y: 520 }, { type: 'flores', x: 760, y: 520 }],
+    decor: [{ type: 'arvore', x: 490, y: 520 }, { type: 'flores', x: 720, y: 520 }, { type: 'pedras', x: 800, y: 520 }],
   }),
   'treino-final': arena('treino-final', {
     solids: [{ x: 200, y: 540, w: 880, h: 180 }],
@@ -82,7 +103,10 @@ export const TUTORIAL_MAPS = {
     spawns: [{ x: 320, y: 540 }, { x: 960, y: 540 }],
     respawns: [{ x: 560, y: 150 }, { x: 720, y: 150 }],
     itemSpawn: { minX: 260, maxX: 1020, y: -40 },
-    decor: [{ type: 'arvore', x: 240, y: 540 }, { type: 'feno', x: 1030, y: 540 }],
+    decor: [
+      { type: 'arvore', x: 250, y: 540 }, { type: 'flores', x: 420, y: 540 }, { type: 'estandarte', x: 640, y: 540, el: 'fogo' },
+      { type: 'suporte', x: 860, y: 540 }, { type: 'feno', x: 1030, y: 540 },
+    ],
   }),
 };
 

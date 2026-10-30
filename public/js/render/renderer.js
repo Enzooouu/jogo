@@ -341,6 +341,11 @@ export class Renderer {
       if (chance(2)) {
         P.add({ x: -40, y: 150 + Math.random() * 380, vx: 30 + Math.random() * 30, vy: -6 + Math.random() * 12, life: 14, size: 1.8, color: 'rgba(255,255,255,0.85)', drag: 0.01 });
       }
+      // folhas caindo das árvores
+      for (const d of g.map.decor ?? []) {
+        if (d.type !== 'arvore' || !chance(0.9)) continue;
+        P.add({ x: d.x - 45 + Math.random() * 90, y: (d.y ?? 560) - 150 + Math.random() * 50, vx: 10 + Math.random() * 25, vy: 25, life: 5, size: 2.4, gravity: 6, drag: 0.4, color: Math.random() < 0.7 ? '#5bb04a' : '#e0c050' });
+      }
     } else if (g.map.id === 'pico') {
       // Folhas e pétalas levadas pelo vento
       if (chance(5)) {
