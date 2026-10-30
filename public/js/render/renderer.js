@@ -9,6 +9,7 @@ import { Camera } from './camera.js';
 import { startCelebration, updateCelebration, drawCelebration, CELEBRATION_TIME } from './celebrations.js';
 import { drawFighter, hexA } from './fighter.js';
 import { drawSwordArt, drawStaffArt, drawShot } from './weapons-art.js';
+import { currentBindings, keyLabel } from '../input/bindings.js';
 import { drawUniversalSword, drawUniversalStaff, prismColor } from './universal-art.js';
 
 export const VIEW_W = 1280;
@@ -1015,7 +1016,7 @@ export class Renderer {
     ctx.restore();
   }
 
-  // Placar completo (segurando TAB)
+  // Placar completo (segurando a tecla do placar, Tab no padrão)
   drawScoreboard(ctx) {
     const g = this.game;
     const cols = [
@@ -1118,7 +1119,7 @@ export class Renderer {
     ctx.textAlign = 'center';
     ctx.font = '600 12px system-ui, sans-serif';
     ctx.fillStyle = 'rgba(255,255,255,0.45)';
-    ctx.fillText('Solte TAB para voltar', VIEW_W / 2, y0 + h - 18);
+    ctx.fillText(`Solte ${keyLabel(currentBindings().scores[0])} para voltar`, VIEW_W / 2, y0 + h - 18);
     ctx.restore();
   }
 

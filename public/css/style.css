@@ -145,7 +145,7 @@ kbd {
 /* tela de controles: trocar as teclas */
 .controls-panel {
   left: 50%; right: auto; transform: translate(-50%, -50%); z-index: 4;
-  width: min(460px, calc(100% - 32px)); max-height: calc(100vh - 40px); overflow-y: auto;
+  width: min(680px, calc(100% - 32px)); max-height: calc(100vh - 40px); overflow-y: auto;
   background: linear-gradient(180deg, rgba(30, 14, 34, .96), rgba(14, 7, 20, .96));
   border-color: rgba(255, 210, 90, .35);
   box-shadow: 0 0 0 1px rgba(255, 140, 60, .12), 0 0 36px rgba(255, 140, 60, .18), 0 24px 60px rgba(0, 0, 0, .65);
@@ -161,9 +161,10 @@ kbd {
 .panel-backdrop[hidden] { display: none; }
 @keyframes fade-in { from { opacity: 0; } }
 @keyframes modal-in { from { opacity: 0; transform: translate(-50%, -48%) scale(.97); } }
-.bind-head, .bind-row { display: grid; grid-template-columns: 1fr 112px 112px; gap: 8px; align-items: center; }
+.bind-head, .bind-row { display: grid; grid-template-columns: 1fr 170px 170px; gap: 8px; align-items: center; }
 .bind-head { font-size: 11px; letter-spacing: .12em; text-transform: uppercase; color: var(--muted); margin: 10px 0 6px; }
 .bind-list { display: grid; gap: 6px; }
+.bind-row.menu-first { margin-top: 6px; padding-top: 10px; border-top: 1px solid rgba(255, 255, 255, .1); }
 .bind-row .name { font-size: 14px; font-weight: 600; }
 .bind-slot { position: relative; display: flex; }
 .bind-btn {

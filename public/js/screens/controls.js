@@ -16,9 +16,15 @@ export function initControls(panel) {
 
   function render() {
     list.replaceChildren();
-    for (const { id, name } of ACTIONS) {
+    let menuStarted = false;
+    for (const { id, name, menu } of ACTIONS) {
       const row = document.createElement('div');
       row.className = 'bind-row';
+      // linha separando os movimentos das teclas de menu
+      if (menu && !menuStarted) {
+        menuStarted = true;
+        row.classList.add('menu-first');
+      }
       const label = document.createElement('span');
       label.className = 'name';
       label.textContent = name;

@@ -13,6 +13,7 @@ import { api } from './api.js';
 import { renderAccountBox, initAuthScreen, setAuthMode, focusAuth, loadProfile } from './screens/account.js';
 import { DemoArena } from './screens/demo.js';
 import { initControls } from './screens/controls.js';
+import { currentBindings, actionOf } from './input/bindings.js';
 import { VersusScreen } from './screens/versus.js';
 
 const $ = (sel) => document.querySelector(sel);
@@ -499,9 +500,13 @@ function formatTime(sec) {
 
 window.addEventListener('keydown', (e) => {
   const typing = e.target instanceof HTMLInputElement;
-  if (e.code === 'KeyM' && !typing) toggleMute();
-  // P também pausa, a não ser que o jogador tenha colocado P num movimento
-  const pauseKey = e.code === 'Escape' || (e.code === 'KeyP' && !state.runner?.keyboard?.codeToAction.has('KeyP'));
+  const action = actionOf(currentBindings(), e.code);
+  if (action === 'mute' && !typing && !e.repeat) {
+    e.preventDefault();
+    toggleMute();
+  }
+  // P também pausa, a não ser que o jogador tenha colocado P em alguma ação
+  const pauseKey = e.code === 'Escape' || (e.code === 'KeyP' && !action);
   if (state.screen === 'game' && pauseKey) {
     e.preventDefault();
     setPaused(!state.runner?.paused);
@@ -513,6 +518,12 @@ window.addEventListener('keydown', (e) => {
     if (state.screen === 'home') closePanels();
     else if (back) show(back);
   }
+});
+
+// som também pode ficar num botão do mouse (só durante a partida)
+window.addEventListener('mousedown', (e) => {
+  if (state.screen !== 'game' || e.target.closest?.('button')) return;
+  if (actionOf(currentBindings(), `Mouse${e.button}`) === 'mute') toggleMute();
 });
 
 document.addEventListener('visibilitychange', () => {

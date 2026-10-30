@@ -47,9 +47,11 @@ outro movimento, os dois trocam):
 | Atacar | clique esquerdo ou `J` |
 | Arremessar a arma | clique direito ou `K` |
 | Placar completo (dano causado, recebido...) | segurar `Tab` |
-| Pausar | `Esc` (ou `P`, se não estiver num movimento) |
+| Pausar | `Esc` (ou `P`, se não estiver em nenhuma ação) |
 | Som liga/desliga | `M` |
-| Acelerar (depois de eliminado) | `F` (se não estiver num movimento) |
+| Acelerar (depois de eliminado) | `F` (se não estiver em nenhuma ação) |
+
+Dá para trocar todas essas teclas (menos o `Esc`) em **Controles**, no menu inicial.
 
 **Regras**
 

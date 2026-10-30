@@ -10,7 +10,7 @@ import { BotController } from '/shared/ai.js';
 import { DT } from '/shared/constants.js';
 import { Renderer } from './render/renderer.js';
 import { KeyboardController } from './input/keyboard.js';
-import { loadBindings, keymapFrom } from './input/bindings.js';
+import { loadBindings, keymapFrom, currentBindings, actionOf } from './input/bindings.js';
 import { playEvents, beep } from './audio.js';
 
 export class MatchRunner {
@@ -49,20 +49,27 @@ export class MatchRunner {
     this.lastCount = null;
 
     this.onResize = () => this.renderer.resize();
+    // Segurar a tecla do placar (Tab no padrão) mostra o placar completo
+    const isScores = (code) => actionOf(currentBindings(), code) === 'scores';
     this.onKeyUp = (e) => {
-      if (e.code === 'Tab') {
+      if (isScores(e.code)) {
         e.preventDefault();
         this.renderer.showScores = false;
       }
     };
     this.onBlur = () => { this.renderer.showScores = false; };
+    this.onMouseDown = (e) => {
+      if (isScores(`Mouse${e.button}`) && !e.target.closest?.('button')) this.renderer.showScores = true;
+    };
+    this.onMouseUp = (e) => {
+      if (isScores(`Mouse${e.button}`)) this.renderer.showScores = false;
+    };
     this.onKey = (e) => {
-      if (e.code === 'Tab') {
-        // Segurar TAB mostra o placar completo
+      if (isScores(e.code)) {
         e.preventDefault();
         this.renderer.showScores = true;
       }
-      if (e.code === 'KeyF' && !this.keyboard?.codeToAction.has('KeyF')) {
+      if (e.code === 'KeyF' && !actionOf(currentBindings(), 'KeyF')) {
         const me = this.game.playerById(this.localId);
         if (me?.state === 'out') this.speed = this.speed === 1 ? 3 : 1;
       }
@@ -70,6 +77,8 @@ export class MatchRunner {
     window.addEventListener('resize', this.onResize);
     window.addEventListener('keydown', this.onKey);
     window.addEventListener('keyup', this.onKeyUp);
+    window.addEventListener('mousedown', this.onMouseDown);
+    window.addEventListener('mouseup', this.onMouseUp);
     window.addEventListener('blur', this.onBlur);
   }
 
@@ -135,6 +144,8 @@ export class MatchRunner {
     window.removeEventListener('resize', this.onResize);
     window.removeEventListener('keydown', this.onKey);
     window.removeEventListener('keyup', this.onKeyUp);
+    window.removeEventListener('mousedown', this.onMouseDown);
+    window.removeEventListener('mouseup', this.onMouseUp);
     window.removeEventListener('blur', this.onBlur);
   }
 }

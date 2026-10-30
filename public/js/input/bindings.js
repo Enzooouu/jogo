@@ -13,6 +13,9 @@ export const ACTIONS = [
   { id: 'attack', name: 'Atacar' },
   { id: 'throw', name: 'Lançar a arma' },
   { id: 'dash', name: 'Dash' },
+  // teclas de menu: não mexem no boneco
+  { id: 'scores', name: 'Ver placar (segurar)', menu: true },
+  { id: 'mute', name: 'Ligar / desligar o som', menu: true },
 ];
 
 export const DEFAULT_BINDINGS = {
@@ -23,10 +26,14 @@ export const DEFAULT_BINDINGS = {
   attack: ['Mouse0', 'KeyJ'],
   throw: ['Mouse2', 'KeyK'],
   dash: ['ShiftLeft', 'KeyL'],
+  scores: ['Tab', null],
+  mute: ['KeyM', null],
 };
 
 // Teclas que já têm outra função no jogo e não podem ser usadas
-export const RESERVED = { Escape: 'pausar', Tab: 'placar', KeyM: 'som' };
+export const RESERVED = { Escape: 'pausar' };
+
+let current = null; // última versão lida ou salva
 
 export function cloneBindings(b) {
   return Object.fromEntries(Object.entries(b).map(([k, v]) => [k, [...v]]));
@@ -34,16 +41,44 @@ export function cloneBindings(b) {
 
 // Lê do navegador; se estiver faltando ou estragado, usa o padrão
 export function loadBindings() {
+  current = cloneBindings(DEFAULT_BINDINGS);
   try {
-    const saved = JSON.parse(localStorage.getItem(STORAGE_KEY) ?? 'null');
-    if (isValid(saved)) return saved;
+    const saved = fillMissing(JSON.parse(localStorage.getItem(STORAGE_KEY) ?? 'null'));
+    if (isValid(saved)) current = saved;
   } catch {
     // sem armazenamento ou dado estragado: usa o padrão
   }
-  return cloneBindings(DEFAULT_BINDINGS);
+  return cloneBindings(current);
+}
+
+// Teclas em uso agora (sem ler o navegador de novo)
+export function currentBindings() {
+  return current ?? loadBindings();
+}
+
+// Movimento que usa essa tecla (ou undefined)
+export function actionOf(b, code) {
+  return ACTIONS.find(({ id }) => b[id].includes(code))?.id;
+}
+
+// Teclas salvas antes de existir um movimento novo: ele ganha o padrão
+// (se a tecla padrão já estiver em uso, fica com a extra ou nada muda)
+function fillMissing(saved) {
+  if (!saved || typeof saved !== 'object') return saved;
+  const b = { ...saved };
+  const used = new Set(Object.values(b).flat());
+  for (const { id } of ACTIONS) {
+    if (b[id]) continue;
+    const free = DEFAULT_BINDINGS[id].filter((code) => code && !used.has(code));
+    if (!free.length) return null;
+    b[id] = [free[0], free[1] ?? null];
+    free.forEach((code) => used.add(code));
+  }
+  return b;
 }
 
 export function saveBindings(b) {
+  current = cloneBindings(b);
   try {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(b));
   } catch {
@@ -66,9 +101,9 @@ function isValid(b) {
   return true;
 }
 
-// Formato que o KeyboardController usa: { ação: [teclas] }
+// Formato que o KeyboardController usa: { ação: [teclas] } (só movimentos do boneco)
 export function keymapFrom(b) {
-  return Object.fromEntries(ACTIONS.map(({ id }) => [id, b[id].filter(Boolean)]));
+  return Object.fromEntries(ACTIONS.filter((a) => !a.menu).map(({ id }) => [id, b[id].filter(Boolean)]));
 }
 
 // Coloca `code` no espaço `slot` (0 = principal, 1 = extra) do movimento
@@ -110,7 +145,7 @@ export function keyLabel(code) {
     Space: 'Espaço', ArrowLeft: '←', ArrowRight: '→', ArrowUp: '↑', ArrowDown: '↓',
     ShiftLeft: 'Shift esq.', ShiftRight: 'Shift dir.', ControlLeft: 'Ctrl esq.', ControlRight: 'Ctrl dir.',
     AltLeft: 'Alt esq.', AltRight: 'Alt dir.', Enter: 'Enter', Backspace: 'Apagar', CapsLock: 'Caps Lock',
-    Mouse0: 'Clique esq.', Mouse1: 'Clique do meio', Mouse2: 'Clique dir.', Mouse3: 'Mouse 4', Mouse4: 'Mouse 5',
+    Tab: 'Tab', Mouse0: 'Clique esq.', Mouse1: 'Clique do meio', Mouse2: 'Clique dir.', Mouse3: 'Mouse 4', Mouse4: 'Mouse 5',
     Comma: ',', Period: '.', Slash: '/', Semicolon: 'Ç', Quote: '~', BracketLeft: '´', BracketRight: '[', Backslash: ']',
     Minus: '-', Equal: '=', Backquote: "'", IntlBackslash: '\\', IntlRo: '/',
   };
