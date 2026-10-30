@@ -33,6 +33,7 @@
 | Novo perigo (espinhos, vento) | tipo em `HAZARDS`, reação em `HAZARD_REACTION`, retângulo no mapa, desenho em `public/js/render/stage.js` |
 | Nova arma | `WEAPONS` em `shared/weapons.js` (melee ou ranged) + ícone no renderer |
 | Novo mapa | `MAPS` em `shared/maps.js` |
+| Nova etapa do tutorial | arena em `shared/maps-treino.js` + etapa em `STEPS` (`shared/tutorial.js`); a tela fica em `public/js/screens/tutorial.js` |
 | Liberar "Todos contra todos" | o motor já suporta (`mode: 'ffa'`, testado); falta tirar o `disabled` do botão em `public/index.html` |
 | Mudar o banco | nova entrada no fim de `MIGRATIONS` em `server/db.js` |
 

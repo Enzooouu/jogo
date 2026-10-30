@@ -172,3 +172,10 @@ export function playEvents(events, localId) {
 export function beep() {
   tone({ freq: 440, dur: 0.12, type: 'square', vol: 0.15 });
 }
+
+// Tarefa do tutorial concluída: plim de três notas subindo
+export function chime() {
+  tone({ freq: 660, dur: 0.12, type: 'triangle', vol: 0.18 });
+  tone({ freq: 880, dur: 0.12, type: 'triangle', vol: 0.18, delay: 0.1 });
+  tone({ freq: 1320, dur: 0.28, type: 'triangle', vol: 0.16, delay: 0.2 });
+}

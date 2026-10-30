@@ -5,6 +5,7 @@
 import { ELEMENTS } from '/shared/elements.js';
 import { drawSwordArt, drawStaffArt, drawSlash } from './weapons-art.js';
 import { lookOf, aura, scarf, limbStroke, torso, feet, fist, pauldron, head, shade, rgba as rgbaHex } from './look.js';
+import { drawSkin } from './mannequin.js';
 
 const OUTLINE = '#0c0710';
 const LIMB = 11;          // comprimento de cada metade de braço/perna
@@ -124,6 +125,14 @@ export function drawFighter(ctx, p, x, y, vis, time, { teamColor, isLocal, showN
   const armF = limb(shoulder, pose.armF);
   const armB = limb(shoulder, pose.armB);
   const wind = Math.min(1, Math.abs(p.vx) / 300 + (p.onGround ? 0 : 0.4)) + 0.2;
+
+  // Tutorial: manequim preto (antes de escolher o elemento) e boneco de treino
+  if (p.skin) {
+    drawSkin(ctx, p.skin, { hip, neck, headPos, shoulder, legF, legB, armF, armB }, time);
+    ctx.restore();
+    if (showName) drawTag(ctx, cx, y - 16, p, teamColor, isLocal);
+    return;
+  }
 
   aura(ctx, k);
   scarf(ctx, p.element, k, neck, time, wind);

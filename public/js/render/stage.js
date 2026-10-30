@@ -9,6 +9,7 @@
 
 import { roundRect, shadeHex, seeded } from './stage-util.js';
 import { PICO_ART } from './stage-pico.js';
+import { TREINO_ART } from './stage-treino.js';
 import { drawVolcano, volcanoAnimated, drawMidLava, midLavaAnimated } from './volcano.js';
 
 export { roundRect };
@@ -36,7 +37,7 @@ export class StageRenderer {
     this.scale = 0;
     this.terrainRect = { x: 60, y: -420, w: 1160, h: 1400 };
     // cada mapa tem o seu cenário; os perigos são desenhados igual em todos
-    this.art = map.id === 'pico' ? PICO_ART : CALDEIRA_ART;
+    this.art = map.art === 'treino' ? TREINO_ART : map.id === 'pico' ? PICO_ART : CALDEIRA_ART;
     this.setScale(scale);
   }
 
@@ -73,7 +74,7 @@ export class StageRenderer {
     ctx.scale(s, s);
     const v = ctx.createRadialGradient(VIEW_W / 2, VIEW_H * 0.55, VIEW_H * 0.45, VIEW_W / 2, VIEW_H * 0.55, VIEW_W * 0.75);
     v.addColorStop(0, 'rgba(8,2,14,0)');
-    v.addColorStop(1, 'rgba(8,2,14,0.45)');
+    v.addColorStop(1, `rgba(8,2,14,${this.art.vignette ?? 0.45})`);
     ctx.fillStyle = v;
     ctx.fillRect(0, 0, VIEW_W, VIEW_H);
     return canvas;

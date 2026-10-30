@@ -75,7 +75,14 @@ export class Renderer {
     for (const e of events) {
       switch (e.type) {
         case 'start':
-          this.banner = { text: 'LUTA!', time: 1.1, max: 1.1, color: '#ffe066' };
+          // no treino do tutorial não tem "LUTA!"
+          if (!g.practice) this.banner = { text: 'LUTA!', time: 1.1, max: 1.1, color: '#ffe066' };
+          break;
+        case 'launch':
+          // tutorial: empurrão da etapa "voltar para a arena"
+          P.add({ type: 'ring', x: e.x, y: e.y, size: 8, grow: 260, life: 0.35, color: '#ffffff' });
+          P.burst(e.x, e.y, { type: 'spark', count: 16, speed: 520, angle: e.side > 0 ? 0 : Math.PI, spread: 1.2, life: 0.35, size: 2.5, color: '#fff3c4', drag: 3 });
+          this.shake(6, 0.2);
           break;
         case 'jump':
           if (e.double) P.add({ type: 'ring', x: e.x, y: e.y, size: 6, grow: 90, life: 0.3, color: 'rgba(255,255,255,0.8)' });
@@ -91,8 +98,8 @@ export class Renderer {
         case 'dash': {
           const p = g.playerById(e.id);
           const el = ELEMENTS[p.element];
-          P.add({ type: 'ring', x: e.x, y: e.y, size: 8, grow: 160, life: 0.22, color: el.light });
-          P.burst(e.x, e.y, { type: 'spark', count: 8, speed: 260, angle: Math.atan2(-e.dy, -e.dx), spread: 0.9, life: 0.3, size: 2.2, color: el.light, drag: 3 });
+          P.add({ type: 'ring', x: e.x, y: e.y, size: 8, grow: 160, life: 0.22, color: p.skin ? '#ffffff' : el.light });
+          P.burst(e.x, e.y, { type: 'spark', count: 8, speed: 260, angle: Math.atan2(-e.dy, -e.dx), spread: 0.9, life: 0.3, size: 2.2, color: p.skin ? '#ffffff' : el.light, drag: 3 });
           break;
         }
         case 'wallGrab':
@@ -121,11 +128,11 @@ export class Renderer {
           P.burst(e.x, e.y, { type: 'spark', count: 34, speed: 900, life: 0.6, size: 3.5, color: el.light, drag: 2.5 });
           P.burst(e.x, e.y, { count: 24, speed: 300, life: 0.9, size: 5, color: el.color, gravity: 150, drag: 1.5 });
           P.add({ type: 'ring', x: e.x, y: e.y, size: 10, grow: 420, life: 0.45, color: el.light });
-          P.add({ type: 'text', text: 'K.O.!', x: e.x, y: Math.max(60, e.y - 30), vy: -30, life: 1.1, size: 40, color: '#ffffff' });
+          P.add({ type: 'text', text: g.practice ? 'Ops!' : 'K.O.!', x: e.x, y: Math.max(60, e.y - 30), vy: -30, life: 1.1, size: 40, color: '#ffffff' });
           if (e.cause === 'lava') P.burst(e.x, e.y, { count: 20, speed: 260, angle: -Math.PI / 2, spread: 1.4, life: 1, size: 4, color: '#ffb347', gravity: 400 });
           if (e.cause === 'agua') P.burst(e.x, e.y, { count: 22, speed: 300, angle: -Math.PI / 2, spread: 1.2, life: 0.9, size: 3.5, color: '#9fe3ff', gravity: 700 });
-          this.shake(12, 0.4);
-          this.pushFeed(koText(g, e, victim), victim);
+          this.shake(g.practice ? 6 : 12, 0.4);
+          if (!g.practice) this.pushFeed(koText(g, e, victim), victim);
           break;
         }
         case 'eliminated': {
@@ -304,6 +311,8 @@ export class Renderer {
     }
     this.stage.drawTerrain(ctx, this.time, this.game.platforms, alpha);
     this.stage.drawHazards(ctx, this.time, false);
+    // desenho extra no mundo (ex.: bandeira de chegada do tutorial)
+    this.drawExtra?.(ctx, this.time);
     this.drawWinds(ctx);
     drawCelebration(ctx, this.celebration, 'mid');
     this.drawItems(ctx);
@@ -317,7 +326,8 @@ export class Renderer {
 
     ctx.setTransform(this.scale, 0, 0, this.scale, 0, 0);
     this.drawOffscreen(ctx, alpha);
-    this.drawHud(ctx);
+    // no treino do tutorial os cartões ficam na tela do tutorial (HTML)
+    if (!this.game.practice) this.drawHud(ctx);
     if (this.showScores) this.drawScoreboard(ctx);
   }
 
@@ -326,7 +336,12 @@ export class Renderer {
     const g = this.game;
     const chance = (rate) => Math.random() < rate * dt;
 
-    if (g.map.id === 'pico') {
+    if (g.map.art === 'treino') {
+      // sementes de dente-de-leão flutuando no sol
+      if (chance(2)) {
+        P.add({ x: -40, y: 150 + Math.random() * 380, vx: 30 + Math.random() * 30, vy: -6 + Math.random() * 12, life: 14, size: 1.8, color: 'rgba(255,255,255,0.85)', drag: 0.01 });
+      }
+    } else if (g.map.id === 'pico') {
       // Folhas e pétalas levadas pelo vento
       if (chance(5)) {
         P.add({ x: -60, y: 100 + Math.random() * 500, vx: 90 + Math.random() * 80, vy: -10 + Math.random() * 30, life: 9, size: 2, color: Math.random() < 0.5 ? '#9fdc6e' : '#ffb3c8', drag: 0.02 });
@@ -355,11 +370,13 @@ export class Renderer {
       const cx = p.x + p.w / 2;
       if (p.dashTime > 0) {
         // rastro do dash: "fantasmas" do lutador
-        P.add({ x: cx + (Math.random() - 0.5) * 10, y: p.y + 10 + Math.random() * 50, vx: -p.vx * 0.1, vy: -p.vy * 0.1, life: 0.3, size: 4, grow: -10, color: ELEMENTS[p.element].light });
+        P.add({ x: cx + (Math.random() - 0.5) * 10, y: p.y + 10 + Math.random() * 50, vx: -p.vx * 0.1, vy: -p.vy * 0.1, life: 0.3, size: 4, grow: -10, color: p.skin ? '#e8e8f0' : ELEMENTS[p.element].light });
       }
       if (p.onWall && p.vy > 40 && chance(25)) {
         P.add({ x: p.onWall > 0 ? p.x + p.w : p.x, y: p.y + 14, vx: -p.onWall * 30, vy: -20, life: 0.35, size: 2.2, color: 'rgba(220,200,210,0.75)', gravity: 150 });
       }
+      // manequim e boneco do tutorial não têm elemento à mostra
+      if (p.skin) continue;
       if (p.element === 'fogo' && chance(18)) {
         P.add({ x: cx + (Math.random() - 0.5) * 10, y: p.y - 4, vx: (Math.random() - 0.5) * 30, vy: -60 - Math.random() * 40, life: 0.5, size: 2.2, grow: -3, color: Math.random() < 0.5 ? '#ffd25a' : '#ff6a1f' });
       }

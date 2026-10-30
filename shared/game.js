@@ -50,9 +50,16 @@ export class Game {
    * @param {number} [config.seed]
    * @param {number} [config.lives]
    * @param {number} [config.timeLimit] segundos (0 = sem limite)
+   * @param {boolean} [config.practice] treino (tutorial): ninguém perde vida
+   *   e quem cai volta no ponto `checkpoint` do jogador
+   * @param {boolean} [config.items] caixas caindo do céu sozinhas (padrão: sim)
+   * @param {number} [config.countdown] segundos de contagem antes de começar
    */
   constructor(config) {
-    const { players, mode = 'times', mapId, seed = 1, lives = PLAYER.lives, timeLimit = MATCH.timeLimit } = config;
+    const {
+      players, mode = 'times', mapId, seed = 1, lives = PLAYER.lives, timeLimit = MATCH.timeLimit,
+      practice = false, items = true, countdown = MATCH.countdown,
+    } = config;
     if (!MODES[mode]) throw new Error(`Modo desconhecido: ${mode}`);
     if (!Array.isArray(players) || players.length < 2) throw new Error('A partida precisa de pelo menos 2 jogadores');
 
@@ -62,11 +69,13 @@ export class Game {
     this.rng = createRng(seed);
     this.lives = lives;
     this.timeLimit = timeLimit;
+    this.practice = practice;
+    this.itemsEnabled = items;
 
     this.tick = 0;
     this.time = 0;               // tempo de luta (sem contar a contagem regressiva)
     this.phase = 'countdown';    // countdown -> playing -> ending -> ended
-    this.phaseTimer = MATCH.countdown;
+    this.phaseTimer = countdown;
     this.result = null;
     this.events = [];
 
@@ -361,6 +370,7 @@ export class Game {
       if (pressed('down') && p.onGround && p.standingOn === 'platform') {
         p.dropTimer = 0.22;
         p.onGround = false;
+        this.emit('drop', { id: p.id });
       }
 
       if (pressed('dash') && p.dashCooldown <= 0 && (p.onGround || p.airDashes > 0)) this.startDash(p, input);
@@ -399,7 +409,9 @@ export class Game {
         p.vy = Math.min(p.vy + PHYS.gravity * DT, PHYS.wallSlideSpeed);
       }
     } else {
-      const fastFalling = control && input.down && !p.onGround && p.vy > 0;
+      // logo depois de descer de uma plataforma não acelera a queda (senão
+      // atravessa também a plataforma de baixo)
+      const fastFalling = control && input.down && !p.onGround && p.vy > 0 && p.dropTimer <= 0;
       p.vy = Math.min(p.vy + PHYS.gravity * DT, fastFalling ? PHYS.fastFall : PHYS.maxFall);
       if (fastFalling) p.vy = Math.max(p.vy, PHYS.maxFall * 0.8);
     }
@@ -656,7 +668,7 @@ export class Game {
     if (p.state !== 'alive') return;
     const cx = p.x + p.w / 2;
     const cy = p.y + p.h / 2;
-    p.lives--;
+    if (!this.practice) p.lives--;
     p.stats.deaths++;
     if (cause === 'queda') p.stats.falls++;
     else p.stats.hazardDeaths++;
@@ -692,7 +704,7 @@ export class Game {
 
     if (p.lives > 0) {
       p.state = 'respawning';
-      p.respawnTimer = PLAYER.respawnTime;
+      p.respawnTimer = this.practice ? 0.8 : PLAYER.respawnTime;
     } else {
       p.state = 'out';
       this.emit('eliminated', { id: p.id });
@@ -700,8 +712,8 @@ export class Game {
   }
 
   respawn(p) {
-    const points = this.map.respawns;
-    const s = points[this.respawnIndex++ % points.length];
+    // no treino, volta no ponto marcado (ex.: começo da etapa do tutorial)
+    const s = (this.practice && p.checkpoint) || this.map.respawns[this.respawnIndex++ % this.map.respawns.length];
     p.x = s.x - p.w / 2;
     p.y = s.y - p.h;
     p.px = p.x;
@@ -709,7 +721,7 @@ export class Game {
     p.vx = 0;
     p.vy = 0;
     p.state = 'alive';
-    p.invuln = PLAYER.invulnTime;
+    p.invuln = this.practice ? 0.6 : PLAYER.invulnTime;
     p.jumpsLeft = PHYS.maxJumps;
     p.airDashes = statsOf(p).airDashes;
     p.dashTime = 0;
@@ -981,24 +993,22 @@ export class Game {
   // ---------------------------------------------------------------- armas no chão
 
   spawnItems() {
+    if (!this.itemsEnabled) return;
     this.nextItemIn -= DT;
     if (this.nextItemIn > 0) return;
     this.nextItemIn = this.rng.range(ITEMS.spawnMin, ITEMS.spawnMax);
     // armas arremessadas que ficaram no chão não contam no limite
     if (this.items.filter((i) => !i.thrown).length >= ITEMS.maxOnMap) return;
-    const { minX, maxX, y } = this.map.itemSpawn;
-    const item = {
-      id: this.nextEntityId++,
-      weapon: this.rng.pick(WEAPON_IDS),
-      x: Math.round(this.rng.range(minX, maxX)),
-      y,
-      w: 34,
-      h: 30,
-      landed: false,
-      life: ITEMS.lifetime,
-    };
+    const { minX, maxX } = this.map.itemSpawn;
+    this.dropCrate(Math.round(this.rng.range(minX, maxX)), this.rng.pick(WEAPON_IDS));
+  }
+
+  // Solta uma caixa de paraquedas em `x` (o tutorial usa direto)
+  dropCrate(x, weapon, life = ITEMS.lifetime) {
+    const item = { id: this.nextEntityId++, weapon, x, y: this.map.itemSpawn.y, w: 34, h: 30, landed: false, life };
     this.items.push(item);
     this.emit('itemSpawn', { itemId: item.id, weapon: item.weapon, x: item.x });
+    return item;
   }
 
   updateItems() {
@@ -1047,6 +1057,7 @@ export class Game {
   // ---------------------------------------------------------------- fim de jogo
 
   checkEnd() {
+    if (this.practice) return;
     const alive = new Set(this.players.filter((p) => p.state !== 'out').map((p) => p.team));
     if (alive.size <= 1) {
       this.finish(alive.size === 1 ? [...alive][0] : null, 'eliminacao');
@@ -1117,6 +1128,8 @@ function createPlayer(cfg, index, lives) {
     team: cfg.team,
     isBot: Boolean(cfg.isBot),
     admin: Boolean(cfg.admin), // modo ADM (testes): cada golpe dá PLAYER.adminDamage
+    skin: cfg.skin ?? null,    // visual especial do tutorial ('manequim', 'boneco')
+    checkpoint: null,          // treino: onde reaparece depois de cair
     slot: index,
     x: 0, y: 0, px: 0, py: 0,
     w: PLAYER.width, h: PLAYER.height,

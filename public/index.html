@@ -23,6 +23,7 @@
           <small>FOGO · ÁGUA · TERRA · AR</small>
         </div>
         <button type="button" class="home-item on" id="home-play">JOGAR</button>
+        <button type="button" class="home-item" id="home-tutorial">TUTORIAL</button>
         <button type="button" class="home-item" id="home-profile">PERFIL</button>
         <button type="button" class="home-item" id="home-controls">CONTROLES</button>
         <button type="button" class="home-item" id="home-settings">CONFIGURAÇÕES</button>
@@ -30,6 +31,20 @@
       <div id="account-box" class="account-box"></div>
 
       <div id="panel-backdrop" class="panel-backdrop" hidden></div>
+      <!-- Primeira vez no jogo: convite para o tutorial -->
+      <div id="welcome" class="welcome" hidden>
+        <div class="welcome-card" role="dialog" aria-labelledby="welcome-title">
+          <canvas id="welcome-art" class="welcome-art" aria-hidden="true"></canvas>
+          <small>BEM-VINDO AO</small>
+          <h2 id="welcome-title">BRAWL DOS ELEMENTOS</h2>
+          <p>É a sua primeira vez aqui? O tutorial ensina tudo em poucos minutos: andar, pular, dash, paredes, armas e os perigos de cada elemento.</p>
+          <div class="welcome-actions">
+            <button type="button" class="btn" id="welcome-yes">FAZER O TUTORIAL</button>
+            <button type="button" class="btn ghost" id="welcome-no">Agora não</button>
+          </div>
+          <button type="button" class="welcome-login" id="welcome-login">Já tem conta? Entrar</button>
+        </div>
+      </div>
       <div id="controls-panel" class="side-panel controls-panel" hidden>
         <h2>Controles</h2>
         <p class="hint">Clique num botão e aperte a tecla (ou um botão do mouse). <kbd>Esc</kbd> cancela.</p>
@@ -120,6 +135,50 @@
             <button id="resume-btn" type="button" class="btn">Continuar</button>
             <button id="quit-btn" type="button" class="btn ghost">Desistir</button>
             <p class="hint" id="quit-hint">Desistir conta como derrota.</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ===================== TUTORIAL ===================== -->
+    <section id="screen-tutorial" class="screen" hidden>
+      <div class="stage-wrap">
+        <canvas id="tut-canvas" width="1280" height="720"></canvas>
+        <div id="tut-card" class="tut-card">
+          <div class="tut-top"><small id="tut-step"></small><span id="tut-progress" class="tut-progress" hidden></span></div>
+          <h2 id="tut-title"></h2>
+          <p id="tut-text"></p>
+          <div class="tut-bar"><i id="tut-bar"></i></div>
+        </div>
+        <div class="tut-corner">
+          <button type="button" class="btn ghost small" id="tut-skip">Pular etapa ›</button>
+          <button type="button" class="btn ghost small" id="tut-pause-btn">Pausa</button>
+        </div>
+        <div id="tut-toast" class="tut-toast" hidden></div>
+        <div id="tut-fade" class="tut-fade"></div>
+        <div id="tut-pick" class="overlay tut-overlay" hidden>
+          <div class="overlay-card tut-pick-card">
+            <small>HORA DAS ARMAS</small>
+            <h2>Escolha seu lutador</h2>
+            <p class="hint">Você vai treinar com ele até o fim do tutorial. Cada elemento reage diferente aos perigos do mapa.</p>
+            <div class="tut-pick-grid" id="tut-pick-grid"></div>
+          </div>
+        </div>
+        <div id="tut-pause" class="overlay tut-overlay" hidden>
+          <div class="overlay-card">
+            <h2>Pausado</h2>
+            <button type="button" class="btn" id="tut-resume">Continuar</button>
+            <button type="button" class="btn ghost" id="tut-restart">Recomeçar etapa</button>
+            <button type="button" class="btn ghost" id="tut-skip2">Pular etapa</button>
+            <button type="button" class="btn ghost" id="tut-quit">Sair do tutorial</button>
+          </div>
+        </div>
+        <div id="tut-end" class="overlay tut-overlay" hidden>
+          <div class="overlay-card tut-end-card">
+            <h2 id="tut-end-title"></h2>
+            <p id="tut-end-text" class="hint"></p>
+            <button type="button" class="btn" id="tut-end-main"></button>
+            <button type="button" class="btn ghost" id="tut-end-alt"></button>
           </div>
         </div>
       </div>

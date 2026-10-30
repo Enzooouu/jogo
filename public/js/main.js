@@ -13,6 +13,7 @@ import { api } from './api.js';
 import { renderAccountBox, initAuthScreen, setAuthMode, focusAuth, loadProfile } from './screens/account.js';
 import { DemoArena } from './screens/demo.js';
 import { initControls } from './screens/controls.js';
+import { TutorialScreen } from './screens/tutorial.js';
 import { currentBindings, actionOf } from './input/bindings.js';
 import { VersusScreen } from './screens/versus.js';
 
@@ -42,11 +43,12 @@ const versus = new VersusScreen($('#versus-canvas'));
 
 // ------------------------------------------------------------ telas
 
-const SCREENS = ['home', 'mode', 'cards', 'versus', 'game', 'result', 'auth', 'profile'];
+const SCREENS = ['home', 'mode', 'cards', 'versus', 'game', 'tutorial', 'result', 'auth', 'profile'];
 const WITH_DEMO = new Set(['home', 'mode', 'cards', 'auth', 'profile']);
 
 export function show(name) {
   for (const s of SCREENS) $(`#screen-${s}`).hidden = s !== name;
+  if (name !== 'tutorial' && tutorial?.active) tutorial.stop();
   state.screen = name;
   if (WITH_DEMO.has(name) && state.demo) demo.start();
   else demo.stop();
@@ -86,6 +88,7 @@ function setUser(user) {
 
 function setOfflineMode() {
   state.offline = true;
+  $('#welcome-login').hidden = true;
   $('#account-box').hidden = true;
   $('#home-profile').hidden = true;
   $('#save-hint').textContent = 'Versão sem servidor: dá para jogar, mas contas e estatísticas ficam desligadas.';
@@ -505,6 +508,15 @@ window.addEventListener('keydown', (e) => {
   }
   // P também pausa, a não ser que o jogador tenha colocado P em alguma ação
   const pauseKey = e.code === 'Escape' || (e.code === 'KeyP' && !action);
+  if (state.screen === 'tutorial' && pauseKey) {
+    e.preventDefault();
+    tutorial.togglePause();
+    return;
+  }
+  if (state.screen === 'home' && e.code === 'Escape' && !$('#welcome').hidden) {
+    closeWelcome();
+    return;
+  }
   if (state.screen === 'game' && pauseKey) {
     e.preventDefault();
     setPaused(!state.runner?.paused);
@@ -526,7 +538,46 @@ window.addEventListener('mousedown', (e) => {
 
 document.addEventListener('visibilitychange', () => {
   if (document.hidden && state.screen === 'game') setPaused(true);
+  if (document.hidden && state.screen === 'tutorial') tutorial.setPaused(true);
 });
+
+// ------------------------------------------------------------ tutorial
+
+const tutorial = new TutorialScreen({
+  onExit: () => show('home'),
+  // "Jogar agora" no fim: já vem com o elemento usado no tutorial
+  onPlay: (element) => {
+    if (element) {
+      state.element = element;
+      savePref('elemento', element);
+    }
+    show('mode');
+  },
+  getName: () => playerName(),
+  debug: DEBUG,
+});
+
+function openTutorial() {
+  unlockAudio();
+  document.activeElement?.blur?.();
+  show('tutorial');
+  tutorial.start(0);
+}
+
+// Cartão de boas-vindas (só na primeira vez que abre o jogo)
+function openWelcome() {
+  $('#welcome').hidden = false;
+  requestAnimationFrame(() => {
+    const { ctx, w, h } = fitCanvas($('#welcome-art'));
+    drawPortrait(ctx, 'agua', w / 2, h - 6, h / 82, { extra: { skin: 'manequim' } });
+  });
+  $('#welcome-yes').focus();
+}
+
+function closeWelcome() {
+  $('#welcome').hidden = true;
+  savePref('boasVindas', '1');
+}
 
 // ------------------------------------------------------------ preferências
 
@@ -551,6 +602,16 @@ function savePref(key, value) {
 function init() {
   buildCards();
   $('#home-play').addEventListener('click', () => show('mode'));
+  $('#home-tutorial').addEventListener('click', openTutorial);
+  $('#welcome-yes').addEventListener('click', () => {
+    closeWelcome();
+    openTutorial();
+  });
+  $('#welcome-no').addEventListener('click', closeWelcome);
+  $('#welcome-login').addEventListener('click', () => {
+    closeWelcome();
+    openAuth('login');
+  });
   $('#home-profile').addEventListener('click', openProfile);
   $('#home-controls').addEventListener('click', () => togglePanel('#controls-panel'));
   $('#panel-backdrop').addEventListener('click', closePanels);
@@ -606,6 +667,7 @@ function init() {
   });
   setUser(null);
   show('home');
+  if (loadPref('boasVindas', '0') !== '1') openWelcome();
   api.me().then(({ user }) => setUser(user)).catch(() => {
     // Sem servidor (ex.: aberto como página estática): joga só como convidado.
     setUser(null);

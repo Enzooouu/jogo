@@ -27,6 +27,12 @@ Na tela inicial (com uma partida de demonstração rodando ao fundo), clique em
 **Jogar** → escolha o modo (**1×1, 2×2, 3×3 ou Todos contra todos**) → escolha a **carta** do
 elemento do seu time → confira os times na tela **Versus** e clique em **Lutar**.
 
+Primeira vez? Clique em **Tutorial** (o jogo também oferece na primeira vez que
+abre). São 11 etapas no Campo de Treino: andar, pular, descer das plataformas,
+dash, paredes (com um manequim preto), depois você escolhe o elemento e aprende
+a pegar armas, atacar o boneco de treino, lançar a arma, os perigos e como
+voltar para a arena. No fim tem um duelo contra um bot fácil.
+
 Você perde uma vida quando **cai lá embaixo** (para fora da ilha) ou num perigo
 que mata o seu elemento. Para os lados e para cima não tem limite: quem é
 arremessado longe continua voando e só perde a vida se cair.
@@ -124,11 +130,14 @@ shared/        Simulação do jogo (roda no navegador E no Node)
   ai.js          bots
   elements.js    elementos e tabela de perigos
   weapons.js     armas e efeito por elemento
-  maps.js        mapa (plataformas, perigos, pontos de nascimento)
+  maps.js        mapas (plataformas, perigos, pontos de nascimento)
+  maps-treino.js arenas do tutorial (Campo de Treino)
+  tutorial.js    as 11 etapas do tutorial (tarefa de cada uma)
   input.js       formato do comando de um jogador (teclado, bot ou rede)
 public/        Navegador
   js/main.js     telas e fluxo (menu, partida, resultado, login, perfil)
   js/match.js    laço da partida (passo fixo de 1/60 s)
+  js/screens/    telas (tutorial, controles, versus, conta...)
   js/render/     desenho no canvas
   js/input/      teclado
   js/api.js      chamadas à API

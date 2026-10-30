@@ -283,7 +283,7 @@ kbd {
 
 /* ------------------------------------------------------------ partida */
 
-#screen-game {
+#screen-game, #screen-tutorial {
   display: flex;
   align-items: center;
   justify-content: center;
@@ -296,7 +296,7 @@ kbd {
   width: min(100vw, calc(100vh * 16 / 9));
   aspect-ratio: 16 / 9;
 }
-#game-canvas { display: block; width: 100%; height: 100%; }
+#game-canvas, #tut-canvas { display: block; width: 100%; height: 100%; }
 
 .overlay {
   position: absolute;
@@ -318,6 +318,105 @@ kbd {
   text-align: center;
 }
 .overlay-card h2 { margin: 0 0 6px; font-family: var(--display); letter-spacing: 0.08em; font-size: 34px; }
+
+/* ------------------------------------------------------------ tutorial */
+
+/* cartão da tarefa, em cima no meio */
+.tut-card {
+  position: absolute; top: 14px; left: 50%; transform: translateX(-50%);
+  width: min(560px, calc(100% - 300px)); min-width: 300px;
+  padding: 12px 18px 14px; border-radius: 14px;
+  background: linear-gradient(180deg, rgba(30, 14, 34, .9), rgba(14, 7, 20, .9));
+  border: 1px solid rgba(255, 210, 90, .4);
+  box-shadow: 0 0 30px rgba(255, 140, 60, .18), 0 14px 40px rgba(0, 0, 0, .45);
+  pointer-events: none;
+}
+.tut-card.enter { animation: tut-in .35s ease-out; }
+.tut-card.done { border-color: rgba(77, 255, 166, .7); box-shadow: 0 0 34px rgba(77, 255, 166, .3), 0 14px 40px rgba(0, 0, 0, .45); }
+.tut-top { display: flex; justify-content: space-between; align-items: center; }
+.tut-top small { font-size: 11px; letter-spacing: .14em; color: var(--muted); font-weight: 700; }
+.tut-progress { font-weight: 800; font-size: 13px; color: #1a0f05; background: #ffd25a; border-radius: 99px; padding: 2px 10px; }
+.tut-card h2 { margin: 2px 0 4px; font-family: var(--display); letter-spacing: .06em; font-size: 26px; color: #ffd25a; text-shadow: 0 0 14px rgba(255, 170, 60, .35); }
+.tut-card.done h2 { color: var(--good); }
+.tut-card p { margin: 0; font-size: 15px; line-height: 1.45; }
+.tut-card kbd { font-size: 13px; }
+.tut-bar { margin-top: 10px; height: 4px; border-radius: 99px; background: rgba(255, 255, 255, .12); overflow: hidden; }
+.tut-bar i { display: block; height: 100%; background: linear-gradient(90deg, #ff6a1f, #ffd25a); transition: width .5s ease; }
+.tut-corner { position: absolute; top: 14px; right: 14px; display: flex; flex-direction: column; gap: 6px; }
+.tut-corner .btn { background: rgba(12, 6, 18, .6); }
+.tut-toast {
+  position: absolute; left: 50%; top: 42%; transform: translate(-50%, -50%);
+  font-family: var(--display); font-size: clamp(34px, 6vw, 64px); letter-spacing: .06em;
+  color: var(--good); text-shadow: 0 4px 0 rgba(0, 0, 0, .55), 0 0 30px rgba(77, 255, 166, .5);
+  pointer-events: none;
+}
+.tut-toast.show { animation: tut-pop 1.5s ease-out forwards; }
+.tut-fade { position: absolute; inset: 0; background: #0d0812; opacity: 0; pointer-events: none; transition: opacity .35s ease; }
+.tut-fade.on { opacity: 1; }
+.tut-overlay { background: rgba(5, 2, 10, .55); backdrop-filter: blur(6px); }
+.tut-overlay .overlay-card {
+  background: linear-gradient(180deg, rgba(30, 14, 34, .96), rgba(14, 7, 20, .96));
+  border: 1px solid rgba(255, 210, 90, .35);
+  box-shadow: 0 0 36px rgba(255, 140, 60, .18), 0 24px 60px rgba(0, 0, 0, .65);
+  animation: welcome-in .25s ease-out;
+}
+.tut-pick-card { max-width: min(760px, calc(100% - 32px)); }
+.tut-pick-card small, .welcome-card small { font-size: 11px; letter-spacing: .16em; color: var(--muted); font-weight: 700; }
+.tut-pick-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-top: 6px; }
+.tut-pick-btn {
+  display: flex; flex-direction: column; align-items: center; gap: 4px; padding: 10px 8px 12px;
+  border-radius: 12px; border: 1px solid rgba(255, 255, 255, .14); background: rgba(255, 255, 255, .04); color: var(--text);
+  transition: transform .15s ease, border-color .15s ease, background .15s ease;
+}
+.tut-pick-btn:hover, .tut-pick-btn:focus-visible { transform: translateY(-3px); border-color: var(--el); background: rgba(255, 255, 255, .08); outline: none; }
+.tut-pick-btn canvas { width: 100%; height: 110px; }
+.tut-pick-btn b { font-size: 17px; color: var(--el); }
+.tut-pick-btn span { font-size: 11.5px; color: var(--muted); line-height: 1.35; }
+.tut-end-card { max-width: 440px; }
+.tut-end-card h2 { color: #ffd25a; text-shadow: 0 0 18px rgba(255, 170, 60, .4); }
+@keyframes tut-in { from { opacity: 0; transform: translate(-50%, -8px); } }
+@keyframes tut-pop {
+  0% { opacity: 0; transform: translate(-50%, -50%) scale(.6); }
+  15% { opacity: 1; transform: translate(-50%, -50%) scale(1.08); }
+  25% { transform: translate(-50%, -50%) scale(1); }
+  80% { opacity: 1; }
+  100% { opacity: 0; transform: translate(-50%, -62%); }
+}
+
+/* cartão de boas-vindas (primeira vez) */
+.welcome {
+  position: fixed; inset: 0; z-index: 5; display: grid; place-items: center; padding: 16px;
+  background: rgba(5, 2, 10, .6); backdrop-filter: blur(7px); -webkit-backdrop-filter: blur(7px);
+  animation: fade-in .25s ease-out;
+}
+.welcome[hidden] { display: none; }
+.welcome-card {
+  width: min(560px, 100%); padding: 26px 30px 18px; border-radius: 18px; text-align: center;
+  background: linear-gradient(180deg, rgba(34, 16, 40, .97), rgba(14, 7, 20, .97));
+  border: 1px solid rgba(255, 210, 90, .45);
+  box-shadow: 0 0 0 1px rgba(255, 140, 60, .12), 0 0 50px rgba(255, 140, 60, .22), 0 30px 80px rgba(0, 0, 0, .7);
+  animation: welcome-in .35s ease-out;
+}
+.welcome-art { display: block; width: 130px; height: 150px; margin: -6px auto 4px; }
+.welcome-card h2 {
+  margin: 2px 0 10px; font-family: var(--display); letter-spacing: .06em; font-size: clamp(30px, 6vw, 44px);
+  background: linear-gradient(90deg, var(--fire-light), var(--fire) 40%, var(--violet) 70%, var(--water-light));
+  -webkit-background-clip: text; background-clip: text; color: transparent;
+}
+.welcome-card p { margin: 0 auto 18px; max-width: 440px; color: var(--text); line-height: 1.5; }
+.welcome-actions { display: flex; flex-direction: column; gap: 8px; align-items: stretch; max-width: 320px; margin: 0 auto; }
+.welcome-actions .btn:first-child { font-size: 18px; padding: 14px 20px; background: linear-gradient(90deg, #ff6a1f, #ffd25a); color: #1a0f05; }
+.welcome-login {
+  margin-top: 14px; border: 0; background: none; color: var(--muted); font-size: 13px; text-decoration: underline; text-underline-offset: 3px; cursor: pointer;
+}
+.welcome-login:hover { color: var(--text); }
+@keyframes welcome-in { from { opacity: 0; transform: translateY(14px) scale(.97); } }
+
+@media (max-width: 760px) {
+  .tut-card { width: calc(100% - 24px); min-width: 0; top: 8px; }
+  .tut-corner { top: auto; bottom: 10px; flex-direction: row; }
+  .tut-pick-grid { grid-template-columns: repeat(2, 1fr); }
+}
 
 /* ------------------------------------------------------------ resultado */
 
