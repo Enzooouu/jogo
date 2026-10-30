@@ -759,6 +759,38 @@ function grassCap(ctx, s, rand, sides) {
     ctx.closePath();
     ctx.fill();
   }
+  // fios de grama caindo pela borda das ondinhas
+  for (const [bx, by] of bumps) {
+    for (let k = 0; k < 3; k++) {
+      const fx = bx - 4 + k * 4 + (rand() - 0.5) * 2;
+      const len = 4 + rand() * 7;
+      ctx.strokeStyle = k === 1 ? GRASS.dark : GRASS.deep;
+      ctx.lineWidth = 1.6;
+      ctx.beginPath();
+      ctx.moveTo(fx, top + by + 2);
+      ctx.quadraticCurveTo(fx + (rand() - 0.5) * 4, top + by + 2 + len * 0.6, fx + (rand() - 0.5) * 3, top + by + 2 + len);
+      ctx.stroke();
+    }
+  }
+  // tufos mais altos, em leque
+  for (let x = s.x + 20 + rand() * 40; x < s.x + s.w - 10; x += 55 + rand() * 70) {
+    const n = 5 + Math.floor(rand() * 3);
+    for (let k = 0; k < n; k++) {
+      const a = -0.6 + (k / (n - 1)) * 1.2 + (rand() - 0.5) * 0.15;
+      const h = 9 + rand() * 9 - Math.abs(a) * 5;
+      const tx = x + Math.sin(a) * h;
+      const ty = top - 1 - Math.cos(a) * h;
+      ctx.fillStyle = k % 2 ? GRASS.top : GRASS.mid;
+      ctx.beginPath();
+      ctx.moveTo(x - 1.8, top);
+      ctx.quadraticCurveTo(x + Math.sin(a) * h * 0.4, top - h * 0.5, tx, ty);
+      ctx.quadraticCurveTo(x + Math.sin(a) * h * 0.4 + 1.5, top - h * 0.45, x + 1.8, top);
+      ctx.closePath();
+      ctx.fill();
+    }
+    ctx.fillStyle = GRASS.shine;
+    ctx.fillRect(x - 0.5, top - 12, 1, 6);
+  }
   // trevinhos e florzinhas no meio da grama
   for (let i = 0; i < s.w / 60; i++) {
     const x = s.x + 10 + rand() * (s.w - 20);
@@ -778,6 +810,347 @@ function grassCap(ctx, s, rand, sides) {
   }
 }
 
+// ---------------------------------------------------------------- terra
+
+// Camadas do chão, de cima para baixo: terra escura (húmus) com raízes,
+// argila alaranjada com riscos de sedimento, cascalho com pedras e, no fundo,
+// rocha escura com cristais dos 4 elementos
+const SOIL = [
+  { from: 0, top: '#7c5131', bottom: '#6a4328', kind: 'humus' },
+  { from: 64, top: '#b9824a', bottom: '#a06b3b', kind: 'argila' },
+  { from: 150, top: '#8a6040', bottom: '#6b4a31', kind: 'cascalho' },
+  { from: 250, top: '#55392a', bottom: '#2c1d14', kind: 'rocha' },
+];
+
+// Linha ondulada de separação entre duas camadas
+function wavy(x0, x1, y, amp, phase) {
+  const pts = [];
+  for (let x = x0 - 10; x <= x1 + 10; x += 8) pts.push([x, y + Math.sin(x * 0.021 + phase) * amp + Math.sin(x * 0.067 + phase * 2) * amp * 0.35]);
+  return pts;
+}
+
+function soil(ctx, s, bottom, rand) {
+  const x0 = s.x;
+  const x1 = s.x + s.w;
+  const depth = bottom - s.y;
+  // cada camada: preenche da sua linha ondulada até o fim do bloco
+  const lines = SOIL.map((l, i) => (i === 0 ? null : wavy(x0, x1, s.y + l.from, 6 + rand() * 4, rand() * 10)));
+  SOIL.forEach((l, i) => {
+    if (l.from > depth) return;
+    const g = ctx.createLinearGradient(0, s.y + l.from, 0, s.y + (SOIL[i + 1]?.from ?? l.from + 200));
+    g.addColorStop(0, l.top);
+    g.addColorStop(1, l.bottom);
+    ctx.fillStyle = g;
+    ctx.beginPath();
+    if (lines[i]) {
+      lines[i].forEach(([x, y], k) => (k ? ctx.lineTo(x, y) : ctx.moveTo(x, y)));
+    } else {
+      ctx.moveTo(x0 - 10, s.y);
+      ctx.lineTo(x1 + 10, s.y);
+    }
+    ctx.lineTo(x1 + 10, bottom + 10);
+    ctx.lineTo(x0 - 10, bottom + 10);
+    ctx.closePath();
+    ctx.fill();
+  });
+
+  // textura de cada camada
+  const span = (i) => [s.y + SOIL[i].from, s.y + (SOIL[i + 1]?.from ?? depth)];
+  const area = (i) => {
+    const [a, b] = span(i);
+    return Math.max(0, Math.min(b, bottom) - a) * s.w;
+  };
+  // húmus: grãozinhos, raizinhas e de vez em quando uma minhoca
+  {
+    const [a] = span(0);
+    for (let i = 0; i < area(0) / 90; i++) {
+      ctx.fillStyle = rand() < 0.6 ? 'rgba(40,22,10,0.45)' : 'rgba(170,120,80,0.35)';
+      ctx.fillRect(x0 + rand() * s.w, a + 14 + rand() * 50, 1.6 + rand() * 1.6, 1.6);
+    }
+    for (let i = 0; i < s.w / 45; i++) {
+      let x = x0 + 8 + rand() * (s.w - 16);
+      let y = a + 12;
+      ctx.strokeStyle = `rgba(${rand() < 0.5 ? '232,200,150' : '70,40,18'},0.6)`;
+      ctx.lineWidth = 0.8 + rand() * 1.4;
+      ctx.beginPath();
+      ctx.moveTo(x, y);
+      for (let k = 0, n = 2 + Math.floor(rand() * 5); k < n; k++) {
+        const nx = x + (rand() - 0.5) * 14;
+        const ny = y + 6 + rand() * 9;
+        ctx.quadraticCurveTo(x + (rand() - 0.5) * 8, (y + ny) / 2, nx, ny);
+        x = nx;
+        y = ny;
+      }
+      ctx.stroke();
+    }
+    if (rand() < 0.7) {
+      const wx = x0 + 30 + rand() * (s.w - 60);
+      const wy = a + 34 + rand() * 18;
+      ctx.strokeStyle = '#e48a8a';
+      ctx.lineWidth = 3;
+      ctx.lineCap = 'round';
+      ctx.beginPath();
+      ctx.moveTo(wx, wy);
+      ctx.bezierCurveTo(wx + 5, wy - 5, wx + 9, wy + 5, wx + 15, wy);
+      ctx.stroke();
+      ctx.strokeStyle = 'rgba(255,255,255,0.4)';
+      ctx.lineWidth = 1;
+      ctx.stroke();
+    }
+  }
+  // argila: riscos de sedimento e rachadinhas
+  if (SOIL[1].from < depth) {
+    const [a, b] = span(1);
+    for (let i = 0; i < area(1) / 700; i++) {
+      const x = x0 + rand() * s.w;
+      const y = a + 10 + rand() * (Math.min(b, bottom) - a - 14);
+      const w = 10 + rand() * 30;
+      ctx.strokeStyle = rand() < 0.5 ? 'rgba(255,220,170,0.35)' : 'rgba(110,60,25,0.35)';
+      ctx.lineWidth = 1.4;
+      ctx.beginPath();
+      ctx.moveTo(x, y);
+      ctx.quadraticCurveTo(x + w / 2, y + (rand() - 0.5) * 3, x + w, y);
+      ctx.stroke();
+    }
+    for (let i = 0; i < s.w / 160; i++) {
+      let x = x0 + rand() * s.w;
+      let y = a + 6;
+      ctx.strokeStyle = 'rgba(80,45,20,0.55)';
+      ctx.lineWidth = 1.2;
+      ctx.beginPath();
+      ctx.moveTo(x, y);
+      for (let k = 0; k < 4; k++) {
+        x += (rand() - 0.5) * 10;
+        y += 5 + rand() * 7;
+        ctx.lineTo(x, y);
+      }
+      ctx.stroke();
+    }
+  }
+  // cascalho: bastante pedra de todo tipo, em grupinhos
+  if (SOIL[2].from < depth) {
+    const [a, b] = span(2);
+    const n = area(2) / 1400;
+    for (let i = 0; i < n; i++) {
+      const cx = x0 + 10 + rand() * (s.w - 20);
+      const cy = a + 12 + rand() * Math.max(4, Math.min(b, bottom) - a - 16);
+      cobble(ctx, cx, cy, 2.5 + rand() * 5, rand);
+      if (rand() < 0.4) cobble(ctx, cx + 6 + rand() * 5, cy + 2, 2 + rand() * 3, rand);
+    }
+  }
+  // pedras grandes espalhadas pelas camadas de cima
+  for (let i = 0; i < s.w / 110; i++) {
+    const y = s.y + 30 + rand() * Math.min(depth - 40, 220);
+    cobble(ctx, x0 + 14 + rand() * (s.w - 28), y, 6 + rand() * 7, rand);
+  }
+  // rocha do fundo: pedregulhos escuros e cristais brilhando (os cristais
+  // vão por último, por cima da sombra do fundo)
+  const crystals = [];
+  if (SOIL[3].from < depth) {
+    const [a] = span(3);
+    const deepH = Math.min(bottom, s.y + 600) - a;
+    for (let i = 0; i < (s.w * deepH) / 11000; i++) {
+      cobble(ctx, x0 + rand() * s.w, a + 14 + rand() * deepH, 7 + rand() * 13, rand, ['#6e5e52', '#9a887a', '#463a32']);
+    }
+    for (let i = 0; i < Math.max(1, s.w / 200); i++) {
+      crystals.push([x0 + 20 + rand() * (s.w - 40), a + 30 + rand() * Math.max(10, deepH - 50), BANNER_ORDER[Math.floor(rand() * 4)]]);
+    }
+  }
+
+  // linhas entre as camadas: sombra embaixo e luz em cima
+  lines.forEach((pts, i) => {
+    if (!pts || SOIL[i].from > depth) return;
+    ctx.lineWidth = 2.5;
+    ctx.strokeStyle = 'rgba(30,14,4,0.35)';
+    ctx.beginPath();
+    pts.forEach(([x, y], k) => (k ? ctx.lineTo(x, y + 1.5) : ctx.moveTo(x, y + 1.5)));
+    ctx.stroke();
+    ctx.lineWidth = 1.2;
+    ctx.strokeStyle = 'rgba(255,225,180,0.25)';
+    ctx.beginPath();
+    pts.forEach(([x, y], k) => (k ? ctx.lineTo(x, y - 1) : ctx.moveTo(x, y - 1)));
+    ctx.stroke();
+  });
+
+  // sombra embaixo da grama e volume (sol vindo da direita)
+  const ao = ctx.createLinearGradient(0, s.y + 6, 0, s.y + 50);
+  ao.addColorStop(0, 'rgba(25,10,2,0.5)');
+  ao.addColorStop(1, 'rgba(25,10,2,0)');
+  ctx.fillStyle = ao;
+  ctx.fillRect(x0, s.y + 6, s.w, 44);
+  const side = ctx.createLinearGradient(x0, 0, x0 + 60, 0);
+  side.addColorStop(0, 'rgba(20,8,0,0.4)');
+  side.addColorStop(1, 'rgba(20,8,0,0)');
+  ctx.fillStyle = side;
+  ctx.fillRect(x0, s.y, 60, depth);
+  const lit = ctx.createLinearGradient(x1 - 40, 0, x1, 0);
+  lit.addColorStop(0, 'rgba(255,220,170,0)');
+  lit.addColorStop(1, 'rgba(255,220,170,0.22)');
+  ctx.fillStyle = lit;
+  ctx.fillRect(x1 - 40, s.y, 40, depth);
+  // mais fundo = mais escuro
+  const deep = ctx.createLinearGradient(0, s.y + 160, 0, s.y + 420);
+  deep.addColorStop(0, 'rgba(10,4,0,0)');
+  deep.addColorStop(1, 'rgba(10,4,0,0.45)');
+  ctx.fillStyle = deep;
+  ctx.fillRect(x0, s.y + 160, s.w, Math.max(0, depth - 160));
+  for (const [x, y, el] of crystals) crystal(ctx, x, y, el, rand);
+}
+
+// Pedra arredondada meio enterrada: sombra de terra embaixo, luz em cima à
+// direita, uma rachadinha de vez em quando
+function cobble(ctx, x, y, r, rand, palette) {
+  const colors = palette ?? [
+    ['#a49a8c', '#c9c0b2', '#6f675c'],
+    ['#b39a7c', '#d9c4a6', '#7a6550'],
+    ['#9a7f74', '#c4aaa0', '#66504a'],
+    ['#8d9196', '#bcc0c4', '#5d6166'],
+  ][Math.floor(rand() * 4)];
+  const [base, light, dark] = Array.isArray(colors[0]) ? colors[0] : colors;
+  const rx = r * (1.1 + rand() * 0.4);
+  const ry = r * (0.75 + rand() * 0.2);
+  const rot = (rand() - 0.5) * 0.6;
+  // buraco/sombra na terra
+  ctx.fillStyle = 'rgba(30,14,4,0.45)';
+  ctx.beginPath();
+  ctx.ellipse(x - 1, y + 2, rx + 1.5, ry + 1.5, rot, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.fillStyle = base;
+  ctx.beginPath();
+  ctx.ellipse(x, y, rx, ry, rot, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.save();
+  ctx.clip();
+  ctx.fillStyle = dark;
+  ctx.beginPath();
+  ctx.ellipse(x - rx * 0.35, y + ry * 0.55, rx, ry * 0.7, rot, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.fillStyle = light;
+  ctx.beginPath();
+  ctx.ellipse(x + rx * 0.3, y - ry * 0.4, rx * 0.5, ry * 0.32, rot - 0.3, 0, Math.PI * 2);
+  ctx.fill();
+  if (r > 5 && rand() < 0.4) {
+    ctx.strokeStyle = dark;
+    ctx.lineWidth = 0.9;
+    ctx.beginPath();
+    ctx.moveTo(x - rx * 0.2, y - ry);
+    ctx.lineTo(x, y - ry * 0.2);
+    ctx.lineTo(x - rx * 0.3, y + ry * 0.4);
+    ctx.stroke();
+  }
+  ctx.restore();
+  ctx.strokeStyle = 'rgba(25,14,6,0.6)';
+  ctx.lineWidth = 1;
+  ctx.beginPath();
+  ctx.ellipse(x, y, rx, ry, rot, 0, Math.PI * 2);
+  ctx.stroke();
+}
+
+// Grupinho de cristais de um elemento, com brilho em volta
+function crystal(ctx, x, y, el, rand) {
+  const [color, light] = ELEMENT_COLORS[el];
+  ctx.save();
+  ctx.translate(x, y);
+  ctx.scale(1.5, 1.5);
+  ctx.translate(-x, -y);
+  const glow = ctx.createRadialGradient(x, y, 2, x, y, 26);
+  glow.addColorStop(0, light === '#ffffff' ? 'rgba(200,255,245,0.35)' : `${color}55`);
+  glow.addColorStop(1, 'rgba(0,0,0,0)');
+  ctx.fillStyle = glow;
+  ctx.fillRect(x - 26, y - 26, 52, 52);
+  for (const [dx, h, w, a] of [[-6, 14, 5, -0.4], [0, 20, 6, 0], [6, 12, 5, 0.45]]) {
+    ctx.save();
+    ctx.translate(x + dx, y + 6);
+    ctx.rotate(a);
+    ctx.beginPath();
+    ctx.moveTo(-w / 2, 0);
+    ctx.lineTo(-w / 2, -h * 0.7);
+    ctx.lineTo(0, -h);
+    ctx.lineTo(w / 2, -h * 0.7);
+    ctx.lineTo(w / 2, 0);
+    ctx.closePath();
+    ctx.fillStyle = color;
+    ctx.fill();
+    ctx.fillStyle = light;
+    ctx.globalAlpha = 0.75;
+    ctx.beginPath();
+    ctx.moveTo(0, 0);
+    ctx.lineTo(0, -h);
+    ctx.lineTo(w / 2, -h * 0.7);
+    ctx.lineTo(w / 2, 0);
+    ctx.closePath();
+    ctx.fill();
+    ctx.globalAlpha = 1;
+    ctx.strokeStyle = 'rgba(20,10,5,0.7)';
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.moveTo(-w / 2, 0);
+    ctx.lineTo(-w / 2, -h * 0.7);
+    ctx.lineTo(0, -h);
+    ctx.lineTo(w / 2, -h * 0.7);
+    ctx.lineTo(w / 2, 0);
+    ctx.stroke();
+    ctx.restore();
+  }
+  // brilhinho
+  ctx.fillStyle = '#ffffff';
+  ctx.beginPath();
+  ctx.moveTo(x + 3, y - 18);
+  ctx.lineTo(x + 4, y - 15);
+  ctx.lineTo(x + 7, y - 14);
+  ctx.lineTo(x + 4, y - 13);
+  ctx.lineTo(x + 3, y - 10);
+  ctx.lineTo(x + 2, y - 13);
+  ctx.lineTo(x - 1, y - 14);
+  ctx.lineTo(x + 2, y - 15);
+  ctx.closePath();
+  ctx.fill();
+  ctx.restore();
+}
+
+// Laterais com torrões de terra saindo um pouco para fora, e contorno
+// acompanhando os torrões
+function crumblySides(ctx, s, bottom, sides, rand) {
+  const end = Math.min(bottom, s.y + 900);
+  for (const [free, x, dir] of [[sides.left, s.x, -1], [sides.right, s.x + s.w, 1]]) {
+    const pts = [[x, s.y + 6]];
+    for (let y = s.y + 14; y < end; y += 10 + rand() * 14) {
+      const out = free ? rand() * 4.5 : 0;
+      pts.push([x + dir * out, y]);
+    }
+    pts.push([x, end]);
+    if (free) {
+      // torrões: cor da camada naquela altura
+      ctx.beginPath();
+      ctx.moveTo(x, s.y + 6);
+      for (let i = 1; i < pts.length; i++) {
+        const [px, py] = pts[i];
+        const [qx, qy] = pts[i - 1];
+        ctx.quadraticCurveTo(qx + dir * 2, (py + qy) / 2, px, py);
+      }
+      ctx.lineTo(x, end);
+      ctx.closePath();
+      const g = ctx.createLinearGradient(0, s.y, 0, s.y + 300);
+      g.addColorStop(0, '#6a4328');
+      g.addColorStop(0.3, '#a06b3b');
+      g.addColorStop(0.6, '#6b4a31');
+      g.addColorStop(1, '#2c1d14');
+      ctx.fillStyle = g;
+      ctx.fill();
+    }
+    ctx.strokeStyle = INK;
+    ctx.lineWidth = 2.5;
+    ctx.beginPath();
+    ctx.moveTo(pts[0][0], pts[0][1]);
+    for (let i = 1; i < pts.length; i++) {
+      const [px, py] = pts[i];
+      const [qx, qy] = pts[i - 1];
+      ctx.quadraticCurveTo(qx + dir * (free ? 2 : 0), (py + qy) / 2, px, py);
+    }
+    ctx.stroke();
+  }
+}
+
 // Bloco de terra em camadas com pedras, raízes e a grama em cima
 function block(ctx, s, rand, map) {
   const solids = map.solids;
@@ -794,83 +1167,26 @@ function block(ctx, s, rand, map) {
 
   if (floating) underside(ctx, s, rand);
 
+  const sides = exposedSides(s, solids);
   ctx.save();
   ctx.beginPath();
   ctx.rect(s.x, s.y, s.w, bottom - s.y);
   ctx.clip();
-  const g = ctx.createLinearGradient(0, s.y, 0, s.y + 300);
-  g.addColorStop(0, DIRT.top);
-  g.addColorStop(0.4, DIRT.mid);
-  g.addColorStop(1, DIRT.dark);
-  ctx.fillStyle = g;
-  ctx.fillRect(s.x, s.y, s.w, bottom - s.y);
-  // camadas onduladas
-  for (const [depth, th, color] of [[54, 14, DIRT.band], [118, 22, DIRT.band2], [196, 26, DIRT.deep]]) {
-    if (s.y + depth > bottom) break;
-    const phase = rand() * 10;
-    ctx.fillStyle = color;
-    ctx.globalAlpha = 0.55;
-    ctx.beginPath();
-    for (let x = s.x - 10; x <= s.x + s.w + 10; x += 10) ctx.lineTo(x, s.y + depth + Math.sin(x * 0.03 + phase) * 5);
-    for (let x = s.x + s.w + 10; x >= s.x - 10; x -= 10) ctx.lineTo(x, s.y + depth + th + Math.sin(x * 0.025 + phase + 2) * 6);
-    ctx.closePath();
-    ctx.fill();
-    ctx.globalAlpha = 1;
-  }
-  // pontinhos de terra
-  const visibleH = Math.min(320, bottom - s.y);
-  for (let i = 0; i < (s.w * visibleH) / 260; i++) {
-    ctx.fillStyle = rand() < 0.5 ? 'rgba(50,28,12,0.35)' : 'rgba(220,180,130,0.25)';
-    ctx.fillRect(s.x + rand() * s.w, s.y + 14 + rand() * visibleH, 2, 2);
-  }
-  // pedras enterradas
-  for (let i = 0; i < (s.w * visibleH) / 5200; i++) {
-    stone(ctx, s.x + 10 + rand() * (s.w - 20), s.y + 30 + rand() * (visibleH - 34), 3 + rand() * 8, rand);
-  }
-  // raízes saindo da grama
-  ctx.strokeStyle = 'rgba(60,36,16,0.7)';
-  for (let i = 0; i < s.w / 70; i++) {
-    let x = s.x + 10 + rand() * (s.w - 20);
-    let y = s.y + 12;
-    ctx.lineWidth = 2;
-    ctx.beginPath();
-    ctx.moveTo(x, y);
-    const len = 3 + Math.floor(rand() * 4);
-    for (let k = 0; k < len; k++) {
-      const nx = x + (rand() - 0.5) * 16;
-      const ny = y + 8 + rand() * 10;
-      ctx.quadraticCurveTo(x + (rand() - 0.5) * 10, (y + ny) / 2, nx, ny);
-      x = nx;
-      y = ny;
-    }
-    ctx.stroke();
-  }
-  // volume: lado esquerdo na sombra, borda direita iluminada
-  const side = ctx.createLinearGradient(s.x, 0, s.x + 50, 0);
-  side.addColorStop(0, 'rgba(20,8,0,0.35)');
-  side.addColorStop(1, 'rgba(20,8,0,0)');
-  ctx.fillStyle = side;
-  ctx.fillRect(s.x, s.y, 50, bottom - s.y);
-  ctx.fillStyle = 'rgba(255,215,160,0.2)';
-  ctx.fillRect(s.x + s.w - 4, s.y, 4, bottom - s.y);
+  soil(ctx, s, bottom, rand);
   ctx.restore();
+  crumblySides(ctx, s, bottom, sides, rand);
 
-  // contorno das laterais
-  ctx.strokeStyle = INK;
-  ctx.lineWidth = 2.5;
-  ctx.beginPath();
-  ctx.moveTo(s.x, bottom);
-  ctx.lineTo(s.x, s.y);
-  ctx.moveTo(s.x + s.w, s.y);
-  ctx.lineTo(s.x + s.w, bottom);
+  // contorno (embaixo só quando o bloco termina na tela)
   if (supported || floating) {
+    ctx.strokeStyle = INK;
+    ctx.lineWidth = 2.5;
+    ctx.beginPath();
     ctx.moveTo(s.x, bottom);
     ctx.lineTo(s.x + s.w, bottom);
+    ctx.stroke();
   }
-  ctx.stroke();
 
   // trepadeiras nas paredes livres
-  const sides = exposedSides(s, solids);
   const wallH = Math.min(bottom, 760) - s.y;
   for (const [free, x, dir] of [[sides.left, s.x, -1], [sides.right, s.x + s.w, 1]]) {
     if (!free || wallH < 60) continue;
