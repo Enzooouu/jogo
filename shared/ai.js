@@ -157,7 +157,9 @@ export class BotController {
     } else {
       const profile = weaponProfile(me.weapon?.id ?? null, me.element);
       const ranged = profile.kind === 'ranged';
-      const reach = ranged ? 520 : profile.reach + me.w * 0.4;
+      // a lança avança enquanto ataca: alcança mais longe (no chão)
+      const lunge = profile.lunge && me.onGround ? profile.lunge.speed * profile.lunge.time * 0.8 : 0;
+      const reach = ranged ? 520 : profile.reach + me.w * 0.4 + lunge;
       const minRange = ranged ? 160 : 0;
       const aligned = Math.abs(dy) < (ranged ? 36 : 50);
       const facingIt = Math.sign(dx) === me.facing || Math.abs(dx) < 4;

@@ -3,7 +3,7 @@
 // aqui altera a simulação.
 
 import { ELEMENTS } from '/shared/elements.js';
-import { drawSwordArt, drawStaffArt, drawSlash } from './weapons-art.js';
+import { drawSwordArt, drawStaffArt, drawSpearArt, drawSlash } from './weapons-art.js';
 import { lookOf, aura, scarf, limbStroke, torso, feet, fist, pauldron, head, shade, rgba as rgbaHex } from './look.js';
 import { drawSkin } from './mannequin.js';
 
@@ -86,6 +86,18 @@ function computePose(p, vis, time) {
       pose.armF = [a, a];
       pose.weaponAngle = a;
       pose.lean = 0.2;
+    } else if (p.attack.weapon === 'lanca') {
+      // Lança: puxa para trás e estoca reto para a frente com as duas mãos
+      const thrust = active ? 1 : u / Math.max(0.01, p.attack.startup / p.attack.duration);
+      pose.armF = [1.57, 1.57];
+      pose.armB = [1.2, 1.5];
+      pose.weaponAngle = 1.57;
+      pose.lean = active ? 0.42 : -0.12 * thrust;
+      pose.thrust = active ? 6 : -6 * Math.min(1, thrust);
+      if (active) {
+        pose.legF = [0.9, 0.3];
+        pose.legB = [-0.7, 0.2];
+      }
     } else if (p.attack.weapon === 'cajado') {
       pose.armF = [1.57, 1.57];
       pose.weaponAngle = 1.57;
@@ -155,8 +167,9 @@ export function drawFighter(ctx, p, x, y, vis, time, { teamColor, isLocal, showN
   // Arma (atrás do braço da frente)
   if (p.weapon || (p.attack && p.attack.weapon)) {
     const weaponId = p.attack?.weapon ?? p.weapon?.id;
-    const angle = pose.weaponAngle ?? (weaponId === 'cajado' ? 2.9 : pose.armF[1] + 0.6);
-    drawHeldWeapon(ctx, weaponId, p.element, armF.end, angle, time);
+    const angle = pose.weaponAngle ?? (weaponId === 'cajado' ? 2.9 : weaponId === 'lanca' ? 2.55 : pose.armF[1] + 0.6);
+    const hand = pose.thrust ? { x: armF.end.x + pose.thrust, y: armF.end.y } : armF.end;
+    drawHeldWeapon(ctx, weaponId, p.element, hand, angle, time);
   }
   limbStroke(ctx, [shoulder, armF.mid, armF.end], 6 * k.thick, k.body, k.bodyHi);
   fist(ctx, p.element, k, armF.end, time);
@@ -182,6 +195,7 @@ export function drawHeldWeapon(ctx, weaponId, elementId, hand, angle, time) {
   ctx.rotate(-angle + Math.PI);
   if (weaponId === 'espada') drawSwordArt(ctx, elementId, time);
   else if (weaponId === 'cajado') drawStaffArt(ctx, elementId, time);
+  else if (weaponId === 'lanca') drawSpearArt(ctx, elementId, time);
   ctx.restore();
 }
 

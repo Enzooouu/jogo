@@ -987,3 +987,58 @@ test('um aperto de dash gasta só um dos 2 dashes do Ar', () => {
   run(g, 6, { 1: makeInput({ dash: true, right: true }) });
   assert.equal(p.airDashes, 1);
 });
+
+// ---------------------------------------------------------------- lança
+
+function spearGame(element = 'fogo') {
+  const g = newGame([element, element === 'agua' ? 'terra' : 'agua'], { mapId: 'treino-campo', items: false });
+  const [a, b] = g.players;
+  place(a, 400, 560);
+  a.facing = 1;
+  a.weapon = { id: 'lanca', uses: WEAPONS.lanca.uses };
+  return { g, a, b };
+}
+
+test('lança: avança para a frente quando ataca e erra', () => {
+  const { g, a, b } = spearGame();
+  place(b, 1150, 560);
+  const x0 = a.x;
+  run(g, 40, (i) => ({ 1: makeInput({ attack: i === 0 }) }));
+  assert.ok(a.x - x0 > 120, `andou só ${Math.round(a.x - x0)}px`);
+  assert.equal(a.weapon.uses, WEAPONS.lanca.uses - 1);
+});
+
+test('lança: para em quem acertar e acerta só uma vez por golpe', () => {
+  const { g, a, b } = spearGame();
+  place(b, 540, 560);
+  let hits = 0;
+  const x0 = a.x;
+  for (let i = 0; i < 40; i++) {
+    g.step({ 1: makeInput({ attack: i === 0 }) });
+    hits += g.drainEvents().filter((e) => e.type === 'hit' && e.attacker === 1).length;
+  }
+  assert.equal(hits, 1);
+  assert.ok(b.damage > 0);
+  assert.ok(a.x - x0 < 110, 'parou no inimigo em vez de passar direto');
+});
+
+test('lança: no ar avança só 1 vez até pisar no chão', () => {
+  const { g, a } = spearGame('ar');
+  // caindo no vazio, longe de qualquer chão
+  a.x = -300;
+  a.y = -400;
+  a.onGround = false;
+  let lunges = 0;
+  for (let i = 0; i < 70; i++) {
+    g.step({ 1: makeInput({ attack: i % 20 === 0 }) });
+    lunges += g.drainEvents().filter((e) => e.type === 'lunge').length;
+  }
+  assert.equal(lunges, 1);
+});
+
+test('lança: cada elemento tem a sua (nome e efeito)', () => {
+  assert.equal(weaponProfile('lanca', 'fogo').status.type, 'queimadura');
+  assert.equal(weaponProfile('lanca', 'agua').name, 'Tridente da Maré');
+  assert.equal(weaponProfile('lanca', 'terra').status.type, 'atordoado');
+  assert.ok(weaponProfile('lanca', 'ar').lunge.speed > weaponProfile('lanca', 'terra').lunge.speed, 'a do ar é mais rápida');
+});

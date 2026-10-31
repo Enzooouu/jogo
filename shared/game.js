@@ -143,7 +143,7 @@ export class Game {
         id: p.id, x: p.x, y: p.y, vx: p.vx, vy: p.vy, facing: p.facing,
         damage: p.damage, lives: p.lives, state: p.state, invuln: p.invuln,
         hitstun: p.hitstun, onGround: p.onGround, onWall: p.onWall, windVx: p.windVx,
-        dashTime: p.dashTime, airDashes: p.airDashes,
+        dashTime: p.dashTime, airDashes: p.airDashes, lungeTime: p.lungeTime,
         weapon: p.weapon ? { ...p.weapon } : null,
         attack: p.attack ? { ...p.attack } : null,
         status: structuredClone(p.status),
@@ -309,10 +309,11 @@ export class Game {
     p.spikeTimer = Math.max(0, p.spikeTimer - DT);
     p.dashCooldown = Math.max(0, p.dashCooldown - DT);
     this.updateStatus(p);
-    // Modo ADM (testes): pulos e dashes no ar sem limite
+    // Modo ADM (testes): pulos, dashes e investidas no ar sem limite
     if (p.admin) {
       p.jumpsLeft = PHYS.maxJumps;
       p.airDashes = statsOf(p).airDashes;
+      p.airLunges = 1;
     }
 
     const control = p.hitstun <= 0 && !p.status.atordoado;
@@ -344,6 +345,7 @@ export class Game {
       if (grabbing && p.onWall !== dir) {
         p.wallHang = PHYS.wallHangTime;
         p.airDashes = statsOf(p).airDashes;
+        p.airLunges = 1;
         this.emit('wallGrab', { id: p.id, side: dir, x: p.x + (dir > 0 ? p.w : 0), y: p.y + 20 });
       }
       p.onWall = grabbing ? dir : 0;
@@ -390,7 +392,16 @@ export class Game {
       if (p.attack && p.attack.t >= p.attack.duration) p.attack = null;
     }
 
-    if (p.dashTime > 0) {
+    if (p.lungeTime > 0) {
+      // Investida da lança: reto para a frente, sem gravidade
+      p.lungeTime -= DT;
+      p.vx = p.lungeVx;
+      p.vy = 0;
+      if (p.lungeTime <= 0) {
+        p.lungeTime = 0;
+        p.vx = p.lungeVx * 0.35;
+      }
+    } else if (p.dashTime > 0) {
       // Dash: velocidade fixa na direção escolhida, sem gravidade
       p.dashTime -= DT;
       p.vx = p.dashVx;
@@ -418,11 +429,13 @@ export class Game {
 
     this.applyWind(p);
     this.moveAndCollide(p);
+    if (p.lungeTime > 0 && p.attack?.fired) this.lungeHits(p, weaponProfile(p.attack.weapon, p.element));
 
     if (p.onGround) {
       if (!wasOnGround) this.emit('land', { id: p.id, x: p.x + p.w / 2, y: p.y + p.h });
       p.jumpsLeft = PHYS.maxJumps;
       p.airDashes = statsOf(p).airDashes;
+      p.airLunges = 1;
     } else if (wasOnGround && !jumped) {
       // Saiu do chão sem pular (andou para fora da borda): perde o pulo do chão.
       p.jumpsLeft = Math.min(p.jumpsLeft, PHYS.maxJumps - 1);
@@ -701,6 +714,7 @@ export class Game {
     p.inHazard = null;
     p.onWall = 0;
     p.dashTime = 0;
+    p.lungeTime = 0;
 
     if (p.lives > 0) {
       p.state = 'respawning';
@@ -724,7 +738,9 @@ export class Game {
     p.invuln = this.practice ? 0.6 : PLAYER.invulnTime;
     p.jumpsLeft = PHYS.maxJumps;
     p.airDashes = statsOf(p).airDashes;
+    p.airLunges = 1;
     p.dashTime = 0;
+    p.lungeTime = 0;
     p.cooldown = 0;
     p.dropTimer = 0;
     p.onWall = 0;
@@ -753,6 +769,7 @@ export class Game {
     if (!p.onGround) p.airDashes--;
     p.onWall = 0;
     p.attack = null;
+    p.lungeTime = 0;
     this.emit('dash', { id: p.id, x: p.x + p.w / 2, y: p.y + p.h / 2, dx: dx / len, dy: dy / len });
   }
 
@@ -768,7 +785,20 @@ export class Game {
     const weaponId = p.attack.weapon;
     const profile = weaponProfile(weaponId, p.element);
 
-    if (profile.kind === 'melee') {
+    if (profile.kind === 'melee' && profile.lunge) {
+      // Lança: avança com a ponta para a frente (no ar, só 1 vez por pulo)
+      p.attack.hitIds = [];
+      if (p.onGround || p.airLunges > 0) {
+        if (!p.onGround) p.airLunges--;
+        p.lungeTime = profile.lunge.time;
+        p.lungeVx = p.facing * profile.lunge.speed;
+        p.attack.duration = Math.max(p.attack.duration, p.attack.startup + profile.lunge.time + 0.08);
+        p.dashTime = 0;
+        p.onWall = 0;
+        this.emit('lunge', { id: p.id, x: p.x + p.w / 2, y: p.y + p.h * 0.45, dir: p.facing, element: p.element });
+      }
+      this.lungeHits(p, profile);
+    } else if (profile.kind === 'melee') {
       const box = {
         x: p.facing > 0 ? p.x + p.w - 6 : p.x + 6 - profile.reach,
         y: p.y + p.h * 0.42 - profile.height / 2,
@@ -806,6 +836,27 @@ export class Game {
       if (p.weapon.uses <= 0) {
         this.emit('weaponBreak', { id: p.id, weapon: p.weapon.id, x: p.x + p.w / 2, y: p.y + 20 });
         p.weapon = null;
+      }
+    }
+  }
+
+  // Ponta da lança: acerta quem estiver na frente (cada um uma vez por golpe);
+  // acertou alguém, a investida para ali
+  lungeHits(p, profile) {
+    const box = {
+      x: p.facing > 0 ? p.x + p.w - 4 : p.x + 4 - profile.reach,
+      y: p.y + p.h * 0.45 - profile.height / 2,
+      w: profile.reach,
+      h: profile.height,
+    };
+    p.attack.box = box;
+    for (const t of this.players) {
+      if (p.attack.hitIds.includes(t.id) || !this.canHit(p, t) || !rectsOverlap(box, t)) continue;
+      p.attack.hitIds.push(t.id);
+      this.applyHit(p, t, profile, p.facing);
+      if (p.lungeTime > 0) {
+        p.lungeTime = 0;
+        p.vx = p.lungeVx * 0.15;
       }
     }
   }
@@ -854,8 +905,9 @@ export class Game {
     target.lastHitBy = attacker.id;
     target.lastHitTime = this.time;
     target.jumpsLeft = Math.max(target.jumpsLeft, 1);
-    // Levar golpe interrompe o dash, mas não devolve dashes gastos.
+    // Levar golpe interrompe o dash e a investida, mas não devolve o que já gastou.
     target.dashTime = 0;
+    target.lungeTime = 0;
     this.applyStatus(target, profile.status, attacker.id);
 
     this.emit('hit', {
@@ -1149,6 +1201,9 @@ function createPlayer(cfg, index, lives) {
     airDashes: ELEMENTS[cfg.element]?.stats?.airDashes ?? PHYS.airDashes,
     wallHang: 0,
     wallJumpLock: 0,
+    lungeTime: 0,           // investida da lança acontecendo
+    lungeVx: 0,
+    airLunges: 1,           // investidas no ar até pisar no chão
     damage: 0,
     lives,
     state: 'alive',

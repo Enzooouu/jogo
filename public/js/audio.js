@@ -88,6 +88,11 @@ export function playEvents(events, localId) {
       case 'jump':
         if (e.id === localId) tone({ freq: e.double ? 520 : 380, to: e.double ? 900 : 640, dur: 0.1, type: 'triangle', vol: 0.15 });
         break;
+      case 'lunge':
+        // zuuum da investida
+        noise({ dur: 0.16, vol: 0.18, freq: 2400 });
+        tone({ freq: 260, to: 720, dur: 0.14, type: 'triangle', vol: 0.1 });
+        break;
       case 'attack':
         noise({ dur: 0.07, vol: 0.12, freq: 3000 });
         break;

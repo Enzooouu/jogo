@@ -8,9 +8,9 @@ import { Particles } from './particles.js';
 import { Camera } from './camera.js';
 import { startCelebration, updateCelebration, drawCelebration, CELEBRATION_TIME } from './celebrations.js';
 import { drawFighter, hexA } from './fighter.js';
-import { drawSwordArt, drawStaffArt, drawShot } from './weapons-art.js';
+import { drawSwordArt, drawStaffArt, drawSpearArt, drawShot } from './weapons-art.js';
 import { currentBindings, keyLabel } from '../input/bindings.js';
-import { drawUniversalSword, drawUniversalStaff, prismColor } from './universal-art.js';
+import { drawUniversalSword, drawUniversalStaff, drawUniversalSpear, prismColor } from './universal-art.js';
 
 export const VIEW_W = 1280;
 export const VIEW_H = 720;
@@ -101,6 +101,14 @@ export class Renderer {
           const el = ELEMENTS[p.element];
           P.add({ type: 'ring', x: e.x, y: e.y, size: 8, grow: 160, life: 0.22, color: p.skin ? '#ffffff' : el.light });
           P.burst(e.x, e.y, { type: 'spark', count: 8, speed: 260, angle: Math.atan2(-e.dy, -e.dx), spread: 0.9, life: 0.3, size: 2.2, color: p.skin ? '#ffffff' : el.light, drag: 3 });
+          break;
+        }
+        case 'lunge': {
+          // investida da lança: anel e faíscas saindo para trás
+          const p = g.playerById(e.id);
+          const el = ELEMENTS[p.element];
+          P.add({ type: 'ring', x: e.x - e.dir * 10, y: e.y, size: 6, grow: 140, life: 0.2, color: el.light });
+          P.burst(e.x - e.dir * 14, e.y, { type: 'spark', count: 10, speed: 320, angle: e.dir > 0 ? Math.PI : 0, spread: 0.5, life: 0.3, size: 2.2, color: el.light, drag: 3 });
           break;
         }
         case 'wallGrab':
@@ -285,7 +293,7 @@ export class Renderer {
       if (v.hurt > 0) v.hurt -= dt;
       // Rastro de "fantasmas" durante o dash
       v.trail = v.trail ?? [];
-      if (p.dashTime > 0 && p.state === 'alive') v.trail.push({ x: p.x, y: p.y, life: 0.18 });
+      if ((p.dashTime > 0 || p.lungeTime > 0) && p.state === 'alive') v.trail.push({ x: p.x, y: p.y, life: 0.18 });
       for (const t of v.trail) t.life -= dt;
       v.trail = v.trail.filter((t) => t.life > 0).slice(-6);
     }
@@ -380,6 +388,10 @@ export class Renderer {
       if (p.dashTime > 0) {
         // rastro do dash: "fantasmas" do lutador
         P.add({ x: cx + (Math.random() - 0.5) * 10, y: p.y + 10 + Math.random() * 50, vx: -p.vx * 0.1, vy: -p.vy * 0.1, life: 0.3, size: 4, grow: -10, color: p.skin ? '#e8e8f0' : ELEMENTS[p.element].light });
+      }
+      if (p.lungeTime > 0) {
+        // riscos de velocidade atrás da investida
+        P.add({ x: cx - Math.sign(p.vx) * 20, y: p.y + 14 + Math.random() * 40, vx: -p.vx * 0.25, vy: 0, life: 0.18, size: 2, grow: -4, color: 'rgba(255,255,255,0.8)' });
       }
       if (p.onWall && p.vy > 40 && chance(25)) {
         P.add({ x: p.onWall > 0 ? p.x + p.w : p.x, y: p.y + 14, vx: -p.onWall * 30, vy: -20, life: 0.35, size: 2.2, color: 'rgba(220,200,210,0.75)', gravity: 150 });
@@ -704,6 +716,7 @@ export class Renderer {
       ctx.translate(0, 20);
     }
     if (item.weapon === 'espada') drawUniversalSword(ctx, t);
+    else if (item.weapon === 'lanca') drawUniversalSpear(ctx, t);
     else drawUniversalStaff(ctx, t);
     ctx.restore();
   }
@@ -734,7 +747,13 @@ export class Renderer {
   drawProjectiles(ctx) {
     for (const pr of this.game.projectiles) {
       ctx.save();
-      if (pr.kind === 'arremesso') {
+      if (pr.kind === 'arremesso' && pr.weapon === 'lanca') {
+        // lança arremessada voa de ponta, apontando para onde vai
+        ctx.translate(pr.x, pr.y);
+        ctx.rotate(Math.atan2(pr.vy, pr.vx) + Math.PI / 2);
+        ctx.translate(0, 30);
+        drawSpearArt(ctx, pr.element, this.time);
+      } else if (pr.kind === 'arremesso') {
         ctx.translate(pr.x, pr.y);
         ctx.rotate(this.time * 22 * Math.sign(pr.vx || 1));
         ctx.translate(0, 18);

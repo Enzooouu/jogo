@@ -1,4 +1,4 @@
-// Armas "universais": como a espada e o cajado ficam quando estão caídos no
+// Armas "universais": como a espada, o cajado e a lança ficam quando estão caídos no
 // chão, sem ser de time nenhum. Têm um pouco de cada elemento (pedrinhas e
 // fios nas quatro cores) e uma cor de brilho que vai mudando devagar.
 // Convenção igual à de weapons-art.js: origem na mão, a arma aponta para -y.
@@ -171,5 +171,49 @@ export function drawUniversalStaff(ctx, t) {
     ctx.arc(Math.cos(a) * 13, cy + Math.sin(a) * 5, 1.6, 0, Math.PI * 2);
     ctx.fill();
   });
+  ctx.restore();
+}
+
+// Lança: haste roxa escura com anéis dourados e as quatro pedrinhas, lâmina
+// prateada com filete na cor que vai mudando
+export function drawUniversalSpear(ctx, t) {
+  ctx.save();
+  ctx.lineJoin = 'round';
+  ctx.lineCap = 'round';
+  const glow = prismColor(t);
+  ctx.strokeStyle = INK;
+  ctx.lineWidth = 6.5;
+  ctx.beginPath(); ctx.moveTo(0, 22); ctx.lineTo(0, -44); ctx.stroke();
+  ctx.strokeStyle = '#3b2f5c';
+  ctx.lineWidth = 3.5;
+  ctx.stroke();
+  ctx.fillStyle = '#e8c76a';
+  ctx.strokeStyle = INK;
+  ctx.lineWidth = 1.2;
+  for (const y of [-40, 2]) {
+    ctx.beginPath(); ctx.rect(-3.2, y, 6.4, 3); ctx.fill(); ctx.stroke();
+  }
+  ELEMENT_COLORS.forEach((c, i) => {
+    ctx.fillStyle = c;
+    ctx.beginPath(); ctx.arc(0, -34 + i * 5, 1.5, 0, Math.PI * 2); ctx.fill();
+  });
+  ctx.fillStyle = '#e8c76a';
+  ctx.beginPath(); ctx.moveTo(-2.6, 20); ctx.lineTo(0, 25); ctx.lineTo(2.6, 20); ctx.closePath(); ctx.fill(); ctx.stroke();
+  // lâmina
+  ctx.beginPath();
+  ctx.moveTo(0, -44); ctx.lineTo(-5, -52); ctx.lineTo(-3.4, -66); ctx.lineTo(0, -78); ctx.lineTo(3.4, -66); ctx.lineTo(5, -52);
+  ctx.closePath();
+  const g = ctx.createLinearGradient(-5, 0, 5, 0);
+  g.addColorStop(0, '#ffffff');
+  g.addColorStop(0.5, '#dfe6f2');
+  g.addColorStop(1, '#9aa6bd');
+  ctx.fillStyle = g;
+  ctx.fill();
+  ctx.strokeStyle = INK;
+  ctx.lineWidth = 2;
+  ctx.stroke();
+  ctx.strokeStyle = glow;
+  ctx.lineWidth = 1.4;
+  ctx.beginPath(); ctx.moveTo(0, -48); ctx.lineTo(0, -74); ctx.stroke();
   ctx.restore();
 }

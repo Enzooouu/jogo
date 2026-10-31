@@ -6,6 +6,8 @@
 //   encharcado: { duration, slow }       reduz a velocidade (0.4 = 40% mais lento)
 //   atordoado:  { duration }             fica sem controle por um instante
 // Projétil com `pull` puxa os inimigos próximos: { radius, strength }
+// Arma com `lunge` faz o jogador avançar enquanto ataca: { speed, time }
+// (no ar avança só 1 vez até pisar no chão de novo)
 
 export const UNARMED = {
   id: 'soco', name: 'Soco', kind: 'melee',
@@ -80,6 +82,42 @@ export const WEAPONS = {
   },
 };
 
+// Lança: investida para a frente com a ponta. Acerta cada inimigo uma vez
+// e para quando acerta alguém.
+WEAPONS.lanca = {
+  id: 'lanca', name: 'Lança', kind: 'melee', uses: 10,
+  cooldown: 0.62, startup: 0.09, duration: 0.34,
+  reach: 64, height: 26,
+  lunge: { speed: 860, time: 0.17 },
+  damage: 11, kbBase: 330, kbScale: 3.6, angle: 0.45,
+  throwDamage: 13,
+  byElement: {
+    fogo: {
+      name: 'Lança Ígnea',
+      damage: 12,
+      status: { type: 'queimadura', duration: 2.5, dps: 4 },
+    },
+    agua: {
+      name: 'Tridente da Maré',
+      kbBase: 350, kbScale: 3.9, height: 32,
+      status: { type: 'encharcado', duration: 2.2, slow: 0.35 },
+    },
+    terra: {
+      name: 'Lança de Rocha',
+      damage: 14, cooldown: 0.75, startup: 0.13, duration: 0.38,
+      lunge: { speed: 760, time: 0.17 },
+      kbBase: 350, kbScale: 3.7,
+      status: { type: 'atordoado', duration: 0.5 },
+    },
+    ar: {
+      name: 'Lança do Vento',
+      damage: 8, cooldown: 0.5, startup: 0.07, duration: 0.3,
+      lunge: { speed: 1050, time: 0.17 },
+      kbBase: 330, kbScale: 3.8,
+    },
+  },
+};
+
 export const WEAPON_IDS = Object.keys(WEAPONS);
 
 // Junta os atributos base da arma com as mudanças do elemento.
@@ -91,6 +129,7 @@ export function weaponProfile(weaponId, elementId) {
   if (base.projectile || mod.projectile) {
     profile.projectile = { ...base.projectile, ...mod.projectile };
   }
+  if (base.lunge || mod.lunge) profile.lunge = { ...base.lunge, ...mod.lunge };
   delete profile.byElement;
   return profile;
 }
