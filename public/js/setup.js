@@ -7,6 +7,7 @@ const BOT_NAMES = {
   agua: ['Maré', 'Gota', 'Onda', 'Correnteza', 'Garoa', 'Orvalho', 'Riacho', 'Chuvisco'],
   terra: ['Rocha', 'Barro', 'Cascalho', 'Pedregulho'],
   ar: ['Brisa', 'Rajada', 'Sopro', 'Ventania'],
+  mortal: ['Zé', 'Fulano', 'Mané', 'Anônimo', 'Sujeito', 'Cidadão', 'Joãozinho', 'Ninguém'],
 };
 
 /**

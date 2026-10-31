@@ -5,6 +5,7 @@
 //   jump   = multiplicador da força do pulo
 //   weight = quanto mais pesado, menos voa ao apanhar (empurrão / weight)
 //   airDashes = quantos dashes no ar até pisar no chão (padrão 1)
+//   damage = multiplicador do dano dos golpes (padrão 1)
 
 export const ELEMENTS = {
   fogo: {
@@ -31,6 +32,14 @@ export const ELEMENTS = {
     description: 'O vento não o empurra. Rápido, pula alto e tem 2 dashes no ar.',
     stats: { speed: 1.15, jump: 1.1, weight: 0.93, airDashes: 2 },
   },
+  // Sem elemento nenhum: sofre com todos os perigos e usa as armas padrão
+  // (sem efeito), mas bate mais forte. Visual: o manequim preto do tutorial.
+  mortal: {
+    id: 'mortal', name: 'Mortal', enabled: true,
+    color: '#4a4658', light: '#e8e8f2', dark: '#141218',
+    description: 'Sem poder nenhum: morre na lava e na água e o vento empurra. Em troca, bate 25% mais forte.',
+    stats: { speed: 1, jump: 1, weight: 1, damage: 1.25 },
+  },
 };
 
 export const HAZARDS = {
@@ -51,6 +60,7 @@ export const HAZARD_REACTION = {
   agua: { agua: 'imune', lava: 'morre', espinhos: 'dano', vento: 'empurra' },
   terra: { espinhos: 'imune', lava: 'morre', agua: 'morre', vento: 'empurra' },
   ar: { vento: 'imune', lava: 'morre', agua: 'morre', espinhos: 'dano' },
+  mortal: { lava: 'morre', agua: 'morre', espinhos: 'dano', vento: 'empurra' },
 };
 
 export function hazardReaction(elementId, hazardId) {

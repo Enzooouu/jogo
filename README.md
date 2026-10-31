@@ -78,6 +78,7 @@ Dá para trocar todas essas teclas (menos o `Esc`) em **Controles**, no menu ini
 | Água | Água | Lava | Espinhos | equilibrado; armas deixam lento (no chão) |
 | Terra | Espinhos | Lava, Água | — | mais lento e pesado (voa menos, vento empurra metade), não fica atordoado; armas atordoam |
 | Ar | Vento | Lava, Água | Espinhos | mais rápido e pula mais alto; tornado puxa os inimigos |
+| Mortal | — | Lava, Água | Espinhos | sem poder nenhum (o vento empurra inteiro) e armas padrão sem efeito, mas **bate 25% mais forte**; visual do manequim preto; vitória: **Soco Final** (um punho gigante racha a tela como vidro) |
 
 - **Espinhos** (em cima da plataforma do meio) não matam: somam 6% de dano por segundo.
 - **Vento**: rajadas aparecem em lugares aleatórios (com 1 s de aviso piscando) e
@@ -93,13 +94,14 @@ areia** atordoa.
 a caixa bate no chão ela se quebra e a arma fica caída no chão: encoste para pegar.
 O efeito muda com o seu elemento.
 Se você arremessar a arma e ela não acertar ninguém (nem cair para fora do mapa,
-na lava ou na água), ela fica no chão como uma espada ou cajado universal, sem
+na lava ou na água), ela fica no chão como uma espada, cajado ou lança universal, sem
 time, e quem pegar recebe ela com as mesmas cargas que tinha:
 
-| Arma | Fogo | Água | Terra | Ar |
-| --- | --- | --- | --- | --- |
-| Espada | Lâmina Flamejante: queima | Lâmina da Maré: empurra mais e deixa lento | Espadão de Pedra: dano alto, atordoa | Lâmina do Vento: rápida e longa |
-| Cajado | Bola de Fogo: explode e queima | Jato d'Água: atravessa e empurra | Pedrada: arco, atordoa | Tornado: lento, atravessa e puxa |
+| Arma | Fogo | Água | Terra | Ar | Mortal |
+| --- | --- | --- | --- | --- | --- |
+| Espada | Lâmina Flamejante: queima | Lâmina da Maré: empurra mais e deixa lento | Espadão de Pedra: dano alto, atordoa | Lâmina do Vento: rápida e longa | Espada: sem efeito |
+| Cajado | Bola de Fogo: explode e queima | Jato d'Água: atravessa e empurra | Pedrada: arco, atordoa | Tornado: lento, atravessa e puxa | Cajado: esfera de força, sem efeito |
+| Lança (investida para a frente; no ar 1 vez por pulo) | Lança Ígnea: queima | Tridente da Maré: deixa lento | Lança de Rocha: forte, atordoa | Lança do Vento: investida mais longa | Lança: sem efeito |
 
 **Mapas:** na tela antes da luta (Versus) escolha **Caldeira** ou **Pico dos Ventos**
 (ilhas no céu, plataformas penduradas em balões que balançam em arco quando

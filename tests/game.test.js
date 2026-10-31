@@ -1042,3 +1042,53 @@ test('lança: cada elemento tem a sua (nome e efeito)', () => {
   assert.equal(weaponProfile('lanca', 'terra').status.type, 'atordoado');
   assert.ok(weaponProfile('lanca', 'ar').lunge.speed > weaponProfile('lanca', 'terra').lunge.speed, 'a do ar é mais rápida');
 });
+
+// ---------------------------------------------------------------- mortal
+
+test('Mortal: bate 25% mais forte que os outros com a mesma arma', () => {
+  const hit = (element) => {
+    const g = newGame([element, element === 'agua' ? 'terra' : 'agua'], { mapId: 'treino-campo', items: false });
+    const [a, b] = g.players;
+    place(a, 400, 560);
+    place(b, 440, 560);
+    a.facing = 1;
+    a.weapon = { id: 'espada', uses: 5 };
+    run(g, 20, (i) => ({ 1: makeInput({ attack: i === 0 }) }));
+    return b.damage;
+  };
+  const normal = hit('agua');
+  const mortal = hit('mortal');
+  assert.ok(Math.abs(mortal / normal - 1.25) < 0.01, `mortal ${mortal} x normal ${normal}`);
+});
+
+test('Mortal: morre na lava e na água, espinhos machucam e o vento empurra', () => {
+  assert.equal(hazardReaction('mortal', 'lava'), 'morre');
+  assert.equal(hazardReaction('mortal', 'agua'), 'morre');
+  assert.equal(hazardReaction('mortal', 'espinhos'), 'dano');
+  assert.equal(hazardReaction('mortal', 'vento'), 'empurra');
+});
+
+test('Mortal: usa as armas padrão, sem efeito de elemento', () => {
+  for (const id of Object.keys(WEAPONS)) {
+    const p = weaponProfile(id, 'mortal');
+    assert.equal(p.status, undefined, id);
+    assert.equal(p.name, WEAPONS[id].name, id);
+  }
+});
+
+test('Mortal: tiro sem elemento não se combina com outros tiros', () => {
+  const g = newGame(['mortal', 'fogo'], { items: false });
+  const [a, b] = g.players;
+  place(a, 300, 540);
+  place(b, 700, 540);
+  a.facing = 1;
+  b.facing = -1;
+  a.weapon = { id: 'cajado', uses: 5 };
+  b.weapon = { id: 'cajado', uses: 5 };
+  let combos = 0;
+  for (let i = 0; i < 40; i++) {
+    g.step({ 1: makeInput({ attack: i === 0 }), 2: makeInput({ attack: i === 0 }) });
+    combos += g.drainEvents().filter((e) => e.type === 'combo').length;
+  }
+  assert.equal(combos, 0);
+});

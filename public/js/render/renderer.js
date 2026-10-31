@@ -168,6 +168,8 @@ export class Renderer {
           } else if (e.element === 'terra') {
             P.burst(e.x, e.y, { count: 6, speed: 140, life: 0.6, size: 7, grow: 16, color: 'rgba(170,140,100,0.45)', drag: 2 });
             P.burst(e.x, e.y, { count: 5, speed: 220, angle: -Math.PI / 2, spread: 2.2, life: 0.5, size: 2.4, color: '#7a5a3a', gravity: 900 });
+          } else if (e.element === 'mortal') {
+            P.burst(e.x, e.y, { type: 'spark', count: 9, speed: 300, angle: dir > 0 ? 0 : Math.PI, spread: 1, life: 0.28, size: 2, color: '#ffffff', drag: 3 });
           } else {
             P.add({ type: 'ring', x: e.x, y: e.y, size: 10, grow: 180, life: 0.3, color: 'rgba(200,255,245,0.8)' });
             P.burst(e.x, e.y, { type: 'spark', count: 8, speed: 260, life: 0.35, size: 1.8, color: '#e8fffb', drag: 3 });
@@ -251,7 +253,7 @@ export class Renderer {
           const winner = e.winnerTeam !== null ? g.players.find((p) => p.team === e.winnerTeam) : null;
           if (winner) {
             const el = ELEMENTS[winner.element];
-            const of = { fogo: 'DO FOGO', agua: 'DA ÁGUA', terra: 'DA TERRA', ar: 'DO AR' }[winner.element] ?? el.name.toUpperCase();
+            const of = { fogo: 'DO FOGO', agua: 'DA ÁGUA', terra: 'DA TERRA', ar: 'DO AR', mortal: 'DO MORTAL' }[winner.element] ?? el.name.toUpperCase();
             this.banner = { text: `VITÓRIA ${of}!`, time: CELEBRATION_TIME, max: CELEBRATION_TIME, color: el.light };
             this.celebration = startCelebration(winner.element, this.game.map);
           } else {
@@ -770,12 +772,15 @@ export class Renderer {
         ctx.translate(pr.x, pr.y);
         ctx.rotate(Math.atan2(pr.vy, pr.vx) + Math.PI / 2);
         ctx.translate(0, 30);
-        drawSpearArt(ctx, pr.element, this.time);
+        if (pr.element === 'mortal') drawUniversalSpear(ctx, this.time);
+        else drawSpearArt(ctx, pr.element, this.time);
       } else if (pr.kind === 'arremesso') {
         ctx.translate(pr.x, pr.y);
         ctx.rotate(this.time * 22 * Math.sign(pr.vx || 1));
         ctx.translate(0, 18);
-        if (pr.weapon === 'espada') drawSwordArt(ctx, pr.element, this.time);
+        // Mortal arremessa as armas padrão (universais)
+        if (pr.element === 'mortal') (pr.weapon === 'espada' ? drawUniversalSword : drawUniversalStaff)(ctx, this.time);
+        else if (pr.weapon === 'espada') drawSwordArt(ctx, pr.element, this.time);
         else drawStaffArt(ctx, pr.element, this.time);
       } else {
         drawShot(ctx, pr.element, pr.x, pr.y, pr.r, Math.sign(pr.vx) || 1, this.time, pr.combo);

@@ -6,6 +6,7 @@ import { ELEMENTS } from '/shared/elements.js';
 import { drawSwordArt, drawStaffArt, drawSpearArt, drawSlash } from './weapons-art.js';
 import { lookOf, aura, scarf, limbStroke, torso, feet, fist, pauldron, head, shade, rgba as rgbaHex } from './look.js';
 import { drawSkin } from './mannequin.js';
+import { drawUniversalSword, drawUniversalStaff, drawUniversalSpear } from './universal-art.js';
 
 const OUTLINE = '#0c0710';
 const LIMB = 11;          // comprimento de cada metade de braço/perna
@@ -144,9 +145,21 @@ export function drawFighter(ctx, p, x, y, vis, time, { teamColor, isLocal, showN
   const armB = limb(shoulder, pose.armB);
   const wind = Math.min(1, Math.abs(p.vx) / 300 + (p.onGround ? 0 : 0.4)) + 0.2;
 
-  // Tutorial: manequim preto (antes de escolher o elemento) e boneco de treino
-  if (p.skin) {
-    drawSkin(ctx, p.skin, { hip, neck, headPos, shoulder, legF, legB, armF, armB }, time);
+  // Manequim preto (tutorial e o Mortal) e boneco de treino
+  const skin = p.skin ?? (p.element === 'mortal' ? 'manequim' : null);
+  if (skin) {
+    const weapon = () => {
+      if (p.attack?.weapon === 'espada' && pose.weaponAngle !== null && p.attack.t >= p.attack.startup) {
+        const u = (p.attack.t - p.attack.startup) / (p.attack.duration - p.attack.startup);
+        drawSlash(ctx, 'rgba(235,238,255,0.9)', shoulder, pose.weaponAngle, 2.9, Math.max(0, 1 - u * 1.2));
+      }
+      const weaponId = p.attack?.weapon ?? p.weapon?.id;
+      if (!weaponId) return;
+      const angle = pose.weaponAngle ?? (weaponId === 'cajado' ? 2.9 : weaponId === 'lanca' ? 1.78 : pose.armF[1] + 0.6);
+      const hand = pose.thrust ? { x: armF.end.x + pose.thrust, y: armF.end.y } : armF.end;
+      drawHeldWeapon(ctx, weaponId, p.element, hand, angle, time, weaponId === 'lanca' ? 16 : 0);
+    };
+    drawSkin(ctx, skin, { hip, neck, headPos, shoulder, legF, legB, armF, armB }, time, weapon);
     ctx.restore();
     if (showName) drawTag(ctx, cx, y - 16, p, teamColor, isLocal);
     return;
@@ -202,7 +215,12 @@ export function drawHeldWeapon(ctx, weaponId, elementId, hand, angle, time, slid
   // angle: 0 = para baixo; giramos para que o eixo -y local aponte para o ângulo
   ctx.rotate(-angle + Math.PI);
   ctx.translate(0, slide);
-  if (weaponId === 'espada') drawSwordArt(ctx, elementId, time);
+  // Mortal (sem elemento): armas padrão, as universais
+  if (elementId === 'mortal') {
+    if (weaponId === 'espada') drawUniversalSword(ctx, time);
+    else if (weaponId === 'cajado') drawUniversalStaff(ctx, time);
+    else if (weaponId === 'lanca') drawUniversalSpear(ctx, time);
+  } else if (weaponId === 'espada') drawSwordArt(ctx, elementId, time);
   else if (weaponId === 'cajado') drawStaffArt(ctx, elementId, time);
   else if (weaponId === 'lanca') drawSpearArt(ctx, elementId, time);
   ctx.restore();

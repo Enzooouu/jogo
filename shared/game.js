@@ -33,7 +33,7 @@ const COMBO_STATUS = {
 
 // Espinhos espetam em "pancadas" a cada meio segundo (fica fácil de perceber)
 const SPIKE_TICK = 0.5;
-const NO_STATS = { speed: 1, jump: 1, weight: 1, airDashes: PHYS.airDashes };
+const NO_STATS = { speed: 1, jump: 1, weight: 1, damage: 1, airDashes: PHYS.airDashes };
 const statsOf = (p) => ({ ...NO_STATS, ...ELEMENTS[p.element].stats });
 // Quanto cada elemento sente o vento (Ar é imune pela tabela de perigos)
 const WIND_FACTOR = { terra: 0.5 };
@@ -889,7 +889,8 @@ export class Game {
   }
 
   applyHit(attacker, target, profile, dirX, scale = {}) {
-    const damage = attacker.admin ? PLAYER.adminDamage : profile.damage * (scale.damage ?? 1);
+    // o Mortal (sem elemento) bate mais forte: stats.damage
+    const damage = attacker.admin ? PLAYER.adminDamage : profile.damage * (scale.damage ?? 1) * statsOf(attacker).damage;
     target.damage += damage;
     target.stats.damageTaken += damage;
     attacker.stats.damageDealt += damage;
@@ -927,6 +928,8 @@ export class Game {
         const a = list[i];
         const b = list[j];
         if (a.gone || b.gone || a.combo || b.combo || a.element === b.element) continue;
+        // disparo sem elemento (Mortal) não combina com nada
+        if (!COMBO_CARRIER.includes(a.element) || !COMBO_CARRIER.includes(b.element)) continue;
         const reach = (a.r + b.r) * 0.9;
         if ((a.x - b.x) ** 2 + (a.y - b.y) ** 2 > reach * reach) continue;
         const x = (a.x + b.x) / 2;

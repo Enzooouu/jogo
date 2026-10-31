@@ -150,8 +150,8 @@ function drawModeTiles() {
       const gap = scale * 26;
       const foot = h - 12;
       if (ffa) {
-        ['fogo', 'agua', 'terra', 'ar'].forEach((el, i) => {
-          drawPortrait(ctx, el, w * (0.17 + i * 0.22), foot, scale * 0.9, { facing: i < 2 ? 1 : -1 });
+        ['fogo', 'agua', 'mortal', 'terra', 'ar'].forEach((el, i) => {
+          drawPortrait(ctx, el, w * (0.13 + i * 0.185), foot, scale * 0.82, { facing: i < 2 ? 1 : i === 2 ? 1 : -1 });
         });
         continue;
       }
@@ -194,6 +194,10 @@ function buildCards() {
     if (machuca) rows.push(['Machuca', machuca]);
     for (const id of Object.keys(WEAPONS)) {
       if (WEAPONS[id].byElement?.[el.id]) rows.push([WEAPONS[id].name, weaponProfile(id, el.id).name]);
+    }
+    // sem elemento: armas padrão e dano extra
+    if (el.stats.damage && el.stats.damage !== 1) {
+      rows.push(['Armas', 'Padrão (sem efeito)'], ['Dano', `+${Math.round((el.stats.damage - 1) * 100)}%`]);
     }
     const card = document.createElement('button');
     card.type = 'button';
@@ -242,7 +246,7 @@ function startCardAnimation() {
       const { ctx, w, h } = fitCanvas(card.querySelector('canvas'));
       const on = card.classList.contains('on');
       const el = card.dataset.element;
-      const weapon = { fogo: 'espada', agua: 'cajado', terra: 'espada', ar: 'cajado' }[el];
+      const weapon = { fogo: 'espada', agua: 'cajado', terra: 'espada', ar: 'cajado', mortal: 'lanca' }[el];
       drawPortrait(ctx, el, w / 2, h - 10, Math.min(1.85, h / 94), {
         time: on ? t : 0,
         extra: weapon ? { weapon: { id: weapon } } : {},
@@ -306,6 +310,7 @@ function fillSide(box, tag, el, members, myId) {
     agua: 'Armas deixam o alvo lento',
     terra: 'Armas atordoam o alvo',
     ar: 'Tornado puxa os inimigos',
+    mortal: 'Bate 25% mais forte (armas sem efeito)',
   }[el.id];
   for (const line of [imune && `Imune: ${imune}`, morre && `Morre: ${morre}`, effect]) {
     if (!line) continue;

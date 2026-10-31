@@ -630,6 +630,7 @@ export function drawShot(ctx, element, x, y, r, dir, t, combo = null) {
     else if (combo === 'agua') mudShot(ctx, r, t);
     else rockShot(ctx, r, t);
   } else if (element === 'ar') windShot(ctx, r, t, combo);
+  else if (element === 'mortal') neutralShot(ctx, r, t);
   else drawFireball(ctx, 0, 0, r, t, 1);
   ctx.restore();
 }
@@ -1469,4 +1470,36 @@ function windSpear(ctx, t) {
     ctx.ellipse(0, -72 + i * 10, 7, 2.4, 0, a, a + 2.2);
     ctx.stroke();
   }
+}
+
+// Disparo sem elemento (Mortal): esfera de força prateada com miolo escuro,
+// anel girando e rastro de faíscas brancas
+function neutralShot(ctx, r, t) {
+  // rastro
+  for (let i = 1; i <= 4; i++) {
+    ctx.fillStyle = `rgba(230,232,255,${0.35 - i * 0.07})`;
+    ctx.beginPath(); ctx.arc(-i * r * 0.8, Math.sin(t * 20 + i) * 1.5, r * (1 - i * 0.16), 0, Math.PI * 2); ctx.fill();
+  }
+  const g = ctx.createRadialGradient(-r * 0.3, -r * 0.3, 1, 0, 0, r);
+  g.addColorStop(0, '#ffffff');
+  g.addColorStop(0.55, '#d8dcef');
+  g.addColorStop(1, '#7a7e96');
+  ctx.save();
+  ctx.shadowColor = '#e8eaff';
+  ctx.shadowBlur = 12;
+  ctx.fillStyle = g;
+  ctx.beginPath(); ctx.arc(0, 0, r, 0, Math.PI * 2); ctx.fill();
+  ctx.restore();
+  ctx.strokeStyle = INK;
+  ctx.lineWidth = 2;
+  ctx.stroke();
+  // miolo escuro (o "vazio" de quem não tem elemento)
+  ctx.fillStyle = '#1c1a22';
+  ctx.beginPath(); ctx.arc(0, 0, r * 0.38, 0, Math.PI * 2); ctx.fill();
+  ctx.fillStyle = 'rgba(255,255,255,0.8)';
+  ctx.beginPath(); ctx.arc(-r * 0.12, -r * 0.14, r * 0.1, 0, Math.PI * 2); ctx.fill();
+  // anel girando
+  ctx.strokeStyle = 'rgba(255,255,255,0.85)';
+  ctx.lineWidth = 1.4;
+  ctx.beginPath(); ctx.ellipse(0, 0, r * 1.35, r * 0.45, t * 6, 0, Math.PI * 1.3); ctx.stroke();
 }

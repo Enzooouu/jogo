@@ -215,9 +215,9 @@ kbd {
 .mode-tile:disabled { filter: grayscale(.85) brightness(.6); }
 .mode-tile[data-mode="ffa"] b { font-size: 21px; }
 
-.card-list { position: relative; z-index: 1; display: flex; justify-content: center; flex-wrap: wrap; gap: 26px; margin-top: 5vh; padding: 0 24px; }
+.card-list { position: relative; z-index: 1; display: flex; justify-content: center; flex-wrap: wrap; gap: 18px; margin-top: 5vh; padding: 0 24px; }
 .el-card {
-  position: relative; width: 210px; min-height: 330px; border-radius: 16px; padding: 14px; display: flex; flex-direction: column; text-align: left; color: #fff;
+  position: relative; width: 200px; min-height: 330px; border-radius: 16px; padding: 14px; display: flex; flex-direction: column; text-align: left; color: #fff;
   background: linear-gradient(160deg, var(--c1), var(--c2)); border: 2px solid rgba(255,255,255,.18); box-shadow: 0 20px 40px rgba(0,0,0,.5);
   transition: transform .15s, box-shadow .15s, border-color .15s;
 }
@@ -421,9 +421,9 @@ kbd {
 .tut-overlay .overlay-card .btn { font-weight: 900; font-style: italic; letter-spacing: .05em; border-radius: 4px; transform: skewX(-8deg); }
 .tut-overlay .overlay-card .btn:not(.ghost) { background: linear-gradient(90deg, #ff6a1f, #ffb03a); color: #1a0f05; border: 2px solid #000; box-shadow: 0 4px 0 #000; }
 @keyframes card-slam { from { opacity: 0; transform: scale(1.12) rotate(-1.5deg); } }
-.tut-pick-card { max-width: min(760px, calc(100% - 32px)); }
+.tut-pick-card { max-width: min(880px, calc(100% - 32px)); }
 .tut-pick-card small { font-family: var(--display); font-style: italic; font-size: 14px; letter-spacing: .14em; color: #ff8a4a; }
-.tut-pick-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-top: 6px; }
+.tut-pick-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 10px; margin-top: 6px; }
 .tut-pick-btn {
   display: flex; flex-direction: column; align-items: center; gap: 4px; padding: 10px 8px 12px;
   border-radius: 4px; border: 2px solid #000; background: #2a1838; color: var(--text);

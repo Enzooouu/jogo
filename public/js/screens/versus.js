@@ -9,6 +9,7 @@ const PALETTE = {
   agua: { inner: '#0b3f8a', mid: '#0a1d3f', outer: '#05080f', fx: 'chuva' },
   terra: { inner: '#5a3a18', mid: '#2a1a0a', outer: '#0d0804', fx: 'brasas' },
   ar: { inner: '#3c6e66', mid: '#1a302c', outer: '#070d0c', fx: 'chuva' },
+  mortal: { inner: '#3a3846', mid: '#16141c', outer: '#060508', fx: 'chuva' },
   misto: { inner: '#4a2a6a', mid: '#1f1030', outer: '#09050f', fx: 'brasas' },
 };
 

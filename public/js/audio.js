@@ -148,6 +148,13 @@ export function playEvents(events, localId) {
           tone({ freq: 1400, to: 250, dur: FIRE_IMPACTS.big - FIRE_IMPACTS.bigStart, type: 'sine', vol: 0.07, delay: FIRE_IMPACTS.bigStart });
           noise({ dur: 1.6, vol: 0.7, freq: 400, delay: FIRE_IMPACTS.big });
           tone({ freq: 90, to: 25, dur: 1.4, type: 'sawtooth', vol: 0.4, delay: FIRE_IMPACTS.big });
+        } else if (e.winnerElement === 'mortal') {
+          // soco final: zumbido carregando, pancada enorme e vidro quebrando
+          tone({ freq: 120, to: 900, dur: 1, type: 'sawtooth', vol: 0.06 });
+          noise({ dur: 1, vol: 0.12, freq: 1800 });
+          noise({ dur: 1.2, vol: 0.75, freq: 500, delay: 1.05 });
+          tone({ freq: 80, to: 25, dur: 1.2, type: 'sawtooth', vol: 0.45, delay: 1.05 });
+          for (let i = 0; i < 6; i++) noise({ dur: 0.12, vol: 0.18, freq: 6000, delay: 1.12 + i * 0.09 });
         } else if (e.winnerElement === 'agua') {
           noise({ dur: 2.5, vol: 0.3, freq: 900, delay: 0.2 });
         } else if (e.winnerElement === 'ar') {

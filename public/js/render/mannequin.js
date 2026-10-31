@@ -270,7 +270,8 @@ function headShape(ctx, skin, k, h, neck) {
   ctx.restore();
 }
 
-export function drawSkin(ctx, skin, { hip, neck, headPos, shoulder, legF, legB, armF, armB }, time) {
+// `drawWeapon` (opcional) desenha a arma entre o corpo e o braço da frente
+export function drawSkin(ctx, skin, { hip, neck, headPos, shoulder, legF, legB, armF, armB }, time, drawWeapon = null) {
   const k = SKINS[skin] ?? SKINS.manequim;
   // sombra de contorno azulada (o manequim brilha um pouco no escuro)
   if (k.rim) {
@@ -287,6 +288,7 @@ export function drawSkin(ctx, skin, { hip, neck, headPos, shoulder, legF, legB, 
   body(ctx, skin, k, shoulder, hip);
   limb(ctx, hip, legF, 6, k.body, k.hi, k, (l) => footShape(ctx, l.end, k.body));
   headShape(ctx, skin, k, headPos, neck);
+  drawWeapon?.();
   joint(ctx, shoulder, 3.6, k);
   limb(ctx, shoulder, armF, 5, k.body, k.hi, k, (l) => hand(ctx, l.end, k, k.body));
 }

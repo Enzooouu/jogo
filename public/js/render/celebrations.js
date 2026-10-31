@@ -3,6 +3,8 @@
 //   agua  -> tsunami atravessando a tela
 //   ar    -> tornado gigante
 //   terra -> terremoto: rachaduras, pilares subindo e espinhos rasgando o chão
+//   mortal -> soco final: um punho gigante de manequim soca a tela, que racha
+//             como vidro e os cacos caem
 //
 // Camadas (todas em coordenadas do mundo):
 //   'back'  -> atrás da ilha     'mid' -> entre a ilha e os lutadores
@@ -51,6 +53,7 @@ function setStage(map) {
   STAGE = { surfaces, islands, main, pools, length: surfaces.reduce((n, sf) => n + sf.x1 - sf.x0, 0) };
   buildFire();
   buildQuake();
+  buildPunch();
 }
 
 // Um ponto de chão: u (0..1) percorre todos os trechos de chão em sequência
@@ -101,6 +104,8 @@ export function updateCelebration(cel, dt, renderer) {
       const x = -100 + Math.random() * Math.min(1500, fx + 100);
       P.add({ x, y: -40 + Math.random() * 200, vx: 60, vy: 300 + Math.random() * 200, life: 1.2, size: 1.6, color: 'rgba(200,240,255,0.8)', gravity: 400 });
     }
+  } else if (cel.element === 'mortal') {
+    updatePunch(cel, dt, renderer);
   } else if (cel.element === 'ar') {
     const cx = tornadoX(t);
     // folhas e poeira sendo sugadas pela tela em direção ao tornado
@@ -143,6 +148,7 @@ export function drawCelebration(ctx, cel, layer) {
   else if (cel.element === 'terra' && layer === 'back') quakeBack(ctx, cel.t);
   else if (cel.element === 'terra' && layer === 'mid') quakeMid(ctx, cel.t);
   else if (cel.element === 'terra' && layer === 'front') quakeFront(ctx, cel.t);
+  else if (cel.element === 'mortal' && layer === 'front') punchFront(ctx, cel.t);
   ctx.restore();
 }
 
@@ -1222,6 +1228,264 @@ function drawBoulder(ctx, x, y, s, rot) {
   ctx.closePath();
   ctx.stroke();
   ctx.restore();
+}
+
+
+// ---------------------------------------------------------------- mortal
+
+// Soco final: a tela escurece, linhas de velocidade fecham no ponto do soco,
+// um punho gigante de manequim (preto, com juntas redondas) vem do lado e
+// soca a "tela": clarão, a tela racha como vidro e os cacos caem.
+const PUNCH = { hit: 1.05, back: 1.7 };
+let CRACKS = [];
+let SHARDS = [];
+let IMPACT = { x: 640, y: 300 };
+
+function buildPunch() {
+  // um pouco acima do chão, à direita do meio (a faixa "VITÓRIA" fica no meio da tela)
+  IMPACT = { x: STAGE.main.cx + 150, y: STAGE.main.top - 95 };
+  // raios de rachadura saindo do ponto do soco, cada um em zigue-zague
+  const rays = 13;
+  CRACKS = [];
+  for (let i = 0; i < rays; i++) {
+    const a0 = (i / rays) * Math.PI * 2 + (rand(i, 1) - 0.5) * 0.35;
+    const pts = [[0, 0]];
+    let a = a0;
+    let r = 0;
+    const total = 420 + rand(i, 2) * 520;
+    while (r < total) {
+      r += 30 + rand(i, r) * 60;
+      a += (rand(i, r + 7) - 0.5) * 0.35;
+      pts.push([Math.cos(a) * r, Math.sin(a) * r]);
+    }
+    CRACKS.push({ a: a0, pts, total });
+  }
+  // anéis ligando os raios (como teia de vidro quebrado)
+  for (const ring of [55, 130, 240]) {
+    const pts = [];
+    for (let i = 0; i <= rays; i++) {
+      const c = CRACKS[i % rays];
+      const r = ring * (0.8 + rand(i, ring) * 0.4);
+      pts.push([Math.cos(c.a) * r, Math.sin(c.a) * r]);
+    }
+    CRACKS.push({ ring: true, pts, total: ring });
+  }
+  // cacos: pedaços entre dois raios, perto do centro
+  SHARDS = [];
+  for (let i = 0; i < rays; i++) {
+    const a = CRACKS[i].a;
+    const b = CRACKS[(i + 1) % rays].a + (i === rays - 1 ? Math.PI * 2 : 0);
+    for (const [r0, r1] of [[0, 55], [55, 130], [130, 240]]) {
+      if (rand(i, r0 + 3) < 0.35) continue;
+      const pts = [[Math.cos(a) * r0, Math.sin(a) * r0], [Math.cos(a) * r1, Math.sin(a) * r1], [Math.cos(b) * r1, Math.sin(b) * r1], [Math.cos(b) * r0, Math.sin(b) * r0]];
+      const cx = pts.reduce((n, p) => n + p[0], 0) / 4;
+      const cy = pts.reduce((n, p) => n + p[1], 0) / 4;
+      SHARDS.push({
+        pts: pts.map(([x, y]) => [x - cx, y - cy]), cx, cy,
+        at: PUNCH.hit + 0.15 + rand(i, r1) * 0.5,
+        vx: cx * 0.8 + (rand(i, r1 + 1) - 0.5) * 120, vy: -120 - rand(i, r1 + 2) * 200,
+        spin: (rand(i, r1 + 4) - 0.5) * 8,
+      });
+    }
+  }
+}
+
+function updatePunch(cel, dt, renderer) {
+  const P = renderer.particles;
+  const t = cel.t;
+  if (t < PUNCH.hit) {
+    // carregando: tremidinha crescendo
+    renderer.shake(1 + t * 2, 0.05);
+    return;
+  }
+  if (!cel.hit) {
+    cel.hit = true;
+    renderer.shake(24, 0.7);
+    P.burst(IMPACT.x, IMPACT.y, { type: 'spark', count: 40, speed: 900, life: 0.6, size: 3, color: '#ffffff', drag: 2.5 });
+    P.add({ type: 'ring', x: IMPACT.x, y: IMPACT.y, size: 20, grow: 900, life: 0.45, color: '#ffffff' });
+    P.add({ type: 'ring', x: IMPACT.x, y: IMPACT.y, size: 10, grow: 500, life: 0.6, color: 'rgba(200,205,255,0.8)' });
+    // poeira levantando do chão com a onda de choque
+    for (let i = 0; i < 26; i++) {
+      const dir = i % 2 ? 1 : -1;
+      P.add({ x: IMPACT.x + dir * Math.random() * 80, y: STAGE.main.top - 6, vx: dir * (400 + Math.random() * 500), vy: -30 - Math.random() * 60, life: 1, size: 8, grow: 26, drag: 1.6, color: 'rgba(220,220,235,0.25)' });
+    }
+  }
+  // pozinho de vidro caindo das rachaduras
+  if (t < 3 && Math.random() < dt * 40) {
+    const c = CRACKS[Math.floor(Math.random() * 13)];
+    const [x, y] = c.pts[Math.floor(Math.random() * c.pts.length)];
+    P.add({ x: IMPACT.x + x, y: IMPACT.y + y, vx: (Math.random() - 0.5) * 40, vy: 40, life: 1.2, size: 1.6, color: 'rgba(235,240,255,0.9)', gravity: 700 });
+  }
+}
+
+// Punho gigante de manequim apontando para a direita; (x, y) = nós dos dedos
+function giantFist(ctx, x, y, s, t) {
+  ctx.save();
+  ctx.translate(x, y);
+  ctx.scale(s, s);
+  const ink = '#06050a';
+  const body = (x0, y0, x1, y1) => {
+    const g = ctx.createLinearGradient(0, y0, 0, y1);
+    g.addColorStop(0, '#4a4858');
+    g.addColorStop(0.35, '#1e1c26');
+    g.addColorStop(1, '#0c0b10');
+    return g;
+  };
+  // antebraço (vem lá de trás, de fora da tela)
+  ctx.fillStyle = body(0, -55, 0, 55);
+  ctx.strokeStyle = ink;
+  ctx.lineWidth = 6;
+  ctx.beginPath();
+  ctx.moveTo(-150, -48); ctx.lineTo(-1400, -70); ctx.lineTo(-1400, 70); ctx.lineTo(-150, 48);
+  ctx.closePath();
+  ctx.fill(); ctx.stroke();
+  ctx.strokeStyle = 'rgba(190,200,255,0.45)';
+  ctx.lineWidth = 4;
+  ctx.beginPath(); ctx.moveTo(-160, -38); ctx.lineTo(-1400, -56); ctx.stroke();
+  // junta do pulso
+  ctx.fillStyle = '#1e1c26';
+  ctx.strokeStyle = ink;
+  ctx.lineWidth = 6;
+  ctx.beginPath(); ctx.arc(-150, 0, 52, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+  ctx.fillStyle = 'rgba(230,232,255,0.55)';
+  ctx.beginPath(); ctx.arc(-168, -20, 16, 0, Math.PI * 2); ctx.fill();
+  // mão fechada
+  ctx.fillStyle = body(0, -80, 0, 80);
+  ctx.strokeStyle = ink;
+  ctx.beginPath();
+  ctx.moveTo(-120, -66); ctx.quadraticCurveTo(-30, -84, 10, -70); ctx.lineTo(10, 74); ctx.quadraticCurveTo(-40, 88, -120, 66);
+  ctx.closePath();
+  ctx.fill(); ctx.stroke();
+  // dedão por cima
+  ctx.beginPath();
+  ctx.moveTo(-90, 30); ctx.quadraticCurveTo(-30, 18, 0, 34); ctx.quadraticCurveTo(10, 60, -20, 66); ctx.quadraticCurveTo(-70, 64, -90, 50);
+  ctx.closePath();
+  ctx.fill(); ctx.stroke();
+  // quatro dedos dobrados com juntas redondas
+  for (let i = 0; i < 4; i++) {
+    const fy = -60 + i * 34;
+    ctx.fillStyle = body(fy - 16, fy - 16, fy + 16, fy + 16);
+    ctx.beginPath();
+    ctx.moveTo(0, fy - 15); ctx.lineTo(40, fy - 15); ctx.quadraticCurveTo(58, fy, 40, fy + 15); ctx.lineTo(0, fy + 15);
+    ctx.closePath();
+    ctx.fill(); ctx.stroke();
+    // nó do dedo: bolinha brilhante
+    ctx.fillStyle = '#26232e';
+    ctx.beginPath(); ctx.arc(44, fy, 13, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+    ctx.fillStyle = 'rgba(235,238,255,0.75)';
+    ctx.beginPath(); ctx.arc(40, fy - 5, 4.5, 0, Math.PI * 2); ctx.fill();
+  }
+  // luz de contorno azulada em cima
+  ctx.strokeStyle = 'rgba(170,190,255,0.55)';
+  ctx.lineWidth = 5;
+  ctx.beginPath(); ctx.moveTo(-115, -60); ctx.quadraticCurveTo(-30, -78, 6, -66); ctx.stroke();
+  ctx.restore();
+}
+
+function punchFront(ctx, t) {
+  const big = 6000;
+  // 1) escurece a cena (dramático) e volta depois do soco
+  const dark = t < PUNCH.hit ? Math.min(0.55, t * 0.7) : Math.max(0, 0.55 - (t - PUNCH.hit) * 0.6);
+  if (dark > 0) {
+    ctx.fillStyle = `rgba(6,5,12,${dark})`;
+    ctx.fillRect(-big / 2, -big / 2, big, big);
+  }
+  // 2) linhas de velocidade fechando no ponto do soco
+  if (t > 0.35 && t < PUNCH.hit + 0.35) {
+    const k = t < PUNCH.hit ? (t - 0.35) / (PUNCH.hit - 0.35) : 1 - (t - PUNCH.hit) / 0.35;
+    ctx.save();
+    ctx.translate(IMPACT.x, IMPACT.y);
+    ctx.fillStyle = `rgba(255,255,255,${0.5 * k})`;
+    for (let i = 0; i < 46; i++) {
+      const a = rand(i, 9) * Math.PI * 2;
+      const r0 = 170 + rand(i, 3) * 160 - k * 60;
+      const w = 0.006 + rand(i, 5) * 0.012;
+      ctx.beginPath();
+      ctx.moveTo(Math.cos(a - w) * r0, Math.sin(a - w) * r0);
+      ctx.lineTo(Math.cos(a) * 1500, Math.sin(a) * 1500);
+      ctx.lineTo(Math.cos(a + w) * r0, Math.sin(a + w) * r0);
+      ctx.closePath();
+      ctx.fill();
+    }
+    ctx.restore();
+  }
+  // 3) punho: recua um pouco, dispara até o ponto, segura e volta
+  let fx;
+  if (t < 0.75) fx = IMPACT.x - 1500 - t * 120;
+  else if (t < PUNCH.hit) {
+    const k = (t - 0.75) / (PUNCH.hit - 0.75);
+    fx = IMPACT.x - 1590 + k * k * 1590;
+  } else if (t < PUNCH.back) fx = IMPACT.x - 18 + Math.sin((t - PUNCH.hit) * 40) * 6 * Math.max(0, 1 - (t - PUNCH.hit) * 4);
+  else fx = IMPACT.x - 18 - (t - PUNCH.back) ** 2 * 6000;
+  const scale = 1.6;
+  // rastro de velocidade atrás do punho enquanto ele vem
+  if (t > 0.75 && t < PUNCH.hit) {
+    ctx.fillStyle = 'rgba(255,255,255,0.35)';
+    for (let i = 0; i < 6; i++) {
+      const yy = IMPACT.y - 80 + i * 32;
+      ctx.fillRect(fx - 700 - i * 40, yy, 520, 3);
+    }
+  }
+  if (fx > IMPACT.x - 1600) giantFist(ctx, fx - 50 * scale, IMPACT.y, scale, t);
+  // 4) rachaduras crescendo do ponto do soco e sumindo no fim
+  if (t >= PUNCH.hit) {
+    const grow = Math.min(1, (t - PUNCH.hit) / 0.18);
+    const alpha = t < 2.7 ? 1 : Math.max(0, 1 - (t - 2.7) / 0.8);
+    if (alpha > 0) {
+      ctx.save();
+      ctx.translate(IMPACT.x, IMPACT.y);
+      ctx.lineJoin = 'round';
+      for (const [w, color] of [[5, `rgba(10,8,16,${0.85 * alpha})`], [1.6, `rgba(255,255,255,${0.9 * alpha})`]]) {
+        ctx.lineWidth = w;
+        ctx.strokeStyle = color;
+        ctx.beginPath();
+        for (const c of CRACKS) {
+          const limit = c.ring ? (grow >= 0.6 ? 1 : 0) : grow;
+          if (!limit) continue;
+          const n = Math.max(2, Math.ceil(c.pts.length * limit));
+          c.pts.slice(0, n).forEach(([x, y], i) => (i ? ctx.lineTo(x, y) : ctx.moveTo(x, y)));
+        }
+        ctx.stroke();
+      }
+      // brilho no centro do soco
+      const glow = ctx.createRadialGradient(0, 0, 4, 0, 0, 90);
+      glow.addColorStop(0, `rgba(255,255,255,${0.8 * alpha})`);
+      glow.addColorStop(1, 'rgba(255,255,255,0)');
+      ctx.fillStyle = glow;
+      ctx.fillRect(-90, -90, 180, 180);
+      ctx.restore();
+    }
+    // 5) cacos de vidro caindo e girando
+    for (const sh of SHARDS) {
+      if (t < sh.at) continue;
+      const u = t - sh.at;
+      const x = IMPACT.x + sh.cx + sh.vx * u;
+      const y = IMPACT.y + sh.cy + sh.vy * u + 900 * u * u;
+      const a = Math.max(0, 1 - u / 1.6);
+      if (a <= 0) continue;
+      ctx.save();
+      ctx.translate(x, y);
+      ctx.rotate(sh.spin * u);
+      ctx.beginPath();
+      sh.pts.forEach(([px, py], i) => (i ? ctx.lineTo(px, py) : ctx.moveTo(px, py)));
+      ctx.closePath();
+      const g = ctx.createLinearGradient(-30, -30, 30, 30);
+      g.addColorStop(0, `rgba(235,245,255,${0.75 * a})`);
+      g.addColorStop(1, `rgba(150,180,230,${0.45 * a})`);
+      ctx.fillStyle = g;
+      ctx.fill();
+      ctx.strokeStyle = `rgba(255,255,255,${a})`;
+      ctx.lineWidth = 2;
+      ctx.stroke();
+      ctx.restore();
+    }
+    // 6) clarão branco na hora do soco
+    const flash = 1 - (t - PUNCH.hit) / 0.3;
+    if (flash > 0) {
+      ctx.fillStyle = `rgba(255,255,255,${flash})`;
+      ctx.fillRect(-big / 2, -big / 2, big, big);
+    }
+  }
 }
 
 // Até a primeira partida, usa o mapa padrão
