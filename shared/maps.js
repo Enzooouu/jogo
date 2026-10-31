@@ -145,9 +145,10 @@ export const MAPS = {
     theme: { skyTop: '#3a4f9e', skyBottom: '#ffb98a', haze: '#ffd6a8' },
   },
 
-  // Campo de grama plano, de dia: sem piscina, espinho nem vento. Só dá para
-  // perder vida sendo derrubado para fora da ilha. Usa o cenário do Campo de
-  // Treino (shared/maps-treino.js).
+  // Campo de grama de dia, sem piscina, espinho nem vento: duas ilhas com
+  // um buraco no meio (era uma ponte, que quebrou) e uma plataforma de
+  // madeira lá no alto. Só dá para perder vida sendo derrubado. Usa o
+  // cenário do Campo de Treino (shared/maps-treino.js).
   campo: {
     id: 'campo',
     name: 'Campo Aberto',
@@ -155,22 +156,30 @@ export const MAPS = {
     width: 1280,
     height: 720,
     blast: { left: -260, right: 1540, top: -560, bottom: 1000 },
-    solids: [{ x: 190, y: 530, w: 900, h: 180 }],
-    platforms: [],
+    solids: [
+      { x: 180, y: 530, w: 340, h: 180 },
+      { x: 760, y: 530, w: 340, h: 180 },
+    ],
+    platforms: [{ x: 455, y: 330, w: 370 }],
     hazards: [],
     spawns: [
-      { x: 330, y: 530 }, { x: 950, y: 530 }, { x: 430, y: 530 }, { x: 850, y: 530 },
-      { x: 530, y: 530 }, { x: 750, y: 530 }, { x: 260, y: 530 }, { x: 1020, y: 530 },
+      { x: 300, y: 530 }, { x: 980, y: 530 }, { x: 400, y: 530 }, { x: 880, y: 530 },
+      { x: 240, y: 530 }, { x: 1040, y: 530 }, { x: 460, y: 530 }, { x: 820, y: 530 },
     ],
     respawns: [
       { x: 560, y: 150 }, { x: 720, y: 150 }, { x: 400, y: 150 }, { x: 880, y: 150 },
     ],
-    itemSpawn: { minX: 230, maxX: 1050, y: -40 },
+    itemSpawn: { minX: 220, maxX: 1060, y: -40 },
     decor: [
-      { type: 'arvore', x: 250, y: 530 }, { type: 'estandarte', x: 380, y: 530, el: 'fogo' },
-      { type: 'flores', x: 520, y: 530 }, { type: 'estandarte', x: 640, y: 530, el: 'terra' },
-      { type: 'flores', x: 760, y: 530 }, { type: 'estandarte', x: 900, y: 530, el: 'agua' },
-      { type: 'arvore', x: 1030, y: 530 }, { type: 'pedras', x: 470, y: 530 }, { type: 'cogumelos', x: 820, y: 530 },
+      { type: 'arvore', x: 225, y: 530 }, { type: 'arvore', x: 1055, y: 530 },
+      { type: 'estandarte', x: 330, y: 530, el: 'fogo' }, { type: 'estandarte', x: 950, y: 530, el: 'agua' },
+      { type: 'estandarte', x: 640, y: 330, el: 'ar' },
+      { type: 'poste', x: 470, y: 330 }, { type: 'poste', x: 810, y: 330 },
+      { type: 'varal', x: 250, y: 410, x2: 470, y2: 262 }, { type: 'varal', x: 810, y: 262, x2: 1030, y2: 410 },
+      { type: 'ponte', x: 520, y: 530, dir: 1 }, { type: 'ponte', x: 760, y: 530, dir: -1 },
+      { type: 'flores', x: 420, y: 530 }, { type: 'pedras', x: 480, y: 530 }, { type: 'cogumelos', x: 270, y: 530 },
+      { type: 'flores', x: 860, y: 530 }, { type: 'arbusto', x: 1000, y: 530 }, { type: 'cogumelos', x: 790, y: 530 },
+      { type: 'feno', x: 400, y: 530 },
     ],
     theme: { skyTop: '#4a9be8', skyBottom: '#cfeeff', haze: '#ffffff' },
   },

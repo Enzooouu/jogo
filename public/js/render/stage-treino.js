@@ -1690,6 +1690,153 @@ function mushrooms(ctx, x, y, rand) {
   }
 }
 
+// Ponte de corda quebrada pendurada na beira da ilha: estaca de madeira,
+// duas cordas caindo para o buraco e tábuas presas (umas tortas, faltando)
+function brokenBridge(ctx, x, y, dir, rand) {
+  // estaca na beira
+  ctx.fillStyle = WOOD.dark;
+  ctx.strokeStyle = INK;
+  ctx.lineWidth = 2;
+  ctx.fillRect(x - dir * 14 - 3, y - 26, 7, 30);
+  ctx.strokeRect(x - dir * 14 - 3, y - 26, 7, 30);
+  ctx.fillStyle = WOOD.light;
+  ctx.fillRect(x - dir * 14 - 3, y - 26, 7, 3);
+  // cordas pendendo (curva) para dentro do buraco
+  const end = { x: x + dir * 46, y: y + 150 };
+  const rope = (oy) => {
+    ctx.beginPath();
+    ctx.moveTo(x - dir * 12, y - 20 + oy);
+    ctx.bezierCurveTo(x + dir * 6, y - 10 + oy, x + dir * 30, y + 40 + oy, end.x, end.y + oy);
+    ctx.stroke();
+  };
+  ctx.strokeStyle = '#3a2410';
+  ctx.lineWidth = 3.2;
+  rope(0);
+  rope(10);
+  ctx.strokeStyle = '#d9c18a';
+  ctx.lineWidth = 1.6;
+  rope(0);
+  rope(10);
+  // tábuas penduradas ao longo da corda
+  const at = (u) => {
+    const p0 = { x: x - dir * 12, y: y - 15 }, p1 = { x: x + dir * 6, y: y - 5 }, p2 = { x: x + dir * 30, y: y + 45 }, p3 = { x: end.x, y: end.y + 5 };
+    const k = 1 - u;
+    return {
+      x: k * k * k * p0.x + 3 * k * k * u * p1.x + 3 * k * u * u * p2.x + u * u * u * p3.x,
+      y: k * k * k * p0.y + 3 * k * k * u * p1.y + 3 * k * u * u * p2.y + u * u * u * p3.y,
+    };
+  };
+  for (let i = 1; i <= 6; i++) {
+    if (i === 4) continue; // tábua que caiu
+    const u = i / 6.5;
+    const p = at(u);
+    const q = at(u + 0.02);
+    const a = Math.atan2(q.y - p.y, q.x - p.x) + (rand() - 0.5) * 0.3;
+    ctx.save();
+    ctx.translate(p.x, p.y);
+    ctx.rotate(a + Math.PI / 2);
+    const g = ctx.createLinearGradient(-9, 0, 9, 0);
+    g.addColorStop(0, WOOD.light);
+    g.addColorStop(1, WOOD.mid);
+    ctx.fillStyle = g;
+    ctx.strokeStyle = INK;
+    ctx.lineWidth = 1.5;
+    roundRect(ctx, -11, -3, 22, 6, 1.5);
+    ctx.fill();
+    ctx.stroke();
+    ctx.restore();
+  }
+  // pedaço de corda arrebentado na ponta
+  ctx.strokeStyle = '#d9c18a';
+  ctx.lineWidth = 1.2;
+  for (const k of [-1, 0, 1]) {
+    ctx.beginPath();
+    ctx.moveTo(end.x, end.y + 5);
+    ctx.lineTo(end.x + k * 3 + dir * 2, end.y + 14 + Math.abs(k) * 2);
+    ctx.stroke();
+  }
+}
+
+// Varal de bandeirinhas coloridas (de festa junina) entre dois pontos
+function bunting(ctx, x1, y1, x2, y2, rand) {
+  const sag = 34;
+  const at = (u) => ({ x: x1 + (x2 - x1) * u, y: y1 + (y2 - y1) * u + Math.sin(u * Math.PI) * sag });
+  ctx.strokeStyle = '#5b3d22';
+  ctx.lineWidth = 1.6;
+  ctx.beginPath();
+  for (let i = 0; i <= 20; i++) {
+    const p = at(i / 20);
+    if (i) ctx.lineTo(p.x, p.y);
+    else ctx.moveTo(p.x, p.y);
+  }
+  ctx.stroke();
+  const colors = ['#ff6a1f', '#ffd23f', '#2f8cff', '#4fd65a', '#ff5b9a', '#b48cff', '#ffffff'];
+  const n = Math.round(Math.hypot(x2 - x1, y2 - y1) / 22);
+  for (let i = 1; i < n; i++) {
+    const p = at(i / n);
+    const q = at(i / n + 0.02);
+    const a = Math.atan2(q.y - p.y, q.x - p.x);
+    ctx.save();
+    ctx.translate(p.x, p.y);
+    ctx.rotate(a);
+    ctx.fillStyle = colors[(i + Math.floor(rand() * 2)) % colors.length];
+    ctx.strokeStyle = 'rgba(29,42,20,0.6)';
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.moveTo(-6, 0);
+    ctx.lineTo(6, 0);
+    ctx.lineTo(0, 13);
+    ctx.closePath();
+    ctx.fill();
+    ctx.stroke();
+    ctx.restore();
+  }
+}
+
+// Poste de madeira com uma lanterninha de papel (na plataforma)
+function lanternPost(ctx, x, y) {
+  ctx.fillStyle = WOOD.dark;
+  ctx.strokeStyle = INK;
+  ctx.lineWidth = 2;
+  ctx.fillRect(x - 3, y - 70, 6, 70);
+  ctx.strokeRect(x - 3, y - 70, 6, 70);
+  ctx.fillRect(x - 3, y - 70, 16, 4);
+  ctx.strokeRect(x - 3, y - 70, 16, 4);
+  ctx.strokeStyle = '#3a2410';
+  ctx.lineWidth = 1.2;
+  ctx.beginPath();
+  ctx.moveTo(x + 10, y - 66);
+  ctx.lineTo(x + 10, y - 60);
+  ctx.stroke();
+  // lanterna de papel vermelha
+  ctx.fillStyle = '#d6372e';
+  ctx.strokeStyle = INK;
+  ctx.lineWidth = 1.6;
+  ctx.beginPath();
+  ctx.ellipse(x + 10, y - 50, 8, 10, 0, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.stroke();
+  ctx.strokeStyle = 'rgba(80,10,5,0.5)';
+  ctx.lineWidth = 1;
+  for (const k of [-4, 0, 4]) {
+    ctx.beginPath();
+    ctx.ellipse(x + 10, y - 50, Math.abs(k) ? 5 : 1, 10, 0, 0, Math.PI * 2);
+    ctx.stroke();
+  }
+  ctx.fillStyle = '#ffd23f';
+  ctx.fillRect(x + 6, y - 61, 8, 2.5);
+  ctx.fillRect(x + 6, y - 41.5, 8, 2.5);
+  ctx.strokeStyle = '#ffd23f';
+  ctx.beginPath();
+  ctx.moveTo(x + 10, y - 39);
+  ctx.lineTo(x + 10, y - 33);
+  ctx.stroke();
+  ctx.fillStyle = 'rgba(255,255,255,0.35)';
+  ctx.beginPath();
+  ctx.ellipse(x + 13, y - 54, 2, 4, 0, 0, Math.PI * 2);
+  ctx.fill();
+}
+
 // Mastro do estandarte (o pano é animado em `front`)
 function bannerPole(ctx, x, y) {
   ctx.fillStyle = WOOD.dark;
@@ -1813,6 +1960,9 @@ function decor(ctx, d, rand) {
     case 'pedras': rocks(ctx, x, y, rand); break;
     case 'cogumelos': mushrooms(ctx, x, y, rand); break;
     case 'estandarte': bannerPole(ctx, x, y); break;
+    case 'ponte': brokenBridge(ctx, x, y, d.dir ?? 1, rand); break;
+    case 'varal': bunting(ctx, x, y, d.x2, d.y2, rand); break;
+    case 'poste': lanternPost(ctx, x, y); break;
     default: break;
   }
 }

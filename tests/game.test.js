@@ -1095,13 +1095,15 @@ test('Mortal: tiro sem elemento não se combina com outros tiros', () => {
 
 // ---------------------------------------------------------------- Campo Aberto
 
-test('Campo Aberto: chão plano, sem perigos nem vento; só cair tira vida', () => {
+test('Campo Aberto: duas ilhas planas e uma plataforma, sem perigos nem vento; só cair tira vida', () => {
   const g = newGame(['fogo', 'agua'], { mapId: 'campo' });
   assert.equal(g.map.hazards.length, 0);
   assert.equal(g.map.wind, undefined);
-  assert.equal(new Set(g.map.solids.map((s) => s.y)).size, 1, 'um chão só, plano');
+  assert.equal(new Set(g.map.solids.map((s) => s.y)).size, 1, 'as duas ilhas na mesma altura, planas');
+  assert.equal(g.map.solids.length, 2);
+  assert.equal(g.map.platforms.length, 1);
   const p = g.playerById(1);
-  place(p, 640, 530);
+  place(p, 300, 530);
   run(g, 120);
   assert.equal(p.state, 'alive');
   p.y = 1200;

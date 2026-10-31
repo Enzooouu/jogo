@@ -57,7 +57,12 @@ export class BotController {
     // Mapas com várias ilhas: a ilha embaixo de mim, ou a mais perto para
     // onde voltar se eu estiver no ar fora de todas.
     const home = this.islands.find((i) => cx >= i.left - 2 && cx <= i.right + 2);
-    const back = home ? null : recoveryTarget(this.islands, game.map, me.element, cx);
+    // pulando um buraco de propósito (para pegar alguém do outro lado):
+    // mira na ilha de lá, e não na mais perto
+    if (home && me.onGround) this.crossing = null;
+    const crossing = this.crossing && game.tick < this.crossing.until ? this.crossing : null;
+    const crossIsland = crossing && this.islands.find((i) => crossing.x >= i.left && crossing.x <= i.right);
+    const back = home ? null : crossIsland ? { island: crossIsland, x: crossing.x } : recoveryTarget(this.islands, game.map, me.element, cx);
     const island = home ?? back.island;
     const offStage = !home;
     // Cabeça abaixo do chão da ilha (e fora das piscinas) = embaixo dela.
@@ -223,9 +228,21 @@ export class BotController {
       }
 
       // Não anda para fora do palco nem cai de plataforma em cima de perigo.
+      // Exceção: o objetivo está do outro lado de um buraco que dá para
+      // pular; aí pula e atravessa.
       if (dir !== 0) {
         const probeX = cx + dir * (me.w / 2 + 14);
-        if (!this.landingIsSafe(game, me, probeX)) dir = 0;
+        if (!this.landingIsSafe(game, me, probeX)) {
+          const goal = this.resolveGoal(game);
+          const goalAhead = goal && Math.sign(goal.x + goal.w / 2 - cx) === dir && Math.abs(goal.x + goal.w / 2 - cx) > 60;
+          const landing = goalAhead && me.standingOn === 'solid' ? this.landingAcross(game, me, probeX, dir) : null;
+          if (landing !== null) {
+            jump = true;
+            this.crossing = { x: landing, until: game.tick + 110 };
+          } else {
+            dir = 0;
+          }
+        }
       }
     }
     return { dir, jump };
@@ -248,6 +265,21 @@ export class BotController {
     }
     if (best.kind === 'hazard') return hazardReaction(me.element, best.type) === 'imune';
     return true;
+  }
+
+  // Chão seguro do outro lado de um buraco, na mesma altura (até ~280px de
+  // distância): devolve o x onde mirar, ou null se não dá para pular
+  landingAcross(game, me, fromX, dir) {
+    const feet = me.y + me.h;
+    for (let d = 10; d <= 280; d += 10) {
+      const x = fromX + dir * d;
+      const solid = game.map.solids.find((s) => x >= s.x && x <= s.x + s.w && s.y > feet - 70 && s.y < feet + 50);
+      if (!solid) continue;
+      const target = x + dir * 40;
+      const deadly = game.map.hazards.some((h) => target >= h.x - 20 && target <= h.x + h.w + 20 && hazardReaction(me.element, h.type) === 'morre');
+      return deadly ? null : target;
+    }
+    return null;
   }
 
   itemIsDeadly(game, me, item) {
