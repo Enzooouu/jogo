@@ -144,6 +144,36 @@ export const MAPS = {
     ],
     theme: { skyTop: '#3a4f9e', skyBottom: '#ffb98a', haze: '#ffd6a8' },
   },
+
+  // Campo de grama plano, de dia: sem piscina, espinho nem vento. Só dá para
+  // perder vida sendo derrubado para fora da ilha. Usa o cenário do Campo de
+  // Treino (shared/maps-treino.js).
+  campo: {
+    id: 'campo',
+    name: 'Campo Aberto',
+    art: 'treino',
+    width: 1280,
+    height: 720,
+    blast: { left: -260, right: 1540, top: -560, bottom: 1000 },
+    solids: [{ x: 190, y: 530, w: 900, h: 180 }],
+    platforms: [],
+    hazards: [],
+    spawns: [
+      { x: 330, y: 530 }, { x: 950, y: 530 }, { x: 430, y: 530 }, { x: 850, y: 530 },
+      { x: 530, y: 530 }, { x: 750, y: 530 }, { x: 260, y: 530 }, { x: 1020, y: 530 },
+    ],
+    respawns: [
+      { x: 560, y: 150 }, { x: 720, y: 150 }, { x: 400, y: 150 }, { x: 880, y: 150 },
+    ],
+    itemSpawn: { minX: 230, maxX: 1050, y: -40 },
+    decor: [
+      { type: 'arvore', x: 250, y: 530 }, { type: 'estandarte', x: 380, y: 530, el: 'fogo' },
+      { type: 'flores', x: 520, y: 530 }, { type: 'estandarte', x: 640, y: 530, el: 'terra' },
+      { type: 'flores', x: 760, y: 530 }, { type: 'estandarte', x: 900, y: 530, el: 'agua' },
+      { type: 'arvore', x: 1030, y: 530 }, { type: 'pedras', x: 470, y: 530 }, { type: 'cogumelos', x: 820, y: 530 },
+    ],
+    theme: { skyTop: '#4a9be8', skyBottom: '#cfeeff', haze: '#ffffff' },
+  },
 };
 
 export const DEFAULT_MAP = 'caldeira';

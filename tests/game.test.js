@@ -6,7 +6,7 @@ import { Game } from '../shared/game.js';
 import { BotController } from '../shared/ai.js';
 import { MATCH, PLAYER } from '../shared/constants.js';
 import { weaponProfile, WEAPONS } from '../shared/weapons.js';
-import { hazardReaction } from '../shared/elements.js';
+import { hazardReaction, ELEMENTS } from '../shared/elements.js';
 import { encodeInput, decodeInput, makeInput } from '../shared/input.js';
 
 const FPS = 60;
@@ -1045,7 +1045,7 @@ test('lança: cada elemento tem a sua (nome e efeito)', () => {
 
 // ---------------------------------------------------------------- mortal
 
-test('Mortal: bate 25% mais forte que os outros com a mesma arma', () => {
+test('Mortal: bate mais forte que os outros com a mesma arma', () => {
   const hit = (element) => {
     const g = newGame([element, element === 'agua' ? 'terra' : 'agua'], { mapId: 'treino-campo', items: false });
     const [a, b] = g.players;
@@ -1058,7 +1058,7 @@ test('Mortal: bate 25% mais forte que os outros com a mesma arma', () => {
   };
   const normal = hit('agua');
   const mortal = hit('mortal');
-  assert.ok(Math.abs(mortal / normal - 1.25) < 0.01, `mortal ${mortal} x normal ${normal}`);
+  assert.ok(Math.abs(mortal / normal - ELEMENTS.mortal.stats.damage) < 0.01, `mortal ${mortal} x normal ${normal}`);
 });
 
 test('Mortal: morre na lava e na água, espinhos machucam e o vento empurra', () => {
@@ -1091,4 +1091,20 @@ test('Mortal: tiro sem elemento não se combina com outros tiros', () => {
     combos += g.drainEvents().filter((e) => e.type === 'combo').length;
   }
   assert.equal(combos, 0);
+});
+
+// ---------------------------------------------------------------- Campo Aberto
+
+test('Campo Aberto: chão plano, sem perigos nem vento; só cair tira vida', () => {
+  const g = newGame(['fogo', 'agua'], { mapId: 'campo' });
+  assert.equal(g.map.hazards.length, 0);
+  assert.equal(g.map.wind, undefined);
+  assert.equal(new Set(g.map.solids.map((s) => s.y)).size, 1, 'um chão só, plano');
+  const p = g.playerById(1);
+  place(p, 640, 530);
+  run(g, 120);
+  assert.equal(p.state, 'alive');
+  p.y = 1200;
+  run(g, 2);
+  assert.equal(p.lives, PLAYER.lives - 1);
 });

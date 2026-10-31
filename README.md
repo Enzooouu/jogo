@@ -78,7 +78,7 @@ Dá para trocar todas essas teclas (menos o `Esc`) em **Controles**, no menu ini
 | Água | Água | Lava | Espinhos | equilibrado; armas deixam lento (no chão) |
 | Terra | Espinhos | Lava, Água | — | mais lento e pesado (voa menos, vento empurra metade), não fica atordoado; armas atordoam |
 | Ar | Vento | Lava, Água | Espinhos | mais rápido e pula mais alto; tornado puxa os inimigos |
-| Mortal | — | Lava, Água | Espinhos | sem poder nenhum (o vento empurra inteiro) e armas padrão sem efeito, mas **bate 25% mais forte**; visual do manequim preto; vitória: **Soco Final** (um punho gigante racha a tela como vidro) |
+| Mortal | — | Lava, Água | Espinhos | sem poder nenhum (o vento empurra inteiro) e armas padrão sem efeito, mas **bate 40% mais forte** e é um pouco mais pesado; visual do manequim preto; vitória: **Soco Final** (um punho gigante racha a tela como vidro) |
 
 - **Espinhos** (em cima da plataforma do meio) não matam: somam 6% de dano por segundo.
 - **Vento**: rajadas aparecem em lugares aleatórios (com 1 s de aviso piscando) e
@@ -103,7 +103,7 @@ time, e quem pegar recebe ela com as mesmas cargas que tinha:
 | Cajado | Bola de Fogo: explode e queima | Jato d'Água: atravessa e empurra | Pedrada: arco, atordoa | Tornado: lento, atravessa e puxa | Cajado: esfera de força, sem efeito |
 | Lança (investida para a frente; no ar 1 vez por pulo) | Lança Ígnea: queima | Tridente da Maré: deixa lento | Lança de Rocha: forte, atordoa | Lança do Vento: investida mais longa | Lança: sem efeito |
 
-**Mapas:** na tela antes da luta (Versus) escolha **Caldeira** ou **Pico dos Ventos**
+**Mapas:** na tela antes da luta (Versus) escolha **Caldeira**, **Campo Aberto** (grama plana de dia, sem piscina, espinho nem vento: só vale derrubar o outro da ilha) ou **Pico dos Ventos**
 (ilhas no céu, plataformas penduradas em balões que balançam em arco quando
 alguém anda em cima ou o vento bate, correntes de vento que atravessam o mapa
 de ponta a ponta além das rajadas comuns, lava, lago e espinhos no meio).

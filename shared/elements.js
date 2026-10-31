@@ -37,8 +37,8 @@ export const ELEMENTS = {
   mortal: {
     id: 'mortal', name: 'Mortal', enabled: true,
     color: '#4a4658', light: '#e8e8f2', dark: '#141218',
-    description: 'Sem poder nenhum: morre na lava e na água e o vento empurra. Em troca, bate 25% mais forte.',
-    stats: { speed: 1, jump: 1, weight: 1, damage: 1.25 },
+    description: 'Sem poder nenhum: morre na lava e na água e o vento empurra. Em troca, bate 40% mais forte e é um pouco mais pesado.',
+    stats: { speed: 1, jump: 1, weight: 1.05, damage: 1.4 },
   },
 };
 

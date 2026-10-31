@@ -310,7 +310,7 @@ function fillSide(box, tag, el, members, myId) {
     agua: 'Armas deixam o alvo lento',
     terra: 'Armas atordoam o alvo',
     ar: 'Tornado puxa os inimigos',
-    mortal: 'Bate 25% mais forte (armas sem efeito)',
+    mortal: 'Bate 40% mais forte (armas sem efeito)',
   }[el.id];
   for (const line of [imune && `Imune: ${imune}`, morre && `Morre: ${morre}`, effect]) {
     if (!line) continue;
