@@ -85,7 +85,7 @@ export const WEAPONS = {
 // Lança: investida para a frente com a ponta. Acerta cada inimigo uma vez
 // e para quando acerta alguém.
 WEAPONS.lanca = {
-  id: 'lanca', name: 'Lança', kind: 'melee', uses: 10,
+  id: 'lanca', name: 'Lança', kind: 'melee', uses: 6,
   cooldown: 0.62, startup: 0.09, duration: 0.34,
   reach: 64, height: 26,
   lunge: { speed: 860, time: 0.17 },

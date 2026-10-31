@@ -506,6 +506,8 @@ kbd {
 
 /* ------------------------------------------------------------ resultado */
 
+.score.ffa th:nth-child(2), .score.ffa td:nth-child(2) { display: none; }
+
 .result-wrap { max-width: 860px; margin: 0 auto; padding: 50px 24px; text-align: center; }
 .result-title {
   margin: 0;

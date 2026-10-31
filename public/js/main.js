@@ -466,9 +466,13 @@ function showResult(setup, result) {
   title.textContent = { vitoria: 'VITÓRIA!', derrota: 'DERROTA', empate: 'EMPATE' }[outcome];
   title.className = `result-title ${{ vitoria: 'win', derrota: 'lose', empate: 'draw' }[outcome]}`;
 
-  const winner = result.winnerTeam !== null ? teamLabel(result, result.winnerTeam) : null;
+  // Todos contra todos: não tem time, o vencedor é um jogador
+  const ffa = result.mode === 'ffa';
+  const champion = ffa && result.winnerTeam !== null ? result.players.find((p) => p.team === result.winnerTeam) : null;
+  const championName = champion && (champion.id === setup.localPlayerId ? 'Você' : champion.name);
+  const winner = result.winnerTeam !== null ? (ffa ? championName : teamLabel(result, result.winnerTeam)) : null;
   const subs = {
-    eliminacao: winner ? `${winner} eliminou o adversário.` : 'Todos caíram ao mesmo tempo.',
+    eliminacao: winner ? (ffa ? `${winner} ficou por último de pé.` : `${winner} eliminou o adversário.`) : 'Todos caíram ao mesmo tempo.',
     tempo: winner ? `Tempo esgotado — ${winner} tinha mais vidas.` : 'Tempo esgotado e tudo empatado.',
     desistencia: 'Você desistiu da partida.',
   };
@@ -477,7 +481,11 @@ function showResult(setup, result) {
   const rows = $('#result-rows');
   rows.innerHTML = '';
   const teams = [...new Set(result.players.map((p) => p.team))];
-  const sorted = [...result.players].sort((a, b) => teams.indexOf(a.team) - teams.indexOf(b.team) || b.kills - a.kills);
+  // sem time (todos contra todos): esconde a coluna de time e ordena por kills
+  $('#result-rows').closest('table').classList.toggle('ffa', ffa);
+  const sorted = ffa
+    ? [...result.players].sort((a, b) => (b.team === result.winnerTeam) - (a.team === result.winnerTeam) || b.kills - a.kills || a.deaths - b.deaths)
+    : [...result.players].sort((a, b) => teams.indexOf(a.team) - teams.indexOf(b.team) || b.kills - a.kills);
   for (const p of sorted) {
     const tr = document.createElement('tr');
     if (p.id === setup.localPlayerId) tr.className = 'me';
