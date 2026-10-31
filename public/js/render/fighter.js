@@ -110,6 +110,12 @@ function computePose(p, vis, time) {
       pose.lean = active ? 0.25 : -0.05;
     }
   }
+  // Segurando a lança (sem atacar): quase deitada na altura da cintura, as
+  // duas mãos na haste e o cabo passando para trás do corpo
+  if (p.weapon?.id === 'lanca' && !p.attack) {
+    pose.armF = [0.75, 1.45];
+    pose.armB = [0.3, 1.25];
+  }
   return pose;
 }
 
@@ -167,9 +173,10 @@ export function drawFighter(ctx, p, x, y, vis, time, { teamColor, isLocal, showN
   // Arma (atrás do braço da frente)
   if (p.weapon || (p.attack && p.attack.weapon)) {
     const weaponId = p.attack?.weapon ?? p.weapon?.id;
-    const angle = pose.weaponAngle ?? (weaponId === 'cajado' ? 2.9 : weaponId === 'lanca' ? 2.55 : pose.armF[1] + 0.6);
+    // lança: quase na horizontal, um pouco para cima, segurada mais no meio
+    const angle = pose.weaponAngle ?? (weaponId === 'cajado' ? 2.9 : weaponId === 'lanca' ? 1.78 : pose.armF[1] + 0.6);
     const hand = pose.thrust ? { x: armF.end.x + pose.thrust, y: armF.end.y } : armF.end;
-    drawHeldWeapon(ctx, weaponId, p.element, hand, angle, time);
+    drawHeldWeapon(ctx, weaponId, p.element, hand, angle, time, weaponId === 'lanca' ? 16 : 0);
   }
   limbStroke(ctx, [shoulder, armF.mid, armF.end], 6 * k.thick, k.body, k.bodyHi);
   fist(ctx, p.element, k, armF.end, time);
@@ -188,11 +195,13 @@ function limb(start, [a1, a2]) {
   return { mid, end };
 }
 
-export function drawHeldWeapon(ctx, weaponId, elementId, hand, angle, time) {
+// `slide` empurra a arma para trás ao longo dela (a mão fica mais no meio)
+export function drawHeldWeapon(ctx, weaponId, elementId, hand, angle, time, slide = 0) {
   ctx.save();
   ctx.translate(hand.x, hand.y);
   // angle: 0 = para baixo; giramos para que o eixo -y local aponte para o ângulo
   ctx.rotate(-angle + Math.PI);
+  ctx.translate(0, slide);
   if (weaponId === 'espada') drawSwordArt(ctx, elementId, time);
   else if (weaponId === 'cajado') drawStaffArt(ctx, elementId, time);
   else if (weaponId === 'lanca') drawSpearArt(ctx, elementId, time);
