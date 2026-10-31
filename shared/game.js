@@ -38,6 +38,13 @@ const statsOf = (p) => ({ ...NO_STATS, ...ELEMENTS[p.element].stats });
 // Quanto cada elemento sente o vento (Ar é imune pela tabela de perigos)
 const WIND_FACTOR = { terra: 0.5 };
 
+// Gelo: acelera devagar, quase não freia e corre um pouco mais
+const ICE = { accel: 0.28, friction: 0.07, speed: 1.15 };
+// Parede de espinhos da morte súbita: dano e o empurrão de volta para o
+// meio, que cresce com o dano (%) como um golpe: com muito dano, a parede
+// arremessa por cima da outra parede (e aí cai no fosso)
+const SPIKE_WALL = { damage: 8, kbBase: 420, kbScale: 4.2, angle: 1.0, hitstun: 0.3, cooldown: 0.45 };
+
 const THROWN = { damage: 10, kbBase: 300, kbScale: 3.4, angle: 0.65, speed: 820, gravity: 1100 };
 const EXPLOSION_KB = { kbBase: 220, kbScale: 2.2, angle: 0.75 };
 
@@ -87,6 +94,8 @@ export class Game {
     this.nextWindIn = this.map.wind ? this.map.wind.first : Infinity;
     this.nextStreamIn = this.map.wind?.stream ? this.map.wind.stream.first : Infinity;
     this.respawnIndex = 0;
+    this.walls = null;           // paredes de espinhos da morte súbita (Coliseu)
+    this.wallsWarned = false;
     // Plataformas com posição atual (algumas balançam presas a um balão)
     this.platforms = this.map.platforms.map((pl) => ({ ...pl, baseX: pl.x, baseY: pl.y, px: pl.x, py: pl.y, dx: 0, dy: 0 }));
 
@@ -152,6 +161,7 @@ export class Game {
       winds: this.winds.map((w) => ({ ...w })),
       projectiles: this.projectiles.map((pr) => ({ ...pr, hitIds: [...pr.hitIds] })),
       platforms: this.platforms.map((pl) => ({ x: pl.x, y: pl.y })),
+      walls: this.walls ? { ...this.walls } : null,
       result: this.result,
     };
   }
@@ -196,6 +206,7 @@ export class Game {
     this.time += DT;
     this.updatePlatforms();
     this.updateWinds();
+    this.updateClosingWalls();
     for (const p of this.players) this.updatePlayer(p, inputs[p.id] ?? EMPTY_INPUT);
     this.updateProjectiles();
     this.updateItems();
@@ -243,6 +254,92 @@ export class Game {
       if (!pl) continue;
       p.x += pl.dx;
       p.y += pl.dy;
+    }
+  }
+
+  // ---------------------------------------------------------------- morte súbita
+
+  // Plataforma que já caiu (o meio dela ficou do lado de fora das paredes)
+  platformGone(pl) {
+    if (!this.walls) return false;
+    const cx = pl.x + pl.w / 2;
+    return cx < this.walls.left || cx > this.walls.right;
+  }
+
+  // Chão que existe agora: na morte súbita do Coliseu o palco desmorona
+  // atrás das paredes de espinhos (fora delas vira fosso)
+  solidsNow() {
+    if (!this.walls) return this.map.solids;
+    const { left, right } = this.walls;
+    return this.map.solids
+      .map((s) => {
+        const x0 = Math.max(s.x, left);
+        const x1 = Math.min(s.x + s.w, right);
+        return x1 > x0 ? { ...s, x: x0, w: x1 - x0 } : null;
+      })
+      .filter(Boolean);
+  }
+
+  // Paredes de espinhos (Coliseu): a partir de `start` segundos de luta elas
+  // fecham devagar dos dois lados até `end`, e o palco desmorona atrás delas.
+  // São baixas (`height`): quem encosta leva dano (Terra não, é imune a
+  // espinhos) e é arremessado de volta para o meio; quem passa por cima
+  // (arremessado alto) cai no fosso.
+  updateClosingWalls() {
+    const cfg = this.map.closingWalls;
+    if (!cfg) return;
+    if (this.time < cfg.start) {
+      if (!this.wallsWarned && this.time >= cfg.start - cfg.warn) {
+        this.wallsWarned = true;
+        this.emit('wallsWarn');
+      }
+      return;
+    }
+    if (!this.walls) this.emit('wallsStart');
+    const k = Math.min(1, (this.time - cfg.start) / (cfg.end - cfg.start));
+    const ease = k * k * (3 - 2 * k);
+    this.walls = {
+      left: cfg.from[0] + (cfg.to[0] - cfg.from[0]) * ease,
+      right: cfg.from[1] + (cfg.to[1] - cfg.from[1]) * ease,
+    };
+    for (const p of this.players) {
+      if (p.state !== 'alive') continue;
+      p.wallSpikeCd = Math.max(0, (p.wallSpikeCd ?? 0) - DT);
+      // a parede é baixa: quem está mais alto que ela passa por cima (e cai no fosso)
+      if (p.y + p.h < cfg.top - cfg.height) continue;
+      // já caindo no fosso (abaixo do palco): segue caindo
+      if (p.y > cfg.top) continue;
+      // de que lado da parede estava no passo anterior: quem já estava fora
+      // (em cima do fosso) só bate nela por fora e segue caindo
+      const prevCx = p.px + p.w / 2;
+      let dir = 0;
+      if (prevCx < this.walls.left) {
+        if (p.x + p.w > this.walls.left) p.x = this.walls.left - p.w;
+        continue;
+      } else if (prevCx > this.walls.right) {
+        if (p.x < this.walls.right) p.x = this.walls.right;
+        continue;
+      } else if (p.x < this.walls.left) {
+        p.x = this.walls.left;
+        dir = 1;
+      } else if (p.x + p.w > this.walls.right) {
+        p.x = this.walls.right - p.w;
+        dir = -1;
+      }
+      if (!dir || p.admin || p.wallSpikeCd > 0) continue;
+      p.wallSpikeCd = SPIKE_WALL.cooldown;
+      const amount = hazardReaction(p.element, 'espinhos') === 'imune' ? 0 : SPIKE_WALL.damage;
+      p.damage += amount;
+      p.stats.damageTaken += amount;
+      const kb = (SPIKE_WALL.kbBase + p.damage * SPIKE_WALL.kbScale) / statsOf(p).weight;
+      p.vx = dir * kb * Math.cos(SPIKE_WALL.angle);
+      p.vy = -kb * Math.sin(SPIKE_WALL.angle);
+      p.onGround = false;
+      p.hitstun = SPIKE_WALL.hitstun;
+      p.dashTime = 0;
+      p.lungeTime = 0;
+      p.attack = null;
+      this.emit('spikeWall', { id: p.id, dir, amount, x: dir > 0 ? this.walls.left : this.walls.right, y: p.y + p.h / 2 });
     }
   }
 
@@ -331,12 +428,14 @@ export class Game {
       // Encharcado deixa lento só no chão (no ar ainda dá para voltar para a ilha)
       if (p.status.encharcado && p.onGround) maxSpeed *= 1 - p.status.encharcado.slow;
       if (p.attack && p.onGround) maxSpeed *= 0.5;
+      const ice = p.onGround && p.onIce;
+      if (ice) maxSpeed *= ICE.speed;
 
       if (dir !== 0) {
-        const accel = p.onGround ? PHYS.groundAccel : PHYS.airAccel;
+        const accel = p.onGround ? PHYS.groundAccel * (ice ? ICE.accel : 1) : PHYS.airAccel;
         p.vx = approach(p.vx, dir * maxSpeed, accel * DT);
       } else {
-        const friction = p.onGround ? PHYS.groundFriction : PHYS.airDrag;
+        const friction = p.onGround ? PHYS.groundFriction * (ice ? ICE.friction : 1) : PHYS.airDrag;
         p.vx = approach(p.vx, 0, friction * DT);
       }
 
@@ -451,11 +550,11 @@ export class Game {
   // Tem parede sólida encostada no lado `dir` (-1 esquerda, 1 direita)?
   touchingWall(p, dir) {
     const probe = { x: dir > 0 ? p.x + p.w : p.x - 2, y: p.y + 12, w: 2, h: p.h - 24 };
-    return this.map.solids.some((s) => rectsOverlap(probe, s));
+    return this.solidsNow().some((s) => rectsOverlap(probe, s));
   }
 
   moveAndCollide(p) {
-    const { solids } = this.map;
+    const solids = this.solidsNow();
     const platforms = this.platforms;
 
     const mvx = p.vx + p.windVx;
@@ -472,12 +571,14 @@ export class Game {
     p.y += p.vy * DT;
     p.onGround = false;
     p.standingOn = null;
+    p.onIce = false;
     for (const s of solids) {
       if (!rectsOverlap(p, s)) continue;
       if (p.vy > 0) {
         p.y = s.y - p.h;
         p.onGround = true;
         p.standingOn = 'solid';
+        p.onIce = Boolean(s.ice);
       } else if (p.vy < 0) {
         p.y = s.y + s.h;
       }
@@ -487,6 +588,7 @@ export class Game {
     if (p.vy >= 0 && p.dropTimer <= 0) {
       const bottom = p.y + p.h;
       for (const pl of platforms) {
+        if (this.platformGone(pl)) continue;
         // compara com onde a plataforma estava (ela pode ter subido neste passo)
         const crossing = prevBottom <= Math.max(pl.y, pl.y - pl.dy) + 0.5 && bottom >= pl.y;
         const inside = p.x + p.w > pl.x && p.x < pl.x + pl.w;
@@ -496,6 +598,7 @@ export class Game {
           p.onGround = true;
           p.standingOn = 'platform';
           p.platform = platforms.indexOf(pl);
+          p.onIce = Boolean(pl.ice);
         }
       }
     }
@@ -985,7 +1088,7 @@ export class Game {
         }
       }
 
-      if (alive && this.map.solids.some((s) => circleRectOverlap(pr.x, pr.y, pr.r * 0.6, s))) alive = false;
+      if (alive && this.solidsNow().some((s) => circleRectOverlap(pr.x, pr.y, pr.r * 0.6, s))) alive = false;
 
       const b = this.map.blast;
       const outside = pr.x < b.left || pr.x > b.right || pr.y > b.bottom;
@@ -1009,7 +1112,7 @@ export class Game {
     let x = pr.x;
     let y = pr.y;
     // se entrou na parede, volta um pouco para fora dela
-    for (const s of this.map.solids) {
+    for (const s of this.solidsNow()) {
       if (!circleRectOverlap(x, y, pr.r * 0.6, s)) continue;
       if (y < s.y + 14) y = s.y - 16;
       else x -= Math.sign(pr.vx || 1) * 24;
@@ -1074,7 +1177,7 @@ export class Game {
         // caixote desce de paraquedas; arma caída despenca
         item.y += (item.dropped ? ITEMS.dropSpeed : ITEMS.fallSpeed) * DT;
         const bottom = item.y + item.h;
-        const surfaces = [...this.map.solids, ...this.platforms];
+        const surfaces = [...this.solidsNow(), ...this.platforms.filter((pl) => !this.platformGone(pl))];
         for (const s of surfaces) {
           const inside = item.x + item.w > s.x && item.x < s.x + s.w;
           if (inside && prevBottom <= s.y + 0.5 && bottom >= s.y) {
@@ -1192,6 +1295,7 @@ function createPlayer(cfg, index, lives) {
     facing: 1,
     onGround: false,
     standingOn: null,
+    onIce: false,           // em pé em cima de gelo (escorrega)
     platform: -1,           // índice da plataforma onde está em pé
     jumpsLeft: PHYS.maxJumps,
     dropTimer: 0,

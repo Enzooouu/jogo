@@ -1110,3 +1110,63 @@ test('Campo Aberto: duas ilhas planas e uma plataforma, sem perigos nem vento; s
   run(g, 2);
   assert.equal(p.lives, PLAYER.lives - 1);
 });
+
+// ---------------------------------------------------------------- gelo e coliseu
+
+test('Lago Congelado: no gelo demora muito mais para parar do que na neve', () => {
+  const slide = (x) => {
+    const g = newGame(['fogo', 'terra'], { mapId: 'gelo', items: false });
+    park(g, 2);
+    const p = g.playerById(1);
+    place(p, x, 530);
+    run(g, 2);
+    p.vx = 330;
+    const x0 = p.x;
+    run(g, 60);
+    return p.x - x0;
+  };
+  const neve = slide(200);
+  const gelo = slide(360);
+  assert.ok(gelo > neve * 3, `gelo ${Math.round(gelo)}px x neve ${Math.round(neve)}px`);
+});
+
+test('Coliseu: paredes de espinhos fecham na morte súbita e arremessam para o meio', () => {
+  const g = newGame(['fogo', 'terra'], { mapId: 'coliseu', items: false });
+  const cfg = g.map.closingWalls;
+  const [fogo, terra] = g.players;
+  // pula direto para o meio da morte súbita e encosta os dois nas paredes,
+  // por dentro
+  g.time = cfg.start + (cfg.end - cfg.start) * 0.5;
+  g.step({});
+  place(fogo, g.walls.left + 14, 520);
+  place(terra, g.walls.right - 14, 520);
+  const events = [];
+  for (let i = 0; i < 10; i++) {
+    g.step({});
+    events.push(...g.drainEvents());
+  }
+  assert.ok(g.walls.left > cfg.from[0] && g.walls.right < cfg.from[1], 'as paredes andaram');
+  const hits = events.filter((e) => e.type === 'spikeWall');
+  assert.equal(new Set(hits.map((e) => e.id)).size, 2, 'os dois encostaram');
+  assert.ok(fogo.damage >= 8, 'fogo leva dano');
+  assert.equal(terra.damage, 0, 'terra é imune a espinhos');
+  assert.ok(fogo.vx > 0 && terra.vx < 0, 'arremessados para o meio');
+  // o palco desmoronou do lado de fora das paredes
+  const floor = g.solidsNow()[0];
+  assert.ok(floor.x >= g.walls.left - 0.01 && floor.x + floor.w <= g.walls.right + 0.01);
+});
+
+test('mapas novos: bots terminam partidas sem travar', () => {
+  for (const mapId of ['gelo', 'coliseu', 'campo']) {
+    const players = ['fogo', 'fogo', 'agua', 'agua'].map((el, i) => ({ id: i + 1, element: el, team: el, isBot: true }));
+    const g = new Game({ players, seed: 3, mapId });
+    const bots = players.map((p) => new BotController(p.id, { seed: p.id }));
+    while (g.phase !== 'ended' && g.tick < 60 * 300) {
+      const inputs = {};
+      for (const b of bots) inputs[b.playerId] = b.getInput(g);
+      g.step(inputs);
+      g.drainEvents();
+    }
+    assert.equal(g.phase, 'ended', mapId);
+  }
+});

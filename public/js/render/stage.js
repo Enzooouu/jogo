@@ -10,6 +10,8 @@
 import { roundRect, shadeHex, seeded } from './stage-util.js';
 import { PICO_ART } from './stage-pico.js';
 import { TREINO_ART } from './stage-treino.js';
+import { GELO_ART } from './stage-gelo.js';
+import { COLISEU_ART } from './stage-coliseu.js';
 import { drawVolcano, volcanoAnimated, drawMidLava, midLavaAnimated } from './volcano.js';
 
 export { roundRect };
@@ -37,7 +39,8 @@ export class StageRenderer {
     this.scale = 0;
     this.terrainRect = { x: 60, y: -420, w: 1160, h: 1400 };
     // cada mapa tem o seu cenário; os perigos são desenhados igual em todos
-    this.art = map.art === 'treino' ? TREINO_ART : map.id === 'pico' ? PICO_ART : CALDEIRA_ART;
+    const ARTS = { treino: TREINO_ART, gelo: GELO_ART, coliseu: COLISEU_ART };
+    this.art = ARTS[map.art] ?? (map.id === 'pico' ? PICO_ART : CALDEIRA_ART);
     this.setScale(scale);
   }
 

@@ -103,7 +103,7 @@ time, e quem pegar recebe ela com as mesmas cargas que tinha:
 | Cajado | Bola de Fogo: explode e queima | Jato d'Água: atravessa e empurra | Pedrada: arco, atordoa | Tornado: lento, atravessa e puxa | Cajado: esfera de força, sem efeito |
 | Lança (investida para a frente; no ar 1 vez por pulo) | Lança Ígnea: queima | Tridente da Maré: deixa lento | Lança de Rocha: forte, atordoa | Lança do Vento: investida mais longa | Lança: sem efeito |
 
-**Mapas:** na tela antes da luta (Versus) escolha **Caldeira**, **Campo Aberto** (grama de dia, sem piscina, espinho nem vento: duas ilhas com um buraco no meio, onde ficava uma ponte que quebrou, e uma plataforma de madeira no alto; só vale derrubar o outro) ou **Pico dos Ventos**
+**Mapas:** na tela antes da luta (Versus) escolha **Caldeira**, **Campo Aberto** (grama de dia, sem piscina, espinho nem vento: duas ilhas com um buraco no meio, onde ficava uma ponte que quebrou, e uma plataforma de madeira no alto; só vale derrubar o outro) **Pico dos Ventos**, **Lago Congelado** (noite de neve com aurora boreal: o gelo do meio **escorrega**, demora para parar e para virar; as margens de neve são firmes; tem um buraco no gelo com água) ou **Coliseu** (palco de pedra sobre o fosso, colunas quebradas e a torcida; **morte súbita** depois de 2:30 de luta: paredes de espinhos baixas fecham dos dois lados e o palco desmorona atrás delas; encostar nelas dá dano e arremessa para o meio, e quanto mais dano você tem, mais longe vai, às vezes por cima da outra parede)
 (ilhas no céu, plataformas penduradas em balões que balançam em arco quando
 alguém anda em cima ou o vento bate, correntes de vento que atravessam o mapa
 de ponta a ponta além das rajadas comuns, lava, lago e espinhos no meio).

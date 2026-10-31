@@ -88,6 +88,16 @@ export function playEvents(events, localId) {
       case 'jump':
         if (e.id === localId) tone({ freq: e.double ? 520 : 380, to: e.double ? 900 : 640, dur: 0.1, type: 'triangle', vol: 0.15 });
         break;
+      case 'wallsWarn':
+        // trombeta de morte súbita
+        tone({ freq: 220, dur: 0.35, type: 'sawtooth', vol: 0.16 });
+        tone({ freq: 277, dur: 0.35, type: 'sawtooth', vol: 0.16, delay: 0.35 });
+        tone({ freq: 330, dur: 0.7, type: 'sawtooth', vol: 0.18, delay: 0.7 });
+        break;
+      case 'spikeWall':
+        noise({ dur: 0.12, vol: 0.3, freq: 3000 });
+        tone({ freq: 180, to: 90, dur: 0.15, type: 'square', vol: 0.15 });
+        break;
       case 'lunge':
         // zuuum da investida
         noise({ dur: 0.16, vol: 0.18, freq: 2400 });

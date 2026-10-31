@@ -97,6 +97,12 @@ export class BotController {
       jump = jump || safety.jump;
     }
 
+    // Morte súbita (Coliseu): foge das paredes de espinhos
+    if (!offStage && game.walls) {
+      if (cx < game.walls.left + 90) dir = 1;
+      else if (cx > game.walls.right - 90) dir = -1;
+    }
+
     // Dentro de uma rajada de vento: anda contra ela para não ser jogado fora.
     if (!offStage && this.rng.chance(this.cfg.reflex)) {
       const gust = game.winds.find((w) => w.state === 'ativo' && rectsOverlap(me, w));
@@ -221,7 +227,9 @@ export class BotController {
       for (const h of deadly) {
         if (h.y > feet + 40 || h.y + h.h < feet - 40) continue;
         const gap = dir > 0 ? h.x - (me.x + me.w) : me.x - (h.x + h.w);
-        if (gap < -2 || gap > 46) continue;
+        // no gelo escorrega: precisa olhar mais longe
+        const look = 46 + (me.onIce ? Math.abs(me.vx) * 0.35 : 0);
+        if (gap < -2 || gap > look) continue;
         const goalInside = goal && goal.x + goal.w / 2 > h.x - 30 && goal.x + goal.w / 2 < h.x + h.w + 30;
         if (goalInside) dir = 0;
         else if (gap < 30) jump = true;
@@ -231,7 +239,7 @@ export class BotController {
       // Exceção: o objetivo está do outro lado de um buraco que dá para
       // pular; aí pula e atravessa.
       if (dir !== 0) {
-        const probeX = cx + dir * (me.w / 2 + 14);
+        const probeX = cx + dir * (me.w / 2 + 14 + (me.onIce ? Math.abs(me.vx) * 0.3 : 0));
         if (!this.landingIsSafe(game, me, probeX)) {
           const goal = this.resolveGoal(game);
           const goalAhead = goal && Math.sign(goal.x + goal.w / 2 - cx) === dir && Math.abs(goal.x + goal.w / 2 - cx) > 60;

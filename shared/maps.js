@@ -183,6 +183,78 @@ export const MAPS = {
     ],
     theme: { skyTop: '#4a9be8', skyBottom: '#cfeeff', haze: '#ffffff' },
   },
+
+  // Lago congelado numa noite de neve com aurora boreal. O meio é gelo
+  // (escorrega: demora para parar e para virar); as margens são de neve
+  // (firmes). No centro tem um buraco no gelo com água (só a Água nada).
+  gelo: {
+    id: 'gelo',
+    name: 'Lago Congelado',
+    art: 'gelo',
+    width: 1280,
+    height: 720,
+    blast: { left: -260, right: 1540, top: -560, bottom: 1000 },
+    solids: [
+      { x: 150, y: 530, w: 180, h: 190 },               // margem de neve (esquerda)
+      { x: 330, y: 530, w: 280, h: 190, ice: true },    // gelo
+      { x: 610, y: 562, w: 60, h: 158 },                // fundo do buraco no gelo
+      { x: 670, y: 530, w: 280, h: 190, ice: true },    // gelo
+      { x: 950, y: 530, w: 180, h: 190 },               // margem de neve (direita)
+    ],
+    platforms: [
+      { x: 390, y: 400, w: 150, ice: true },
+      { x: 740, y: 400, w: 150, ice: true },
+      { x: 565, y: 290, w: 150, ice: true },
+    ],
+    hazards: [
+      { type: 'agua', x: 610, y: 540, w: 60, h: 22 },
+    ],
+    spawns: [
+      { x: 230, y: 530 }, { x: 1050, y: 530 }, { x: 420, y: 530 }, { x: 860, y: 530 },
+      { x: 540, y: 530, near: 'agua' }, { x: 740, y: 530, near: 'agua' },
+      { x: 465, y: 400 }, { x: 815, y: 400 },
+    ],
+    respawns: [
+      { x: 560, y: 150 }, { x: 720, y: 150 }, { x: 400, y: 150 }, { x: 880, y: 150 },
+    ],
+    itemSpawn: { minX: 200, maxX: 1080, y: -40 },
+    decor: [],
+    theme: { skyTop: '#060c24', skyBottom: '#1c2f5a', haze: '#a8c8ff' },
+  },
+
+  // Coliseu romano no fim da tarde: palco de pedra sobre o fosso, colunas
+  // quebradas como plataformas e a torcida na arquibancada. Morte súbita:
+  // depois de 2:30 de luta, paredes de espinhos fecham dos dois lados.
+  coliseu: {
+    id: 'coliseu',
+    name: 'Coliseu',
+    art: 'coliseu',
+    width: 1280,
+    height: 720,
+    blast: { left: -260, right: 1540, top: -560, bottom: 1000 },
+    solids: [{ x: 200, y: 520, w: 880, h: 200 }],
+    platforms: [
+      { x: 285, y: 395, w: 150 },
+      { x: 845, y: 395, w: 150 },
+      { x: 560, y: 285, w: 160 },
+    ],
+    hazards: [],
+    // paredes de espinhos: posição da face de dentro (esquerda, direita), de
+    // onde saem até onde chegam; `top` = chão do palco, `height` = altura da
+    // parede acima dele; `warn` = segundos de aviso antes
+    closingWalls: { start: 150, end: 215, warn: 5, from: [200, 1080], to: [470, 810], top: 520, height: 70 },
+    spawns: [
+      { x: 330, y: 520 }, { x: 950, y: 520 }, { x: 440, y: 520 }, { x: 840, y: 520 },
+      { x: 540, y: 520 }, { x: 740, y: 520 }, { x: 260, y: 520 }, { x: 1020, y: 520 },
+    ],
+    // reaparece sempre no meio (fica dentro das paredes quando elas fecham)
+    respawns: [
+      { x: 560, y: 150 }, { x: 720, y: 150 }, { x: 600, y: 120 }, { x: 680, y: 120 },
+    ],
+    itemSpawn: { minX: 240, maxX: 1040, y: -40 },
+    decor: [],
+    theme: { skyTop: '#3a2a6a', skyBottom: '#ffb070', haze: '#ffcf9a' },
+  },
 };
 
 export const DEFAULT_MAP = 'caldeira';

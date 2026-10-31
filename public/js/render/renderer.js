@@ -79,6 +79,21 @@ export class Renderer {
           // no treino do tutorial não tem "LUTA!"
           if (!g.practice) this.banner = { text: 'LUTA!', time: 1.1, max: 1.1, color: '#ffe066' };
           break;
+        case 'wallsWarn':
+          this.banner = { text: 'MORTE SÚBITA!', time: 2.4, max: 2.4, color: '#ff5b4a' };
+          this.shake(4, 0.4);
+          break;
+        case 'wallsStart':
+          this.pushFeed('As paredes de espinhos estão fechando!', null, true);
+          break;
+        case 'spikeWall': {
+          // encostou na parede de espinhos: faíscas e o dano
+          P.burst(e.x, e.y, { type: 'spark', count: 14, speed: 380, angle: e.dir > 0 ? 0 : Math.PI, spread: 1.4, life: 0.35, size: 2.5, color: '#ffd0a0', drag: 3 });
+          P.burst(e.x, e.y, { count: 6, speed: 160, life: 0.5, size: 3, color: '#c83a2a', gravity: 500 });
+          if (e.amount > 0) P.add({ type: 'text', text: `+${e.amount}%`, x: e.x + e.dir * 30, y: e.y - 30, vy: -60, life: 0.8, size: 17, color: '#ff7a7a' });
+          this.shake(6, 0.15);
+          break;
+        }
         case 'launch':
           // tutorial: empurrão da etapa "voltar para a arena"
           P.add({ type: 'ring', x: e.x, y: e.y, size: 8, grow: 260, life: 0.35, color: '#ffffff' });
@@ -323,6 +338,7 @@ export class Renderer {
       updateCelebration(this.celebration, dt, this);
       drawCelebration(ctx, this.celebration, 'back');
     }
+    this.stage.art.setWalls?.(this.game.walls);
     this.stage.drawTerrain(ctx, this.time, this.game.platforms, alpha);
     this.stage.drawHazards(ctx, this.time, false);
     // desenho extra no mundo (ex.: bandeira de chegada do tutorial)
@@ -333,6 +349,7 @@ export class Renderer {
     this.drawProjectiles(ctx);
     this.drawPlayers(ctx, alpha);
     this.particles.draw(ctx);
+    this.drawClosingWalls(ctx);
     drawCelebration(ctx, this.celebration, 'front');
     this.stage.drawHazards(ctx, this.time, true);
     if (this.debug) this.drawDebug(ctx);
@@ -350,7 +367,20 @@ export class Renderer {
     const g = this.game;
     const chance = (rate) => Math.random() < rate * dt;
 
-    if (g.map.art === 'treino') {
+    if (g.map.art === 'gelo') {
+      // neve caindo devagar
+      if (chance(26)) {
+        P.add({ x: -100 + Math.random() * 1480, y: -30, vx: 15 + Math.random() * 25, vy: 40 + Math.random() * 40, life: 14, size: 1.4 + Math.random() * 1.8, color: 'rgba(255,255,255,0.9)', drag: 0.01 });
+      }
+    } else if (g.map.art === 'coliseu') {
+      // pétalas jogadas pela torcida e poeira dourada no ar
+      if (chance(3)) {
+        P.add({ x: Math.random() * 1280, y: -20, vx: (Math.random() - 0.5) * 40, vy: 40 + Math.random() * 30, life: 12, size: 2.2, color: Math.random() < 0.5 ? '#ff5b6a' : '#ffd0e0', drag: 0.02 });
+      }
+      if (chance(4)) {
+        P.add({ x: Math.random() * 1280, y: 200 + Math.random() * 300, vx: 6, vy: -4, life: 6, size: 1.2, color: 'rgba(255,220,150,0.6)' });
+      }
+    } else if (g.map.art === 'treino') {
       // sementes de dente-de-leão flutuando no sol
       if (chance(2)) {
         P.add({ x: -40, y: 150 + Math.random() * 380, vx: 30 + Math.random() * 30, vy: -6 + Math.random() * 12, life: 14, size: 1.8, color: 'rgba(255,255,255,0.85)', drag: 0.01 });
@@ -390,6 +420,10 @@ export class Renderer {
       if (p.dashTime > 0) {
         // rastro do dash: "fantasmas" do lutador
         P.add({ x: cx + (Math.random() - 0.5) * 10, y: p.y + 10 + Math.random() * 50, vx: -p.vx * 0.1, vy: -p.vy * 0.1, life: 0.3, size: 4, grow: -10, color: p.skin ? '#e8e8f0' : ELEMENTS[p.element].light });
+      }
+      if (p.onIce && p.onGround && Math.abs(p.vx) > 120 && chance(30)) {
+        // raspas de gelo saindo do pé quando escorrega
+        P.add({ x: cx - Math.sign(p.vx) * 8, y: p.y + p.h - 2, vx: -p.vx * 0.2 + (Math.random() - 0.5) * 40, vy: -40 - Math.random() * 50, life: 0.4, size: 1.8, color: 'rgba(220,245,255,0.9)', gravity: 500 });
       }
       if (p.lungeTime > 0) {
         // riscos de velocidade atrás da investida
@@ -477,6 +511,118 @@ export class Renderer {
         ctx.restore();
       }
     }
+  }
+
+  // Paredes de espinhos da morte súbita (Coliseu): barreiras baixas de
+  // madeira com espinhos de ferro virados para dentro. No aviso elas sobem do
+  // fosso nas pontas do palco; depois fecham, e atrás delas o palco
+  // desmoronou (vira fosso escuro, com a beira quebrada).
+  drawClosingWalls(ctx) {
+    const g = this.game;
+    const cfg = g.map.closingWalls;
+    if (!cfg || g.time < cfg.start - cfg.warn) return;
+    const rise = Math.min(1, (g.time - (cfg.start - cfg.warn)) / cfg.warn);
+    const ease = 1 - (1 - rise) ** 3;
+    const left = g.walls?.left ?? cfg.from[0];
+    const right = g.walls?.right ?? cfg.from[1];
+    // palco que já caiu
+    if (g.walls) {
+      for (const [x, dir] of [[left, 1], [right, -1]]) this.drawCollapsed(ctx, x, cfg.top, dir);
+    }
+    const lift = (1 - ease) * (cfg.height + 40);
+    for (const [x, dir] of [[left, 1], [right, -1]]) this.drawSpikeWall(ctx, x, cfg.top, cfg.height, lift, dir);
+  }
+
+  drawCollapsed(ctx, x, top, dir) {
+    const far = x - dir * 2000;
+    ctx.save();
+    const pit = ctx.createLinearGradient(0, top - 10, 0, top + 260);
+    pit.addColorStop(0, '#2a1a10');
+    pit.addColorStop(1, '#080402');
+    ctx.fillStyle = pit;
+    ctx.fillRect(Math.min(far, x), top - 8, 2000, 1200);
+    // beira quebrada do palco (pedras em zigue-zague)
+    ctx.fillStyle = '#a8814f';
+    ctx.strokeStyle = '#1e1208';
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.moveTo(x, top - 8);
+    for (let i = 0; i <= 8; i++) {
+      const y = top - 8 + i * 12;
+      ctx.lineTo(x - dir * (6 + ((i * 37) % 5) * 4), y);
+    }
+    ctx.lineTo(x, top + 96);
+    ctx.closePath();
+    ctx.fill();
+    ctx.stroke();
+    // pedras caindo no fosso
+    const t = this.time;
+    for (let i = 0; i < 6; i++) {
+      const u = (t * 0.6 + i / 6) % 1;
+      const px = x - dir * (20 + ((i * 53) % 90));
+      const py = top + u * 360;
+      ctx.globalAlpha = 1 - u;
+      ctx.fillStyle = '#8a6a44';
+      ctx.fillRect(px - 5, py - 5, 10, 10);
+    }
+    ctx.restore();
+  }
+
+  drawSpikeWall(ctx, x, top, height, lift, dir) {
+    const y0 = top - height + lift;
+    ctx.save();
+    // barreira de madeira com faixas de ferro (atrás da borda)
+    const w = 46;
+    const bx = dir > 0 ? x - w : x;
+    const wood = ctx.createLinearGradient(bx, 0, bx + w, 0);
+    wood.addColorStop(0, dir > 0 ? '#3a2010' : '#7a4a26');
+    wood.addColorStop(1, dir > 0 ? '#7a4a26' : '#3a2010');
+    ctx.fillStyle = wood;
+    ctx.fillRect(bx, y0, w, height + 200);
+    ctx.strokeStyle = '#141018';
+    ctx.lineWidth = 2;
+    ctx.strokeRect(bx, y0, w, height + 200);
+    ctx.fillStyle = '#5a5a64';
+    for (const yy of [y0 + 14, y0 + height * 0.55]) {
+      ctx.fillRect(bx, yy, w, 7);
+      ctx.fillStyle = '#9a9aa4';
+      ctx.fillRect(bx + 6, yy + 2, 3, 3);
+      ctx.fillRect(bx + w - 9, yy + 2, 3, 3);
+      ctx.fillStyle = '#5a5a64';
+    }
+    // ponta de cima afiada
+    ctx.fillStyle = '#6a3a1c';
+    ctx.beginPath();
+    for (let i = 0; i < 4; i++) {
+      const sx = bx + (i * w) / 4;
+      ctx.moveTo(sx, y0);
+      ctx.lineTo(sx + w / 8, y0 - 12);
+      ctx.lineTo(sx + w / 4, y0);
+    }
+    ctx.fill();
+    ctx.stroke();
+    // espinhos de ferro virados para dentro
+    for (let y = y0 + 6; y < top - 2; y += 18) {
+      const g = ctx.createLinearGradient(x, 0, x + dir * 26, 0);
+      g.addColorStop(0, '#7a7a86');
+      g.addColorStop(1, '#f0f0f8');
+      ctx.fillStyle = g;
+      ctx.beginPath();
+      ctx.moveTo(x, y);
+      ctx.lineTo(x + dir * 26, y + 7);
+      ctx.lineTo(x, y + 14);
+      ctx.closePath();
+      ctx.fill();
+      ctx.stroke();
+    }
+    // correntes puxando para fora
+    ctx.strokeStyle = '#4a4a52';
+    ctx.lineWidth = 3;
+    ctx.beginPath();
+    ctx.moveTo(bx + w / 2, y0 + 20);
+    ctx.lineTo(bx + w / 2 - dir * 260, y0 - 140);
+    ctx.stroke();
+    ctx.restore();
   }
 
   // Rajadas de vento: aviso (contorno piscando) e depois linhas correndo
