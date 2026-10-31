@@ -2,6 +2,11 @@
 
 O nome atual ("Brawl dos Elementos") é provisório.
 
+## Favorito: ELEMENTUM 🏆
+
+O Enzo acha que **ELEMENTUM** é o melhor: o nome não fica preso a 4
+elementos, então continua certo se um dia entrarem outros (raio, gelo...).
+
 ## Favoritos do Enzo ⭐
 
 - **ELEMENTUM**: "elemento" em latim, chique e misterioso.
