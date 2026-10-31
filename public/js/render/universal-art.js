@@ -174,46 +174,90 @@ export function drawUniversalStaff(ctx, t) {
   ctx.restore();
 }
 
-// Lança: haste roxa escura com anéis dourados e as quatro pedrinhas, lâmina
-// prateada com filete na cor que vai mudando
+// Lança: haste roxa escura com filete dourado em espiral, colar dourado com
+// as quatro pedrinhas dos elementos e uma joia que muda de cor, lâmina
+// prateada com nervura e fio na cor que vai mudando, brilhinho correndo
 export function drawUniversalSpear(ctx, t) {
   ctx.save();
   ctx.lineJoin = 'round';
   ctx.lineCap = 'round';
   const glow = prismColor(t);
+  // haste
   ctx.strokeStyle = INK;
   ctx.lineWidth = 6.5;
   ctx.beginPath(); ctx.moveTo(0, 22); ctx.lineTo(0, -44); ctx.stroke();
-  ctx.strokeStyle = '#3b2f5c';
-  ctx.lineWidth = 3.5;
+  const shaft = ctx.createLinearGradient(-2, 0, 2, 0);
+  shaft.addColorStop(0, '#5a4a8a');
+  shaft.addColorStop(1, '#2a2048');
+  ctx.strokeStyle = shaft;
+  ctx.lineWidth = 3.6;
   ctx.stroke();
+  ctx.strokeStyle = '#e8c76a';
+  ctx.lineWidth = 0.9;
+  ctx.beginPath();
+  for (let y = 18; y > -40; y -= 1.5) {
+    const x = Math.sin(y * 0.4) * 1.6;
+    if (y === 18) ctx.moveTo(x, y);
+    else ctx.lineTo(x, y);
+  }
+  ctx.stroke();
+  // ponteira
   ctx.fillStyle = '#e8c76a';
   ctx.strokeStyle = INK;
   ctx.lineWidth = 1.2;
-  for (const y of [-40, 2]) {
-    ctx.beginPath(); ctx.rect(-3.2, y, 6.4, 3); ctx.fill(); ctx.stroke();
-  }
+  ctx.beginPath(); ctx.moveTo(-3, 18); ctx.lineTo(0, 26); ctx.lineTo(3, 18); ctx.closePath(); ctx.fill(); ctx.stroke();
+  ctx.beginPath(); ctx.rect(-3.2, 14, 6.4, 3); ctx.fill(); ctx.stroke();
+  // colar dourado com as quatro pedrinhas e a joia do meio
+  ctx.beginPath();
+  ctx.moveTo(-4.5, -38); ctx.lineTo(-6.5, -43); ctx.lineTo(-5, -48); ctx.lineTo(5, -48); ctx.lineTo(6.5, -43); ctx.lineTo(4.5, -38);
+  ctx.closePath();
+  const gold = ctx.createLinearGradient(-6, 0, 6, 0);
+  gold.addColorStop(0, '#a87a2a');
+  gold.addColorStop(0.4, '#ffe08a');
+  gold.addColorStop(1, '#a87a2a');
+  ctx.fillStyle = gold;
+  ctx.fill(); ctx.stroke();
   ELEMENT_COLORS.forEach((c, i) => {
     ctx.fillStyle = c;
-    ctx.beginPath(); ctx.arc(0, -34 + i * 5, 1.5, 0, Math.PI * 2); ctx.fill();
+    ctx.beginPath(); ctx.arc(-4.5 + i * 3, -39.6, 1.1, 0, Math.PI * 2); ctx.fill();
   });
-  ctx.fillStyle = '#e8c76a';
-  ctx.beginPath(); ctx.moveTo(-2.6, 20); ctx.lineTo(0, 25); ctx.lineTo(2.6, 20); ctx.closePath(); ctx.fill(); ctx.stroke();
-  // lâmina
+  ctx.fillStyle = glow;
+  ctx.beginPath(); ctx.arc(0, -44.5, 2.2, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+  // lâmina com nervura
+  const pts = [[0, -48], [-5.5, -55], [-4, -70], [0, -84], [4, -70], [5.5, -55]];
   ctx.beginPath();
-  ctx.moveTo(0, -44); ctx.lineTo(-5, -52); ctx.lineTo(-3.4, -66); ctx.lineTo(0, -78); ctx.lineTo(3.4, -66); ctx.lineTo(5, -52);
+  pts.forEach(([x, y], i) => (i ? ctx.lineTo(x, y) : ctx.moveTo(x, y)));
   ctx.closePath();
-  const g = ctx.createLinearGradient(-5, 0, 5, 0);
-  g.addColorStop(0, '#ffffff');
-  g.addColorStop(0.5, '#dfe6f2');
-  g.addColorStop(1, '#9aa6bd');
-  ctx.fillStyle = g;
+  ctx.fillStyle = '#a7b2c8';
   ctx.fill();
+  ctx.save();
+  ctx.clip();
+  const face = ctx.createLinearGradient(-5, 0, 0, 0);
+  face.addColorStop(0, '#ffffff');
+  face.addColorStop(1, '#e2e8f4');
+  ctx.fillStyle = face;
+  ctx.fillRect(-6, -86, 6, 40);
+  // brilhinho correndo pela lâmina
+  const run = ((t * 0.6) % 1.6) - 0.3;
+  const shine = ctx.createLinearGradient(0, -84 + run * 40, 0, -78 + run * 40);
+  shine.addColorStop(0, 'rgba(255,255,255,0)');
+  shine.addColorStop(0.5, 'rgba(255,255,255,0.95)');
+  shine.addColorStop(1, 'rgba(255,255,255,0)');
+  ctx.fillStyle = shine;
+  ctx.fillRect(-6, -90, 12, 50);
+  ctx.restore();
   ctx.strokeStyle = INK;
   ctx.lineWidth = 2;
+  ctx.beginPath();
+  pts.forEach(([x, y], i) => (i ? ctx.lineTo(x, y) : ctx.moveTo(x, y)));
+  ctx.closePath();
   ctx.stroke();
+  ctx.save();
+  ctx.shadowColor = glow;
+  ctx.shadowBlur = 6;
   ctx.strokeStyle = glow;
-  ctx.lineWidth = 1.4;
-  ctx.beginPath(); ctx.moveTo(0, -48); ctx.lineTo(0, -74); ctx.stroke();
+  ctx.lineWidth = 1.3;
+  ctx.beginPath(); ctx.moveTo(0, -51); ctx.lineTo(0, -80); ctx.stroke();
+  ctx.restore();
   ctx.restore();
 }

@@ -707,7 +707,25 @@ export class Renderer {
         }
       }
       // deitada: a arma aponta para -y, gira 90° para ficar na horizontal
-      ctx.translate(cx - dir * 20, ground - (item.weapon === 'espada' ? 5 : 4));
+      if (item.weapon === 'lanca') {
+        // lança é comprida: centraliza no lugar do item, com sombra e um
+        // brilho no chão para chamar atenção
+        ctx.fillStyle = 'rgba(10,20,5,0.3)';
+        ctx.beginPath();
+        ctx.ellipse(cx, ground - 1, 52, 4, 0, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.save();
+        ctx.globalCompositeOperation = 'lighter';
+        ctx.globalAlpha = 0.35 + Math.sin(t * 3) * 0.12;
+        ctx.fillStyle = prismColor(t);
+        ctx.beginPath();
+        ctx.ellipse(cx + dir * 30, ground - 4, 22, 6, 0, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.restore();
+        ctx.translate(cx - dir * 30, ground - 7);
+      } else {
+        ctx.translate(cx - dir * 20, ground - (item.weapon === 'espada' ? 5 : 4));
+      }
       ctx.rotate((dir * Math.PI) / 2);
     } else {
       // caindo: gira no ar
