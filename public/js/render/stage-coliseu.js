@@ -1042,8 +1042,8 @@ function statue(ctx, x, y, dir) {
 // lá no fundo. Fica atrás do palco (aparece quando o palco se abre).
 function fosso(ctx, floor, rand) {
   const top = floor.y + 20;
-  const x0 = -400;
-  const x1 = 1700;
+  const x0 = FOSSO.x;
+  const x1 = FOSSO.x + FOSSO.w;
   // parede do fundo
   const wall = ctx.createLinearGradient(0, top, 0, top + 420);
   wall.addColorStop(0, '#7a5232');
@@ -1054,7 +1054,7 @@ function fosso(ctx, floor, rand) {
   // blocos de pedra
   ctx.strokeStyle = 'rgba(30,16,6,0.45)';
   ctx.lineWidth = 1.5;
-  for (let r = 0; r < 14; r++) {
+  for (let r = 0; r < 22; r++) {
     const y = top + r * 30;
     ctx.beginPath();
     ctx.moveTo(x0, y);
@@ -1068,7 +1068,7 @@ function fosso(ctx, floor, rand) {
     }
   }
   // portões de ferro (arco escuro com grade)
-  const gates = [floor.x + 150, floor.x + floor.w / 2, floor.x + floor.w - 150];
+  const gates = gatesOf(floor);
   for (const gx of gates) {
     const gy = top + 60;
     const w = 90;
@@ -1141,32 +1141,45 @@ function fosso(ctx, floor, rand) {
     ctx.fillStyle = '#6a4a22';
     ctx.fillRect(tx - 8, top + 84, 16, 8);
   }
-  // chão de areia lá no fundo, com escudos e lanças velhas
-  const sandY = top + 230;
-  const sand = ctx.createLinearGradient(0, sandY, 0, sandY + 60);
-  sand.addColorStop(0, '#c89a5a');
-  sand.addColorStop(1, '#6a4a28');
-  ctx.fillStyle = sand;
-  ctx.fillRect(x0, sandY, x1 - x0, 400);
-  for (let i = 0; i < 10; i++) {
-    const x = floor.x + rand() * floor.w;
-    ctx.fillStyle = '#8a5a2a';
-    ctx.beginPath();
-    ctx.ellipse(x, sandY + 8, 9, 4, 0, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.strokeStyle = '#5a4a3a';
-    ctx.lineWidth = 1.5;
-    ctx.beginPath();
-    ctx.moveTo(x + 14, sandY + 10);
-    ctx.lineTo(x + 40, sandY - 6);
-    ctx.stroke();
-  }
-  // escuridão no fundo
-  const deep = ctx.createLinearGradient(0, top, 0, top + 360);
-  deep.addColorStop(0, 'rgba(10,4,0,0.1)');
-  deep.addColorStop(1, 'rgba(10,4,0,0.75)');
+  // beirada de pedra no alto do fosso (o muro da arena), dos dois lados
+  ctx.fillStyle = '#c8a070';
+  ctx.fillRect(x0, top - 10, x1 - x0, 14);
+  ctx.fillStyle = 'rgba(80,46,20,0.6)';
+  ctx.fillRect(x0, top + 2, x1 - x0, 3);
+  ctx.strokeStyle = INK;
+  ctx.lineWidth = 2;
+  ctx.strokeRect(x0, top - 10, x1 - x0, 14);
+  // o abismo: vai escurecendo até o preto lá embaixo
+  const deep = ctx.createLinearGradient(0, top, 0, top + 620);
+  deep.addColorStop(0, 'rgba(10,4,0,0.05)');
+  deep.addColorStop(0.45, 'rgba(10,4,0,0.7)');
+  deep.addColorStop(1, 'rgba(4,1,0,1)');
   ctx.fillStyle = deep;
-  ctx.fillRect(x0, top, x1 - x0, 1000);
+  ctx.fillRect(x0, top, x1 - x0, FOSSO.h);
+}
+
+// Área do fosso: bem mais larga que a tela e funda (a câmera se afasta
+// quando alguém é arremessado longe)
+const FOSSO = { x: -1300, w: 3900, h: 1500 };
+// portões a cada 370px a partir do meio do palco, e tochas entre eles
+const gatesOf = (floor) => Array.from({ length: 11 }, (_, i) => floor.x + floor.w / 2 + (i - 5) * 370);
+
+// O fosso inteiro é desenhado uma vez numa tela grande (em resolução menor,
+// fica atrás de tudo e escuro) e só copiado a cada quadro
+let FOSSO_SPRITE = null;
+function fossoSprite(floor) {
+  if (FOSSO_SPRITE && FOSSO_SPRITE.floor === floor) return FOSSO_SPRITE;
+  const res = 0.6;
+  const rect = { x: FOSSO.x, y: floor.y + 4, w: FOSSO.w, h: FOSSO.h };
+  const canvas = document.createElement('canvas');
+  canvas.width = Math.round(rect.w * res);
+  canvas.height = Math.round(rect.h * res);
+  const ctx = canvas.getContext('2d');
+  ctx.scale(res, res);
+  ctx.translate(-rect.x, -rect.y);
+  fosso(ctx, floor, seeded(77));
+  FOSSO_SPRITE = { floor, rect, canvas };
+  return FOSSO_SPRITE;
 }
 
 // Pilares que seguram o palco (desenhados a cada quadro: caem na morte súbita)
@@ -1208,7 +1221,7 @@ function pillarArt(ctx, px, floor) {
   ctx.fillRect(px, floor.y + 120, 56, 560);
 }
 
-const fossoTorches = (floor) => [floor.x + 75, floor.x + floor.w / 2 - 125, floor.x + floor.w / 2 + 125, floor.x + floor.w - 75];
+const fossoTorches = (floor) => gatesOf(floor).slice(0, -1).map((g) => g + 185);
 
 // O palco é desenhado uma vez numa tela própria e copiado a cada quadro: na
 // morte súbita só os pedaços que ficam são copiados, e os que caem viram
@@ -1240,7 +1253,6 @@ function stagePiece(ctx, sp, a, b) {
 
 function drawTerrain(ctx, map, rand) {
   const floor = map.solids[0];
-  fosso(ctx, floor, rand);
   for (const p of map.platforms) if (p.y <= floor.y - 200) slab(ctx, p);
 }
 
@@ -1279,7 +1291,11 @@ export const COLISEU_ART = {
   mid: drawMid,
   midAnimated,
   terrain: drawTerrain,
-  behind() {},
+  // o fosso fica atrás de tudo (inclusive do desenho fixo do campo)
+  behind(ctx, map) {
+    const sp = fossoSprite(map.solids[0]);
+    ctx.drawImage(sp.canvas, sp.rect.x, sp.rect.y, sp.rect.w, sp.rect.h);
+  },
   // o renderer passa a partida (para saber se o palco já se abriu)
   setGame(game) {
     GAME = game;

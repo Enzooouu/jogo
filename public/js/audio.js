@@ -117,10 +117,42 @@ export function setAmbience(kind) {
   crowdLoop = src;
 }
 
+// Grito da torcida: ruído filtrado na faixa da voz que cresce, fica um
+// tempo e some devagar, com um monte de "êêê!" de vozes diferentes no meio
+function crowdRoar(vol = 0.5, dur = 2.2, delay = 0) {
+  const c = ensure();
+  if (!c || muted) return;
+  const t = c.currentTime + delay;
+  const len = Math.floor(c.sampleRate * dur);
+  const buffer = c.createBuffer(1, len, c.sampleRate);
+  const data = buffer.getChannelData(0);
+  for (let i = 0; i < len; i++) data[i] = Math.random() * 2 - 1;
+  for (const [freq, q, share] of [[700, 0.9, 1], [1600, 1.2, 0.7]]) {
+    const src = c.createBufferSource();
+    src.buffer = buffer;
+    const band = c.createBiquadFilter();
+    band.type = 'bandpass';
+    band.frequency.value = freq;
+    band.Q.value = q;
+    const gain = c.createGain();
+    gain.gain.setValueAtTime(0.0001, t);
+    gain.gain.exponentialRampToValueAtTime(vol * share, t + 0.25);
+    gain.gain.setValueAtTime(vol * share, t + dur * 0.45);
+    gain.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+    src.connect(band).connect(gain).connect(master);
+    src.start(t);
+    src.stop(t + dur + 0.05);
+  }
+  // vozes gritando
+  for (let i = 0; i < 14; i++) {
+    const f = 260 + Math.random() * 380;
+    tone({ freq: f, to: f * (1.15 + Math.random() * 0.3), dur: 0.35 + Math.random() * 0.4, type: 'sawtooth', vol: 0.025, delay: delay + 0.05 + Math.random() * dur * 0.5 });
+  }
+}
+
 // Torcida: comemoração (alguém caiu) e "uooooh" (golpe forte)
 function cheer(vol = 0.35, delay = 0) {
-  noise({ dur: 1.6, vol, freq: 2200, delay });
-  noise({ dur: 1.2, vol: vol * 0.6, freq: 900, delay: delay + 0.1 });
+  crowdRoar(vol * 1.4, 2.2, delay);
 }
 
 function ooh() {
