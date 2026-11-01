@@ -14,6 +14,7 @@ import { WEAPONS, WEAPON_IDS, weaponProfile } from './weapons.js';
 import { EMPTY_INPUT } from './input.js';
 import { createRng } from './rng.js';
 import { rectsOverlap, circleRectOverlap, approach } from './geometry.js';
+import { FrozenLake, LAKE } from './lake.js';
 
 // Combinação de disparos: quem continua (o primeiro da lista ganha), o nome
 // de cada par e o efeito extra que o elemento absorvido dá ao acertar
@@ -97,6 +98,8 @@ export class Game {
     this.suddenWarned = false;
     // Plataformas com posição atual (algumas balançam presas a um balão)
     this.platforms = this.map.platforms.map((pl) => ({ ...pl, baseX: pl.x, baseY: pl.y, px: pl.x, py: pl.y, dx: 0, dy: 0 }));
+    // Lago Congelado: gelo que racha, plataformas que derretem, nevasca...
+    this.lake = this.map.lake ? new FrozenLake(this) : null;
 
     const seen = new Set();
     this.players = players.map((cfg, index) => {
@@ -152,7 +155,7 @@ export class Game {
         damage: p.damage, lives: p.lives, state: p.state, invuln: p.invuln,
         hitstun: p.hitstun, onGround: p.onGround, onWall: p.onWall, windVx: p.windVx,
         dashTime: p.dashTime, airDashes: p.airDashes, lungeTime: p.lungeTime,
-        weapon: p.weapon ? { ...p.weapon } : null,
+        weapon: p.weapon ? { ...p.weapon } : null, snowballs: p.snowballs,
         attack: p.attack ? { ...p.attack } : null,
         status: structuredClone(p.status),
       })),
@@ -206,6 +209,7 @@ export class Game {
     this.updatePlatforms();
     this.updateWinds();
     this.updateSuddenDeath();
+    this.lake?.update();
     for (const p of this.players) this.updatePlayer(p, inputs[p.id] ?? EMPTY_INPUT);
     this.updateProjectiles();
     this.updateItems();
@@ -260,12 +264,14 @@ export class Game {
 
   // Plataforma que caiu na morte súbita (as colunas do Coliseu)
   platformGone(pl) {
+    if (pl.goneTime > 0) return true; // derreteu (Lago Congelado)
     return this.suddenDeath && this.map.suddenDeath.dropPlatforms.includes(this.platforms.indexOf(pl));
   }
 
   // Chão que existe agora: na morte súbita do Coliseu o palco se abre e
   // sobram só os pedaços de `keep`
   solidsNow() {
+    if (this.lake) return this.lake.solids();
     if (!this.suddenDeath) return this.map.solids;
     const out = [];
     for (const s of this.map.solids) {
@@ -276,6 +282,11 @@ export class Game {
       }
     }
     return out;
+  }
+
+  // Perigos de agora (no Lago Congelado, a água dos buracos no gelo)
+  hazardsNow() {
+    return this.lake ? [...this.map.hazards, ...this.lake.hazards()] : this.map.hazards;
   }
 
   // Morte súbita (Coliseu): depois de `start` segundos de luta o palco se
@@ -440,6 +451,7 @@ export class Game {
       if (pressed('dash') && p.dashCooldown <= 0 && (p.onGround || p.airDashes > 0)) this.startDash(p, input);
       if (pressed('attack') && p.cooldown <= 0 && !p.attack) this.startAttack(p);
       if (pressed('throw') && p.weapon) this.throwWeapon(p);
+      else if (pressed('throw') && p.snowballs > 0) this.throwSnowball(p);
     } else {
       p.onWall = 0;
       p.vx = approach(p.vx, 0, PHYS.hitstunDrag * DT);
@@ -538,6 +550,7 @@ export class Game {
     for (const s of solids) {
       if (!rectsOverlap(p, s)) continue;
       if (p.vy > 0) {
+        if (s.ice && this.lake) this.lake.impact(p, p.vy);
         p.y = s.y - p.h;
         p.onGround = true;
         p.standingOn = 'solid';
@@ -673,6 +686,10 @@ export class Game {
         if (w.state === 'ativo' && rectsOverlap(p, w)) target += w.dir * (w.strength ?? cfg.strength) * (WIND_FACTOR[p.element] ?? 1);
       }
     }
+    // nevasca do Lago Congelado (na diagonal, para baixo)
+    if (this.lake && !p.admin && hazardReaction(p.element, 'vento') !== 'imune') {
+      target += this.lake.blizzardPush(p, WIND_FACTOR[p.element] ?? 1);
+    }
     p.windVx = approach(p.windVx, target, 1800 * DT);
   }
 
@@ -693,7 +710,7 @@ export class Game {
   checkHazards(p) {
     p.inHazard = null;
     if (p.admin) return; // modo ADM: atravessa lava, água e espinhos
-    for (const h of this.map.hazards) {
+    for (const h of this.hazardsNow()) {
       // Margem de 4px para não morrer por encostar um pixel na borda.
       if (!rectsOverlap(p, h, 4)) continue;
       const reaction = hazardReaction(p.element, h.type);
@@ -769,6 +786,7 @@ export class Game {
     });
 
     p.weapon = null;
+    p.snowballs = 0;
     p.attack = null;
     p.status = { queimadura: null, encharcado: null, atordoado: null };
     p.windVx = 0;
@@ -954,6 +972,30 @@ export class Game {
     this.emit('throw', { id: p.id, weapon: weaponId });
   }
 
+  // Bola de neve (Lago Congelado): sai da mão sem ocupar a arma
+  throwSnowball(p) {
+    const cfg = LAKE.snowball;
+    p.snowballs--;
+    this.projectiles.push({
+      id: this.nextEntityId++,
+      kind: 'neve',
+      owner: p.id,
+      team: p.team,
+      element: p.element,
+      weapon: null,
+      x: p.x + p.w / 2 + p.facing * 18,
+      y: p.y + 24,
+      vx: p.facing * cfg.speed + p.vx * 0.3,
+      vy: cfg.lift,
+      r: cfg.r,
+      gravity: cfg.gravity,
+      life: 2,
+      pierce: false,
+      hitIds: [],
+    });
+    this.emit('throw', { id: p.id, weapon: 'neve' });
+  }
+
   applyHit(attacker, target, profile, dirX, scale = {}) {
     // o Mortal (sem elemento) bate mais forte: stats.damage
     const damage = attacker.admin ? PLAYER.adminDamage : profile.damage * (scale.damage ?? 1) * statsOf(attacker).damage;
@@ -1035,7 +1077,9 @@ export class Game {
           if (!circleRectOverlap(pr.x, pr.y, pr.r, t)) continue;
           pr.hitIds.push(t.id);
           const dir = Math.sign(pr.vx) || owner.facing;
-          if (pr.kind === 'arremesso') {
+          if (pr.kind === 'neve') {
+            this.lake?.snowHit(owner, t, dir);
+          } else if (pr.kind === 'arremesso') {
             this.applyHit(owner, t, { id: pr.weapon, ...THROWN, damage: WEAPONS[pr.weapon].throwDamage }, dir);
           } else {
             const profile = weaponProfile(pr.weapon, pr.element);
@@ -1233,7 +1277,7 @@ export class Game {
         }
       }
       // arma caída na lava ou na água se perde
-      const sunk = item.dropped && item.landed && this.map.hazards.some((h) => (h.type === 'lava' || h.type === 'agua') && rectsOverlap(item, h));
+      const sunk = item.dropped && item.landed && this.hazardsNow().some((h) => (h.type === 'lava' || h.type === 'agua') && rectsOverlap(item, h));
       if (sunk) this.emit('itemLost', { itemId: item.id, x: item.x + item.w / 2, y: item.y + item.h / 2 });
       else if (item.life > 0 && item.y < this.map.blast.bottom) keep.push(item);
     }
@@ -1351,6 +1395,7 @@ function createPlayer(cfg, index, lives) {
     pickupCooldown: 0,
     status: { queimadura: null, encharcado: null, atordoado: null },
     windVx: 0,              // empurrão do vento (somado ao andar)
+    snowballs: 0,           // bolas de neve na mão (Lago Congelado)
     inHazard: null,
     lastHitBy: null,
     lastHitTime: -Infinity,

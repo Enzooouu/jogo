@@ -242,6 +242,45 @@ export function playEvents(events, localId) {
       case 'start':
         tone({ freq: 880, dur: 0.35, type: 'square', vol: 0.18 });
         break;
+      // ---- Lago Congelado
+      case 'iceCrack':
+        noise({ dur: 0.12, vol: 0.3, freq: 4200 });
+        tone({ freq: 1600, to: 700, dur: 0.08, type: 'triangle', vol: 0.08 });
+        break;
+      case 'iceBreak':
+        noise({ dur: 0.45, vol: 0.45, freq: 2600 });
+        tone({ freq: 260, to: 70, dur: 0.4, type: 'sawtooth', vol: 0.18 });
+        noise({ dur: 0.5, vol: 0.25, freq: 800, delay: 0.12 });
+        break;
+      case 'iceFreeze':
+        tone({ freq: 1400, to: 2100, dur: 0.12, type: 'triangle', vol: 0.07 });
+        tone({ freq: 1900, to: 2600, dur: 0.12, type: 'triangle', vol: 0.06, delay: 0.1 });
+        break;
+      case 'platformMelt':
+        noise({ dur: 0.35, vol: 0.22, freq: 1600 });
+        tone({ freq: 520, to: 180, dur: 0.3, type: 'sine', vol: 0.12 });
+        break;
+      case 'blizzardWarn':
+        tone({ freq: 380, to: 760, dur: 0.6, type: 'sine', vol: 0.08 });
+        tone({ freq: 420, to: 820, dur: 0.6, type: 'sine', vol: 0.06, delay: 0.5 });
+        break;
+      case 'blizzardStart':
+        noise({ dur: 4.4, vol: 0.2, freq: 650 });
+        break;
+      case 'icicleShake':
+        tone({ freq: 2600, dur: 0.04, type: 'triangle', vol: 0.05 });
+        tone({ freq: 2900, dur: 0.04, type: 'triangle', vol: 0.05, delay: 0.08 });
+        break;
+      case 'icicleBreak':
+        noise({ dur: 0.2, vol: 0.25, freq: 5200 });
+        break;
+      case 'snowPickup':
+        noise({ dur: 0.12, vol: 0.16, freq: 700 });
+        break;
+      case 'snowHit':
+        noise({ dur: 0.1, vol: 0.25, freq: 600 });
+        tone({ freq: 210, to: 110, dur: 0.1, type: 'sine', vol: 0.18 });
+        break;
       case 'matchEnd':
         // som da comemoração de cada elemento
         if (e.winnerElement === 'fogo') {

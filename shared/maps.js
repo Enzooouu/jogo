@@ -191,29 +191,30 @@ export const MAPS = {
     id: 'gelo',
     name: 'Lago Congelado',
     art: 'gelo',
+    lake: true,   // gelo que racha, plataformas que derretem, nevasca, pingentes e bolas de neve (shared/lake.js)
     width: 1280,
     height: 720,
     blast: { left: -260, right: 1540, top: -560, bottom: 1000 },
     solids: [
-      { x: 150, y: 530, w: 180, h: 190 },               // margem de neve (esquerda)
+      { x: 90, y: 530, w: 240, h: 190 },                // margem de neve (esquerda)
       { x: 330, y: 530, w: 620, h: 190, ice: true },    // gelo (lago inteiro congelado)
-      { x: 950, y: 530, w: 180, h: 190 },               // margem de neve (direita)
+      { x: 950, y: 530, w: 240, h: 190 },               // margem de neve (direita)
     ],
     platforms: [
-      { x: 390, y: 400, w: 150, ice: true },
-      { x: 740, y: 400, w: 150, ice: true },
-      { x: 565, y: 290, w: 150, ice: true },
+      { x: 230, y: 395, w: 200, ice: true },
+      { x: 850, y: 395, w: 200, ice: true },
+      { x: 530, y: 268, w: 220, ice: true },
     ],
     hazards: [],
     spawns: [
-      { x: 230, y: 530 }, { x: 1050, y: 530 }, { x: 420, y: 530 }, { x: 860, y: 530 },
+      { x: 170, y: 530 }, { x: 1110, y: 530 }, { x: 420, y: 530 }, { x: 860, y: 530 },
       { x: 560, y: 530 }, { x: 720, y: 530 },
-      { x: 465, y: 400 }, { x: 815, y: 400 },
+      { x: 330, y: 395 }, { x: 950, y: 395 },
     ],
     respawns: [
       { x: 560, y: 150 }, { x: 720, y: 150 }, { x: 400, y: 150 }, { x: 880, y: 150 },
     ],
-    itemSpawn: { minX: 200, maxX: 1080, y: -40 },
+    itemSpawn: { minX: 140, maxX: 1140, y: -40 },
     decor: [],
     theme: { skyTop: '#060c24', skyBottom: '#1c2f5a', haze: '#a8c8ff' },
   },

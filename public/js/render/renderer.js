@@ -74,7 +74,7 @@ export class Renderer {
     const g = this.game;
     const P = this.particles;
     for (const e of events) {
-      this.stage.art.onEvent?.(e);
+      this.stage.art.onEvent?.(e, P, this);
       switch (e.type) {
         case 'start':
           // no treino do tutorial não tem "LUTA!"
@@ -229,6 +229,8 @@ export class Renderer {
             P.add({ type: 'ring', x: e.x, y: e.y, size: 10, grow: 150, life: 0.35, color: 'rgba(200,255,245,0.8)' });
             P.add({ type: 'ring', x: e.x, y: e.y, size: 4, grow: 90, life: 0.3, color: 'rgba(255,255,255,0.8)' });
             P.burst(e.x, e.y, { count: 6, speed: 180, life: 0.7, size: 2.2, color: '#a8d86a', gravity: 150, drag: 1 });
+          } else if (e.kind === 'neve') {
+            P.burst(e.x, e.y, { count: 10, speed: 180, life: 0.45, size: 3, color: '#ffffff', gravity: 600 });
           } else if (e.kind === 'arremesso') {
             P.burst(e.x, e.y, { type: 'spark', count: 8, speed: 260, life: 0.3, size: 2, color: '#dddddd', drag: 3 });
           } else {
@@ -351,7 +353,8 @@ export class Renderer {
     }
     this.stage.art.setGame?.(this.game);
     this.stage.drawTerrain(ctx, this.time, this.game.platforms, alpha);
-    this.stage.drawHazards(ctx, this.time, false);
+    const hazards = this.game.hazardsNow?.() ?? this.game.map.hazards;
+    this.stage.drawHazards(ctx, this.time, false, hazards);
     // desenho extra no mundo (ex.: bandeira de chegada do tutorial)
     this.drawExtra?.(ctx, this.time);
     this.drawWinds(ctx);
@@ -360,9 +363,11 @@ export class Renderer {
     this.drawProjectiles(ctx);
     this.drawPlayers(ctx, alpha);
     this.particles.draw(ctx);
+    // por cima dos lutadores (ex.: nevasca e pingentes do Lago Congelado)
+    this.stage.art.overlay?.(ctx, this.time, this.game, alpha);
     this.drawSuddenDeath(ctx);
     drawCelebration(ctx, this.celebration, 'front');
-    this.stage.drawHazards(ctx, this.time, true);
+    this.stage.drawHazards(ctx, this.time, true, hazards);
     if (this.debug) this.drawDebug(ctx);
     this.stage.drawVignette(ctx);
 
@@ -908,6 +913,22 @@ export class Renderer {
         if (pr.element === 'mortal') (pr.weapon === 'espada' ? drawUniversalSword : drawUniversalStaff)(ctx, this.time);
         else if (pr.weapon === 'espada') drawSwordArt(ctx, pr.element, this.time);
         else drawStaffArt(ctx, pr.element, this.time);
+      } else if (pr.kind === 'neve') {
+        // bola de neve girando, com um rastro de neve
+        ctx.fillStyle = 'rgba(255,255,255,0.35)';
+        ctx.beginPath();
+        ctx.arc(pr.x - pr.vx * 0.02, pr.y - pr.vy * 0.02, pr.r * 0.8, 0, Math.PI * 2);
+        ctx.fill();
+        const g = ctx.createRadialGradient(pr.x - 3, pr.y - 3, 1, pr.x, pr.y, pr.r);
+        g.addColorStop(0, '#ffffff');
+        g.addColorStop(1, '#b4c8e8');
+        ctx.fillStyle = g;
+        ctx.strokeStyle = 'rgba(40,60,100,0.7)';
+        ctx.lineWidth = 1.5;
+        ctx.beginPath();
+        ctx.arc(pr.x, pr.y, pr.r, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.stroke();
       } else {
         drawShot(ctx, pr.element, pr.x, pr.y, pr.r, Math.sign(pr.vx) || 1, this.time, pr.combo);
       }
@@ -1097,6 +1118,7 @@ export class Renderer {
     ctx.fillStyle = el.light;
     let sub = el.name.toUpperCase();
     if (p.weapon) sub = `${weaponProfile(p.weapon.id, p.element).name} (${p.weapon.uses})`;
+    else if (p.snowballs > 0) sub = `Bolas de neve (${p.snowballs})`;
     if (p.state === 'respawning') sub = 'VOLTANDO...';
     if (out) sub = 'ELIMINADO';
     ctx.fillText(fit(ctx, sub, 150), x + 88, y + 40);
@@ -1182,6 +1204,7 @@ export class Renderer {
     ctx.fillStyle = 'rgba(255,255,255,0.7)';
     let sub = el.name;
     if (p.weapon) sub = `${weaponProfile(p.weapon.id, p.element).name} (${p.weapon.uses})`;
+    else if (p.snowballs > 0) sub = `Bolas de neve (${p.snowballs})`;
     if (p.state === 'respawning') sub = 'voltando...';
     if (out) sub = 'ELIMINADO';
     ctx.fillText(fit(ctx, sub, w - 90), x + 20, y + 52);

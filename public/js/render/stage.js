@@ -144,8 +144,9 @@ export class StageRenderer {
 
   // Perigos animados. `front` desenha uma camada translúcida por cima dos
   // personagens para parecer que estão "dentro" da lava/água.
-  drawHazards(ctx, time, front = false) {
-    for (const h of this.map.hazards) {
+  // `hazards`: perigos de agora (ex.: buracos no gelo do Lago Congelado)
+  drawHazards(ctx, time, front = false, hazards = this.map.hazards) {
+    for (const h of hazards) {
       if (h.type === 'lava') drawLava(ctx, h, time, front);
       else if (h.type === 'agua') drawWater(ctx, h, time, front);
       else if (h.type === 'espinhos' && !front) drawSpikes(ctx, h, time);

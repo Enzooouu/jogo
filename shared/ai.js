@@ -110,6 +110,9 @@ export class BotController {
     if (!offStage && this.rng.chance(this.cfg.reflex)) {
       const gust = game.winds.find((w) => w.state === 'ativo' && rectsOverlap(me, w));
       if (gust && hazardReaction(me.element, 'vento') !== 'imune') dir = -gust.dir;
+      // nevasca do Lago Congelado: anda contra ela
+      const bz = game.lake?.blizzard;
+      if (bz?.state === 'ativo' && hazardReaction(me.element, 'vento') !== 'imune') dir = -bz.dir;
     }
 
     if (dir < 0) out.left = true;
@@ -191,6 +194,10 @@ export class BotController {
       if (me.weapon && me.weapon.uses <= 1 && Math.abs(dx) < 320 && aligned && facingIt && this.rng.chance(0.02)) {
         this.wantThrow = true;
       }
+      // bola de neve (Lago Congelado)
+      if (!me.weapon && me.snowballs > 0 && Math.abs(dx) < 420 && Math.abs(dx) > 60 && aligned && facingIt && this.rng.chance(0.04)) {
+        this.wantThrow = true;
+      }
     }
 
     // Alvo mais alto: pula. Alvo mais baixo e eu numa plataforma: desce.
@@ -210,7 +217,7 @@ export class BotController {
     let jump = false;
     const cx = me.x + me.w / 2;
     const feet = me.y + me.h;
-    const deadly = game.map.hazards.filter((h) => hazardReaction(me.element, h.type) !== 'imune');
+    const deadly = game.hazardsNow().filter((h) => hazardReaction(me.element, h.type) !== 'imune');
 
     // No ar, em cima de um perigo mortal: continua indo para a saída mais perto.
     for (const h of deadly) {
@@ -269,7 +276,7 @@ export class BotController {
     };
     for (const s of currentMap(game).solids) if (x >= s.x && x <= s.x + s.w) consider(s.y, 'solid');
     for (const p of game.platforms) if (!game.platformGone(p) && x >= p.x && x <= p.x + p.w) consider(p.y, 'platform');
-    for (const h of game.map.hazards) if (x >= h.x && x <= h.x + h.w) consider(h.y, 'hazard', h.type);
+    for (const h of game.hazardsNow()) if (x >= h.x && x <= h.x + h.w) consider(h.y, 'hazard', h.type);
     if (!best) {
       // Sem nada embaixo: só é seguro se ainda estou em cima do chão atual.
       return me.standingOn === 'solid' && currentMap(game).solids.some((s) => x >= s.x && x <= s.x + s.w && Math.abs(s.y - feet) < 2);
@@ -287,14 +294,14 @@ export class BotController {
       const solid = currentMap(game).solids.find((s) => x >= s.x && x <= s.x + s.w && s.y > feet - 70 && s.y < feet + 50);
       if (!solid) continue;
       const target = x + dir * 40;
-      const deadly = game.map.hazards.some((h) => target >= h.x - 20 && target <= h.x + h.w + 20 && hazardReaction(me.element, h.type) === 'morre');
+      const deadly = game.hazardsNow().some((h) => target >= h.x - 20 && target <= h.x + h.w + 20 && hazardReaction(me.element, h.type) === 'morre');
       return deadly ? null : target;
     }
     return null;
   }
 
   itemIsDeadly(game, me, item) {
-    return game.map.hazards.some((h) => rectsOverlap(item, h) && hazardReaction(me.element, h.type) !== 'imune');
+    return game.hazardsNow().some((h) => rectsOverlap(item, h) && hazardReaction(me.element, h.type) !== 'imune');
   }
 
   resolveGoal(game) {
@@ -314,7 +321,7 @@ export class BotController {
 
 // O mapa com o chão de agora (na morte súbita do Coliseu parte do palco cai)
 function currentMap(game) {
-  return game.suddenDeath ? { ...game.map, solids: game.solidsNow() } : game.map;
+  return game.suddenDeath || game.lake ? { ...game.map, solids: game.solidsNow(), hazards: game.hazardsNow() } : game.map;
 }
 
 function dist(a, b) {
