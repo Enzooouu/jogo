@@ -540,66 +540,16 @@ export class Renderer {
   }
 
   // Morte súbita do Coliseu: no aviso, as paredes de espinhos sobem do fosso
-  // até o céu nas pontas da arena; depois o palco se abre (os pedaços caem
-  // girando no abismo e fica o buraco escuro)
+  // até o céu nas pontas da arena (o palco se abrindo é desenhado no cenário,
+  // stage-coliseu.js)
   drawSuddenDeath(ctx) {
     const g = this.game;
     const sd = g.map.suddenDeath;
     if (!sd || g.time < sd.start - sd.warn) return;
-    const floor = g.map.solids[0];
-    if (g.suddenDeath) {
-      const since = this.collapseAt != null ? this.time - this.collapseAt : 9;
-      for (const [a, b] of this.fallenRanges()) this.drawFallen(ctx, a, b, floor, since);
-    }
     const rise = Math.min(1, (g.time - (sd.start - sd.warn)) / sd.warn);
     const top = 1100 - (1 - (1 - rise) ** 3) * 1900;
     this.drawSpikeWall(ctx, sd.walls[0], top, 1);
     this.drawSpikeWall(ctx, sd.walls[1], top, -1);
-  }
-
-  drawFallen(ctx, a, b, floor, since) {
-    ctx.save();
-    // buraco até o abismo
-    const pit = ctx.createLinearGradient(0, floor.y - 10, 0, floor.y + 300);
-    pit.addColorStop(0, '#1e120a');
-    pit.addColorStop(1, '#030101');
-    ctx.fillStyle = pit;
-    ctx.fillRect(a, floor.y - 10, b - a, 1100);
-    // beiradas quebradas dos pedaços que ficaram
-    ctx.fillStyle = '#a8814f';
-    ctx.strokeStyle = '#1e1208';
-    ctx.lineWidth = 2;
-    for (const [x, dir] of [[a, 1], [b, -1]]) {
-      if (x <= floor.x || x >= floor.x + floor.w) continue;
-      ctx.beginPath();
-      ctx.moveTo(x, floor.y - 6);
-      for (let i = 0; i <= 7; i++) ctx.lineTo(x + dir * (4 + ((i * 41) % 5) * 3), floor.y - 6 + i * 12);
-      ctx.lineTo(x, floor.y + 84);
-      ctx.closePath();
-      ctx.fill();
-      ctx.stroke();
-    }
-    // blocos do palco caindo e girando nos primeiros segundos
-    if (since < 3) {
-      const n = Math.max(1, Math.round((b - a) / 45));
-      for (let i = 0; i < n; i++) {
-        const k = (i + 0.5) / n;
-        const fall = Math.max(0, since - k * 0.25);
-        const x = a + k * (b - a);
-        const y = floor.y + 30 + 900 * fall * fall;
-        ctx.save();
-        ctx.globalAlpha = Math.max(0, 1 - fall / 1.4);
-        ctx.translate(x, y);
-        ctx.rotate((i % 2 ? 1 : -1) * fall * 2.5);
-        ctx.fillStyle = '#d9b57e';
-        ctx.fillRect(-22, -30, 44, 60);
-        ctx.fillStyle = '#f2dcae';
-        ctx.fillRect(-22, -30, 44, 10);
-        ctx.strokeRect(-22, -30, 44, 60);
-        ctx.restore();
-      }
-    }
-    ctx.restore();
   }
 
   // Paliçada de madeira com espinhos de ferro virados para dentro, do fundo

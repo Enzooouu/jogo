@@ -459,6 +459,33 @@ function midAnimated(ctx, time) {
     if (MOOD.gestureT > 2.4) MOOD.gesture = null;
   }
 
+  // torcida nos dois andares de arcos de baixo (o de cima fica vazio)
+  for (const f of [1, 2]) {
+    const [top, bottom] = WALL.floors[f];
+    const archW = 46 - f * 4;
+    const gap = 16;
+    const w = archW - 6;
+    const h = (w * CLUSTER.h) / CLUSTER.w;
+    for (let x = -560; x < 1840; x += archW + gap) {
+      const ay = top + curve(x) - 50;
+      const ah = bottom - top - 16;
+      const secIndex = SECTIONS.indexOf(sectionAt(x + archW / 2));
+      const seed = Math.abs(Math.sin(x * 7.13 + f * 91.7) * 43758.5453) % 1;
+      const hop = Math.abs(Math.sin(time * (5 + seed * 3) + seed * 10)) * (2 + MOOD.excite * 5);
+      ctx.save();
+      // só aparece dentro do vão do arco
+      ctx.beginPath();
+      ctx.moveTo(x, ay + ah);
+      ctx.lineTo(x, ay + archW / 2);
+      ctx.arc(x + archW / 2, ay + archW / 2, archW / 2, Math.PI, 0);
+      ctx.lineTo(x + archW, ay + ah);
+      ctx.closePath();
+      ctx.clip();
+      ctx.drawImage(clusterSprite(secIndex, Math.floor(seed * 3)), x + 3, ay + ah - h + 3 - hop, w, h);
+      ctx.restore();
+    }
+  }
+
   // torcida pulando, setor por setor
   for (let r = 0; r < STANDS.rows; r++) {
     const y = STANDS.top + r * STANDS.rowH - 16;
@@ -627,20 +654,6 @@ function meander(ctx, x0, x1, y, h) {
 
 // Palco de pedra sobre o fosso, com colunas grossas descendo para o escuro
 function stage(ctx, s, rand) {
-  // pilares que seguram o palco, sumindo no fosso
-  for (const px of [s.x + 60, s.x + s.w / 2 - 30, s.x + s.w - 120]) {
-    const g = ctx.createLinearGradient(px, 0, px + 60, 0);
-    g.addColorStop(0, STONE.deep);
-    g.addColorStop(0.4, STONE.dark);
-    g.addColorStop(1, STONE.shadow);
-    ctx.fillStyle = g;
-    ctx.fillRect(px, s.y + 60, 60, 900);
-  }
-  const fade = ctx.createLinearGradient(0, s.y + 150, 0, s.y + 420);
-  fade.addColorStop(0, 'rgba(20,10,4,0)');
-  fade.addColorStop(1, 'rgba(20,10,4,0.95)');
-  ctx.fillStyle = fade;
-  ctx.fillRect(s.x - 40, s.y + 150, s.w + 80, 900);
   // corpo do palco: blocos de pedra
   const h = 80;
   const body = ctx.createLinearGradient(0, s.y, 0, s.y + h);
@@ -864,9 +877,185 @@ function statue(ctx, x, y, dir) {
 // O palco e a laje do meio ficam no desenho fixo. Colunas, estátuas e
 // braseiros são desenhados a cada quadro (em `front`) porque somem quando a
 // morte súbita derruba o palco atrás das paredes de espinhos.
+// Fosso embaixo do palco: parede de pedra na sombra, portões de ferro de
+// onde saíam as feras, tochas, pilares segurando o palco e o chão de areia
+// lá no fundo. Fica atrás do palco (aparece quando o palco se abre).
+function fosso(ctx, floor, rand) {
+  const top = floor.y + 20;
+  const x0 = -400;
+  const x1 = 1700;
+  // parede do fundo
+  const wall = ctx.createLinearGradient(0, top, 0, top + 420);
+  wall.addColorStop(0, '#7a5232');
+  wall.addColorStop(0.5, '#4e321e');
+  wall.addColorStop(1, '#241408');
+  ctx.fillStyle = wall;
+  ctx.fillRect(x0, top, x1 - x0, 1000);
+  // blocos de pedra
+  ctx.strokeStyle = 'rgba(30,16,6,0.45)';
+  ctx.lineWidth = 1.5;
+  for (let r = 0; r < 14; r++) {
+    const y = top + r * 30;
+    ctx.beginPath();
+    ctx.moveTo(x0, y);
+    ctx.lineTo(x1, y);
+    ctx.stroke();
+    for (let x = x0 + (r % 2) * 35; x < x1; x += 70) {
+      ctx.beginPath();
+      ctx.moveTo(x, y);
+      ctx.lineTo(x, y + 30);
+      ctx.stroke();
+    }
+  }
+  // portões de ferro (arco escuro com grade)
+  const gates = [floor.x + 150, floor.x + floor.w / 2, floor.x + floor.w - 150];
+  for (const gx of gates) {
+    const gy = top + 60;
+    const w = 90;
+    const h = 120;
+    ctx.fillStyle = '#e0b880';
+    ctx.beginPath();
+    ctx.moveTo(gx - w / 2 - 10, gy + h);
+    ctx.lineTo(gx - w / 2 - 10, gy + w / 2);
+    ctx.arc(gx, gy + w / 2, w / 2 + 10, Math.PI, 0);
+    ctx.lineTo(gx + w / 2 + 10, gy + h);
+    ctx.closePath();
+    ctx.fill();
+    const dark = ctx.createLinearGradient(0, gy, 0, gy + h);
+    dark.addColorStop(0, '#0e0604');
+    dark.addColorStop(1, '#2a160a');
+    ctx.fillStyle = dark;
+    ctx.beginPath();
+    ctx.moveTo(gx - w / 2, gy + h);
+    ctx.lineTo(gx - w / 2, gy + w / 2);
+    ctx.arc(gx, gy + w / 2, w / 2, Math.PI, 0);
+    ctx.lineTo(gx + w / 2, gy + h);
+    ctx.closePath();
+    ctx.fill();
+    // olhos brilhando lá no escuro (alguma fera esperando)
+    ctx.fillStyle = 'rgba(255,200,60,0.8)';
+    ctx.beginPath();
+    ctx.arc(gx - 6, gy + 70, 2.2, 0, Math.PI * 2);
+    ctx.arc(gx + 6, gy + 70, 2.2, 0, Math.PI * 2);
+    ctx.fill();
+    // grade de ferro
+    ctx.save();
+    ctx.beginPath();
+    ctx.moveTo(gx - w / 2, gy + h);
+    ctx.lineTo(gx - w / 2, gy + w / 2);
+    ctx.arc(gx, gy + w / 2, w / 2, Math.PI, 0);
+    ctx.lineTo(gx + w / 2, gy + h);
+    ctx.closePath();
+    ctx.clip();
+    ctx.strokeStyle = '#3a3a44';
+    ctx.lineWidth = 4;
+    for (let x = gx - w / 2 + 8; x < gx + w / 2; x += 13) {
+      ctx.beginPath();
+      ctx.moveTo(x, gy);
+      ctx.lineTo(x, gy + h);
+      ctx.stroke();
+    }
+    for (const y of [gy + 40, gy + 85]) {
+      ctx.beginPath();
+      ctx.moveTo(gx - w / 2, y);
+      ctx.lineTo(gx + w / 2, y);
+      ctx.stroke();
+    }
+    ctx.strokeStyle = 'rgba(160,160,180,0.5)';
+    ctx.lineWidth = 1.2;
+    for (let x = gx - w / 2 + 7; x < gx + w / 2; x += 13) {
+      ctx.beginPath();
+      ctx.moveTo(x, gy);
+      ctx.lineTo(x, gy + h);
+      ctx.stroke();
+    }
+    ctx.restore();
+    // pedra do topo do arco
+    ctx.fillStyle = '#f2d4a0';
+    ctx.fillRect(gx - 8, gy - 10, 16, 14);
+  }
+  // suportes das tochas entre os portões (o fogo é animado em front)
+  for (const tx of fossoTorches(floor)) {
+    ctx.fillStyle = '#3a2a1e';
+    ctx.fillRect(tx - 3, top + 90, 6, 26);
+    ctx.fillStyle = '#6a4a22';
+    ctx.fillRect(tx - 8, top + 84, 16, 8);
+  }
+  // pilares que seguram o palco
+  for (const px of [floor.x + 40, floor.x + floor.w / 2 - 28, floor.x + floor.w - 96]) {
+    const g = ctx.createLinearGradient(px, 0, px + 56, 0);
+    g.addColorStop(0, STONE.deep);
+    g.addColorStop(0.4, STONE.mid);
+    g.addColorStop(1, STONE.shadow);
+    ctx.fillStyle = g;
+    ctx.fillRect(px, floor.y + 70, 56, 900);
+    ctx.strokeStyle = INK;
+    ctx.lineWidth = 2;
+    ctx.strokeRect(px, floor.y + 70, 56, 900);
+    ctx.fillStyle = 'rgba(40,20,8,0.3)';
+    for (let y = floor.y + 110; y < floor.y + 500; y += 40) ctx.fillRect(px, y, 56, 3);
+  }
+  // chão de areia lá no fundo, com escudos e lanças velhas
+  const sandY = top + 230;
+  const sand = ctx.createLinearGradient(0, sandY, 0, sandY + 60);
+  sand.addColorStop(0, '#c89a5a');
+  sand.addColorStop(1, '#6a4a28');
+  ctx.fillStyle = sand;
+  ctx.fillRect(x0, sandY, x1 - x0, 400);
+  for (let i = 0; i < 10; i++) {
+    const x = floor.x + rand() * floor.w;
+    ctx.fillStyle = '#8a5a2a';
+    ctx.beginPath();
+    ctx.ellipse(x, sandY + 8, 9, 4, 0, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.strokeStyle = '#5a4a3a';
+    ctx.lineWidth = 1.5;
+    ctx.beginPath();
+    ctx.moveTo(x + 14, sandY + 10);
+    ctx.lineTo(x + 40, sandY - 6);
+    ctx.stroke();
+  }
+  // escuridão no fundo
+  const deep = ctx.createLinearGradient(0, top, 0, top + 360);
+  deep.addColorStop(0, 'rgba(10,4,0,0.1)');
+  deep.addColorStop(1, 'rgba(10,4,0,0.75)');
+  ctx.fillStyle = deep;
+  ctx.fillRect(x0, top, x1 - x0, 1000);
+}
+
+const fossoTorches = (floor) => [floor.x + 75, floor.x + floor.w / 2 - 125, floor.x + floor.w / 2 + 125, floor.x + floor.w - 75];
+
+// O palco é desenhado uma vez numa tela própria e copiado a cada quadro: na
+// morte súbita só os pedaços que ficam são copiados, e os que caem viram
+// blocos caindo girando (aparece o fosso por trás)
+let STAGE_SPRITE = null;
+function stageSprite(floor) {
+  if (STAGE_SPRITE && STAGE_SPRITE.floor === floor) return STAGE_SPRITE;
+  const pad = 14;
+  const rect = { x: floor.x - pad, y: floor.y - 10, w: floor.w + pad * 2, h: 104 };
+  const canvas = document.createElement('canvas');
+  canvas.width = rect.w * 2;
+  canvas.height = rect.h * 2;
+  const ctx = canvas.getContext('2d');
+  ctx.scale(2, 2);
+  ctx.translate(-rect.x, -rect.y);
+  stage(ctx, floor, seeded(41));
+  STAGE_SPRITE = { floor, rect, canvas };
+  return STAGE_SPRITE;
+}
+
+// copia o pedaço [a, b] do palco
+function stagePiece(ctx, sp, a, b) {
+  const { rect, canvas } = sp;
+  const sx = (a - rect.x) * 2;
+  const sw = (b - a) * 2;
+  if (sw <= 0) return;
+  ctx.drawImage(canvas, sx, 0, sw, rect.h * 2, a, rect.y, b - a, rect.h);
+}
+
 function drawTerrain(ctx, map, rand) {
   const floor = map.solids[0];
-  stage(ctx, floor, rand);
+  fosso(ctx, floor, rand);
   for (const p of map.platforms) if (p.y <= floor.y - 200) slab(ctx, p);
 }
 
@@ -924,8 +1113,59 @@ export const COLISEU_ART = {
     }
   },
   front(ctx, map, time) {
-    if (sudden()) return;
     const floor = map.solids[0];
+    // tochas do fosso
+    // (o fogo nasce em cima do suporte, que fica em floor.y + 104)
+    for (const [i, tx] of fossoTorches(floor).entries()) brazierFire(ctx, tx, floor.y + 104 + 57, time + i);
+    const sp = stageSprite(floor);
+    if (sudden()) {
+      const sd = map.suddenDeath;
+      for (const [a, b] of sd.keep) {
+        stagePiece(ctx, sp, a, b);
+        // beiradas quebradas
+        ctx.fillStyle = STONE.dark;
+        ctx.strokeStyle = INK;
+        ctx.lineWidth = 2;
+        for (const [x, dir] of [[a, -1], [b, 1]]) {
+          ctx.beginPath();
+          ctx.moveTo(x, floor.y - 5);
+          for (let i = 0; i <= 6; i++) ctx.lineTo(x + dir * ((i * 37) % 4) * 3, floor.y - 5 + i * 14);
+          ctx.lineTo(x, floor.y + 80);
+          ctx.closePath();
+          ctx.fill();
+          ctx.stroke();
+        }
+      }
+      // pedaços que caíram: blocos do próprio palco caindo e girando
+      const since = GAME.time - sd.start;
+      if (since < 3) {
+        let x = sp.rect.x;
+        const fallen = [];
+        for (const [a, b] of sd.keep) {
+          if (a > x) fallen.push([x, a]);
+          x = Math.max(x, b);
+        }
+        if (x < sp.rect.x + sp.rect.w) fallen.push([x, sp.rect.x + sp.rect.w]);
+        for (const [a, b] of fallen) {
+          const n = Math.max(1, Math.round((b - a) / 60));
+          for (let i = 0; i < n; i++) {
+            const pa = a + ((b - a) * i) / n;
+            const pb = a + ((b - a) * (i + 1)) / n;
+            const fall = Math.max(0, since - i * 0.08);
+            const cx = (pa + pb) / 2;
+            ctx.save();
+            ctx.globalAlpha = Math.max(0, 1 - fall / 2.2);
+            ctx.translate(cx, floor.y + 40 + 700 * fall * fall);
+            ctx.rotate((i % 2 ? 1 : -1) * fall * 1.6);
+            ctx.translate(-cx, -(floor.y + 40));
+            stagePiece(ctx, sp, pa, pb);
+            ctx.restore();
+          }
+        }
+      }
+      return;
+    }
+    stagePiece(ctx, sp, sp.rect.x, sp.rect.x + sp.rect.w);
     for (const p of map.platforms) {
       if (p.y <= floor.y - 200) continue;
       brokenColumn(ctx, p, floor.y);

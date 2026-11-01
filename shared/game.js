@@ -40,6 +40,9 @@ const WIND_FACTOR = { terra: 0.5 };
 
 // Gelo: acelera devagar, quase não freia e corre um pouco mais
 const ICE = { accel: 0.28, friction: 0.07, speed: 1.15 };
+// Arma jogada pela torcida (Coliseu) que acerta alguém no caminho
+const CROWD_HIT = { damage: 8, kbBase: 280, kbScale: 2.6, angle: 0.7 };
+
 const THROWN = { damage: 10, kbBase: 300, kbScale: 3.4, angle: 0.65, speed: 820, gravity: 1100 };
 const EXPLOSION_KB = { kbBase: 220, kbScale: 2.2, angle: 0.75 };
 
@@ -1127,6 +1130,27 @@ export class Game {
     this.dropCrate(Math.round(this.rng.range(minX, maxX)), this.rng.pick(WEAPON_IDS));
   }
 
+  hitByCrowd(p, item) {
+    const dir = Math.sign(item.vx) || 1;
+    const damage = CROWD_HIT.damage;
+    p.damage += damage;
+    p.stats.damageTaken += damage;
+    const kb = (CROWD_HIT.kbBase + p.damage * CROWD_HIT.kbScale) / statsOf(p).weight;
+    p.vx = dir * kb * Math.cos(CROWD_HIT.angle);
+    p.vy = Math.min(-kb * Math.sin(CROWD_HIT.angle), -180);
+    p.onGround = false;
+    p.hitstun = 0.12 + kb * 0.00035;
+    p.attack = null;
+    p.dashTime = 0;
+    p.lungeTime = 0;
+    // quem levou a pancada não pega a arma no mesmo instante
+    p.pickupCooldown = Math.max(p.pickupCooldown, 0.5);
+    this.emit('hit', {
+      attacker: null, target: p.id, damage, kb, element: 'mortal', weapon: item.weapon, crowd: true,
+      x: p.x + p.w / 2, y: p.y + p.h * 0.4,
+    });
+  }
+
   // Arma arremessada da arquibancada (Coliseu): sai de um dos lados e cai
   // em arco em (x, chão), já pronta para pegar (sem caixa)
   throwItem(x, groundY, weapon) {
@@ -1162,10 +1186,19 @@ export class Game {
       if (!item.landed) {
         const prevBottom = item.y + item.h;
         if (item.flying) {
-          // jogada pela torcida: voa em arco
+          // jogada pela torcida: voa em arco; se acertar alguém no caminho,
+          // dá dano, empurra e cai ali mesmo
           item.vy += ITEMS.throwGravity * DT;
           item.x += item.vx * DT;
           item.y += item.vy * DT;
+          const victim = this.players.find((p) => p.state === 'alive' && p.invuln <= 0 && !p.admin && rectsOverlap(item, p));
+          if (victim) {
+            this.hitByCrowd(victim, item);
+            item.flying = false;
+            item.vx = 0;
+            // cai a partir dos pés de quem levou (senão podia atravessar o chão)
+            item.y = Math.min(item.y, victim.y + victim.h - item.h - 1);
+          }
         } else {
           // caixote desce de paraquedas; arma caída despenca
           item.y += (item.dropped ? ITEMS.dropSpeed : ITEMS.fallSpeed) * DT;

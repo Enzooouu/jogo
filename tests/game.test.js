@@ -1166,6 +1166,25 @@ test('Coliseu: a torcida joga as armas, que caem no palco prontas para pegar', (
   assert.equal(item.uses, WEAPONS.lanca.uses);
 });
 
+test('Coliseu: arma jogada pela torcida que acerta alguém no caminho dá dano', () => {
+  const g = newGame(['fogo', 'agua'], { mapId: 'coliseu' });
+  const [a] = g.players;
+  park(g, 2);
+  place(a, 640, 520);
+  // mira bem em cima do jogador: a arma passa por ele no caminho
+  const item = g.throwItem(640, 520, 'espada');
+  let hit = null;
+  for (let i = 0; i < 120 && !hit; i++) {
+    g.step({});
+    hit = g.drainEvents().find((e) => e.type === 'hit' && e.crowd);
+  }
+  assert.ok(hit, 'acertou');
+  assert.equal(hit.target, 1);
+  assert.ok(a.damage >= 8);
+  run(g, 120);
+  assert.ok(item.landed, 'depois cai no chão e dá para pegar');
+});
+
 test('mapas novos: bots terminam partidas sem travar', () => {
   for (const mapId of ['gelo', 'coliseu', 'campo']) {
     const players = ['fogo', 'fogo', 'agua', 'agua'].map((el, i) => ({ id: i + 1, element: el, team: el, isBot: true }));
