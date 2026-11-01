@@ -6,7 +6,7 @@
 //
 // Mesmo formato do cenário da Caldeira (ver CALDEIRA_ART em stage.js).
 
-import { roundRect, glowSprite } from './stage-util.js';
+import { roundRect, glowSprite, ridgeLine } from './stage-util.js';
 
 const VIEW_W = 1280;
 const VIEW_H = 720;
@@ -76,10 +76,49 @@ function paintSky(ctx, t) {
     ctx.ellipse(x + 40, y + 12, w / 3, 4, -0.04, 0, Math.PI * 2);
     ctx.fill();
   }
+  // faixas de nuvem cortando o sol (borda de baixo dourada)
+  for (const [y, w, x] of [[392, 420, 900], [428, 300, 980], [455, 520, 870]]) {
+    const g = ctx.createLinearGradient(0, y - 6, 0, y + 8);
+    g.addColorStop(0, 'rgba(190,120,170,0.55)');
+    g.addColorStop(0.7, 'rgba(230,140,160,0.5)');
+    g.addColorStop(1, 'rgba(255,214,150,0.9)');
+    ctx.fillStyle = g;
+    ctx.beginPath();
+    ctx.ellipse(x, y, w / 2, 7, 0, 0, Math.PI * 2);
+    ctx.fill();
+  }
+  // mais estrelas bem no alto
+  for (let i = 0; i < 70; i++) {
+    ctx.globalAlpha = 0.1 + ((i * 13) % 10) / 22;
+    ctx.fillStyle = '#ffffff';
+    ctx.fillRect((i * 523 + 77) % VIEW_W, (i * 61) % 120, 1.2, 1.2);
+  }
+  ctx.globalAlpha = 1;
 }
 
 // Pássaros voando em bando devagar pelo céu
+// Redemoinhos de vento: risquinhos brancos que atravessam o céu e
+// terminam numa voltinha
+function windCurls(ctx, time, n, y0, h, speed, alpha) {
+  ctx.lineCap = 'round';
+  for (let i = 0; i < n; i++) {
+    const span = 1700;
+    const x = ((i * 397 + time * speed * (0.8 + (i % 3) * 0.2)) % span) - 200;
+    const y = y0 + ((i * 131) % h) + Math.sin(time * 0.8 + i) * 8;
+    const len = 70 + (i % 4) * 25;
+    const fade = Math.sin(((x + 200) / span) * Math.PI);
+    ctx.strokeStyle = `rgba(255,248,250,${alpha * fade})`;
+    ctx.lineWidth = 1.6;
+    ctx.beginPath();
+    ctx.moveTo(x - len, y);
+    ctx.quadraticCurveTo(x - len * 0.4, y - 6, x, y);
+    ctx.arc(x, y - 7, 7, Math.PI / 2, Math.PI * 2.1, true);
+    ctx.stroke();
+  }
+}
+
 function skyAnimated(ctx, time) {
+  windCurls(ctx, time, 9, 60, 300, 70, 0.55);
   ctx.strokeStyle = 'rgba(60,40,70,0.75)';
   ctx.lineWidth = 1.8;
   ctx.lineCap = 'round';
@@ -147,99 +186,221 @@ function cloudPuff(ctx, x, y, s, body, light) {
 // ======================================================================
 // Fundo distante
 
-function drawFar(ctx, map, rand) {
-  // o pico nevado, com o templo do vento lá em cima
-  ctx.fillStyle = '#7a6aa6';
+// Ilha flutuante: topo de grama com arvorezinhas, pedra em camadas
+// afinando para baixo, raízes penduradas; opcional casinha e cachoeira
+function floatIsland(ctx, x, y, w, tone, rand, { trees = 3, house = false } = {}) {
+  const depth = w * (0.9 + rand() * 0.4);
+  // pedra de baixo (cone serrilhado)
+  ctx.fillStyle = tone.rock;
   ctx.beginPath();
-  ctx.moveTo(-200, 700);
-  ctx.lineTo(80, 260);
-  ctx.lineTo(150, 170);
-  ctx.lineTo(200, 60);
-  ctx.lineTo(250, 160);
-  ctx.lineTo(330, 240);
-  ctx.lineTo(560, 700);
+  ctx.moveTo(x - w, y);
+  const n = 7;
+  for (let k = 1; k < n; k++) {
+    const u = k / n;
+    const px = x - w + u * w * 2;
+    const py = y + depth * Math.sin(u * Math.PI) * (0.55 + rand() * 0.45);
+    ctx.lineTo(px, py);
+  }
+  ctx.lineTo(x + w, y);
   ctx.closePath();
   ctx.fill();
-  ctx.fillStyle = 'rgba(255,200,190,0.35)';
-  ctx.beginPath();
-  ctx.moveTo(200, 60);
-  ctx.lineTo(250, 160);
-  ctx.lineTo(330, 240);
-  ctx.lineTo(560, 700);
-  ctx.lineTo(380, 700);
-  ctx.lineTo(260, 260);
-  ctx.closePath();
-  ctx.fill();
-  // neve
-  ctx.fillStyle = '#fbeef2';
-  ctx.beginPath();
-  ctx.moveTo(150, 170);
-  ctx.lineTo(200, 60);
-  ctx.lineTo(250, 160);
-  ctx.lineTo(228, 150);
-  ctx.lineTo(214, 172);
-  ctx.lineTo(196, 146);
-  ctx.lineTo(176, 178);
-  ctx.closePath();
-  ctx.fill();
-  // templo no topo: telhado curvo e pilares
-  ctx.fillStyle = '#4b3a6e';
-  ctx.fillRect(186, 40, 4, 18);
-  ctx.fillRect(210, 40, 4, 18);
-  ctx.beginPath();
-  ctx.moveTo(176, 42);
-  ctx.quadraticCurveTo(200, 26, 224, 42);
-  ctx.closePath();
-  ctx.fill();
-  ctx.fillStyle = 'rgba(191,233,225,0.9)';
-  ctx.beginPath();
-  ctx.arc(200, 50, 3, 0, Math.PI * 2);
-  ctx.fill();
-  // espiral de vento em volta do pico
-  ctx.strokeStyle = 'rgba(235,250,255,0.45)';
-  ctx.lineWidth = 2;
-  for (let k = 0; k < 3; k++) {
+  // lado iluminado pelo sol (direita) e camadas
+  ctx.save();
+  ctx.clip();
+  ctx.fillStyle = tone.lit;
+  ctx.fillRect(x + w * 0.15, y, w, depth);
+  ctx.strokeStyle = tone.line;
+  ctx.lineWidth = 1.2;
+  for (let k = 1; k < 4; k++) {
     ctx.beginPath();
-    ctx.ellipse(200, 120 + k * 60, 60 + k * 40, 12 + k * 4, -0.1, Math.PI * 0.1, Math.PI * 1.25);
+    ctx.moveTo(x - w, y + k * depth * 0.18);
+    for (let px = x - w; px <= x + w; px += 12) ctx.lineTo(px, y + k * depth * 0.18 + Math.sin(px * 0.08 + k) * 2.5);
     ctx.stroke();
   }
-
-  // ilhas-montanha distantes, com cachoeiras caindo nas nuvens
-  for (const [x, y, s] of [[700, 300, 60], [1150, 260, 80], [1500, 330, 50], [-420, 300, 70]]) {
-    ctx.fillStyle = '#8e7cb3';
+  ctx.restore();
+  // raízes penduradas
+  ctx.strokeStyle = tone.root;
+  ctx.lineWidth = 1.2;
+  for (let k = 0; k < 5; k++) {
+    const rx = x - w * 0.7 + rand() * w * 1.4;
     ctx.beginPath();
-    ctx.moveTo(x - s * 1.2, y);
-    ctx.lineTo(x - s * 0.4, y - s * 1.1);
-    ctx.lineTo(x, y - s * 0.7);
-    ctx.lineTo(x + s * 0.5, y - s * 1.4);
-    ctx.lineTo(x + s * 1.2, y);
-    ctx.lineTo(x + s * 0.4, y + s * 0.9);
-    ctx.lineTo(x - s * 0.3, y + s * 0.6);
-    ctx.closePath();
-    ctx.fill();
-    ctx.fillStyle = 'rgba(255,215,200,0.4)';
-    ctx.beginPath();
-    ctx.moveTo(x + s * 0.5, y - s * 1.4);
-    ctx.lineTo(x + s * 1.2, y);
-    ctx.lineTo(x + s * 0.6, y);
-    ctx.closePath();
-    ctx.fill();
-    ctx.fillStyle = 'rgba(120,170,110,0.7)';
-    ctx.fillRect(x - s * 1.2, y - 3, s * 2.4, 4);
-    ctx.fillStyle = 'rgba(240,250,255,0.6)';
-    ctx.fillRect(x + s * 0.2, y + 2, 3, 260);
+    ctx.moveTo(rx, y + 4);
+    ctx.quadraticCurveTo(rx + 4, y + depth * 0.4, rx - 2, y + depth * (0.4 + rand() * 0.4));
+    ctx.stroke();
   }
+  // topo de grama com borda clara
+  ctx.fillStyle = tone.grass;
+  ctx.beginPath();
+  ctx.ellipse(x, y, w * 1.02, Math.max(4, w * 0.09), 0, Math.PI, 0);
+  ctx.lineTo(x + w * 1.02, y + 3);
+  ctx.lineTo(x - w * 1.02, y + 3);
+  ctx.fill();
+  ctx.fillStyle = tone.grassLit;
+  ctx.fillRect(x - w, y - 1, w * 2, 2);
+  for (let k = 0; k < trees; k++) {
+    const tx = x - w * 0.7 + rand() * w * 1.4;
+    const r = w * (0.07 + rand() * 0.05);
+    ctx.fillStyle = tone.trunk;
+    ctx.fillRect(tx - r * 0.12, y - r * 1.6, r * 0.24, r * 1.6);
+    ctx.fillStyle = tone.tree;
+    ctx.beginPath();
+    ctx.arc(tx, y - r * 1.9, r, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = tone.treeLit;
+    ctx.beginPath();
+    ctx.arc(tx + r * 0.3, y - r * 2.1, r * 0.5, 0, Math.PI * 2);
+    ctx.fill();
+  }
+  if (house) {
+    const hx = x + w * 0.25;
+    const s = w / 60;
+    ctx.fillStyle = tone.wall;
+    ctx.fillRect(hx - 8 * s, y - 12 * s, 16 * s, 12 * s);
+    ctx.fillStyle = tone.roof;
+    ctx.beginPath();
+    ctx.moveTo(hx - 11 * s, y - 12 * s);
+    ctx.quadraticCurveTo(hx, y - 24 * s, hx + 11 * s, y - 12 * s);
+    ctx.fill();
+    ctx.fillStyle = '#ffd79a';
+    ctx.fillRect(hx - 2 * s, y - 8 * s, 4 * s, 4 * s);
+  }
+  return { x, y, w, depth };
+}
 
+// tons das ilhas: as de longe somem no céu rosado
+const ISLE_FAR = { rock: '#9c88bb', lit: 'rgba(255,200,190,0.28)', line: 'rgba(80,60,110,0.18)', root: 'rgba(90,110,90,0.4)', grass: '#9fbf8c', grassLit: 'rgba(255,240,210,0.6)', tree: '#88aa80', treeLit: 'rgba(255,230,200,0.4)', trunk: '#7a6a80', wall: '#e8cfd4', roof: '#7a8fc0' };
+const ISLE_NEAR = { rock: '#86709f', lit: 'rgba(255,195,180,0.3)', line: 'rgba(60,40,90,0.22)', root: 'rgba(70,100,70,0.55)', grass: '#7fae6c', grassLit: 'rgba(255,240,200,0.7)', tree: '#6a9a62', treeLit: 'rgba(255,230,190,0.45)', trunk: '#6a5060', wall: '#efd8da', roof: '#5f7fb6' };
+
+// cachoeiras das ilhas (desenhadas animadas em farAnimated)
+const FALLS = [];
+
+function drawFar(ctx, map, rand) {
+  FALLS.length = 0;
+  // o pico dos ventos: montanha alta e serrilhada, neve no alto e o templo
+  const PEAK = { x: 200, top: 60, base: 720 };
+  const pts = ridgeLine([[-300, 720], [-120, 420], [10, 300], [90, 200], [150, 150], PEAK.x === 200 ? [200, 60] : [200, 60], [262, 140], [330, 230], [420, 330], [560, 520], [700, 720]], rand, 0.14, 5);
+  const outline = () => {
+    ctx.beginPath();
+    ctx.moveTo(pts[0][0], 900);
+    for (const [x, y] of pts) ctx.lineTo(x, y);
+    ctx.lineTo(pts[pts.length - 1][0], 900);
+    ctx.closePath();
+  };
+  const body = ctx.createLinearGradient(0, 60, 0, 700);
+  body.addColorStop(0, '#8a7ab4');
+  body.addColorStop(1, '#6c5c98');
+  ctx.fillStyle = body;
+  outline();
+  ctx.fill();
+  ctx.save();
+  outline();
+  ctx.clip();
+  // lado do sol (direita) mais quente
+  ctx.fillStyle = 'rgba(255,190,180,0.32)';
+  ctx.beginPath();
+  ctx.moveTo(200, 60);
+  for (const [x, y] of pts.filter(([x]) => x > 200)) ctx.lineTo(x, y);
+  ctx.lineTo(700, 900);
+  ctx.lineTo(300, 900);
+  ctx.lineTo(240, 300);
+  ctx.closePath();
+  ctx.fill();
+  // cristas descendo
+  ctx.strokeStyle = 'rgba(60,40,90,0.28)';
+  ctx.lineWidth = 1.5;
+  for (let r = 0; r < 7; r++) {
+    let x = 200 + (r - 3) * 14;
+    let y = 90 + Math.abs(r - 3) * 22;
+    ctx.beginPath();
+    ctx.moveTo(x, y);
+    for (let k = 0; k < 6; k++) {
+      x += (r - 3) * (4 + rand() * 6);
+      y += 40 + rand() * 20;
+      ctx.lineTo(x, y);
+    }
+    ctx.stroke();
+  }
+  // neve do alto, com a borda escorrendo
+  ctx.fillStyle = '#fbeef2';
+  ctx.beginPath();
+  ctx.moveTo(-300, -200);
+  ctx.lineTo(700, -200);
+  ctx.lineTo(700, 210);
+  for (let x = 700; x >= -300; x -= 12) ctx.lineTo(x, 200 + Math.sin(x * 0.07) * 14 + (rand() - 0.2) * 26 + Math.abs(x - 200) * 0.12);
+  ctx.closePath();
+  ctx.fill();
+  ctx.fillStyle = 'rgba(190,170,220,0.5)';
+  ctx.beginPath();
+  ctx.moveTo(200, 60);
+  for (const [x, y] of pts.filter(([x]) => x < 200).reverse()) ctx.lineTo(x, y);
+  ctx.lineTo(-300, 260);
+  ctx.lineTo(170, 260);
+  ctx.closePath();
+  ctx.fill();
+  ctx.restore();
+  // templo no topo: telhado curvo, pilares e a luz do vento
+  ctx.fillStyle = '#4b3a6e';
+  ctx.fillRect(186, 40, 4, 20);
+  ctx.fillRect(210, 40, 4, 20);
+  ctx.fillRect(180, 58, 40, 4);
+  ctx.beginPath();
+  ctx.moveTo(172, 43);
+  ctx.quadraticCurveTo(200, 22, 228, 43);
+  ctx.closePath();
+  ctx.fill();
+  ctx.fillStyle = 'rgba(191,233,225,0.95)';
+  ctx.beginPath();
+  ctx.arc(200, 51, 3.5, 0, Math.PI * 2);
+  ctx.fill();
+  // ilhas flutuantes de longe (as menores ficam mais apagadas)
+  for (const [x, y, w, opts] of [[700, 300, 44, { trees: 2 }], [1500, 330, 40, { trees: 2 }], [-460, 300, 50, { trees: 3 }]]) {
+    ctx.globalAlpha = 0.75;
+    const isl = floatIsland(ctx, x, y, w, ISLE_FAR, rand, opts);
+    ctx.globalAlpha = 1;
+    FALLS.push({ x: x + w * 0.35, y: y + 2, w: 3, len: 240, a: 0.45 });
+    void isl;
+  }
+  for (const [x, y, w, opts] of [[1150, 250, 78, { trees: 4, house: true }], [520, 200, 36, { trees: 1 }]]) {
+    floatIsland(ctx, x, y, w, ISLE_NEAR, rand, opts);
+    FALLS.push({ x: x - w * 0.3, y: y + 2, w: 5, len: 300, a: 0.6 });
+  }
   // banco de nuvens no horizonte
   cloudBank(ctx, 520, -760, 2040, 70, '#f3c7c9', 'rgba(255,240,215,0.85)', 'rgba(190,150,190,0.35)', rand);
 }
 
 function farAnimated(ctx, time) {
+  // espiral de vento girando em volta do pico
+  ctx.save();
+  ctx.lineCap = 'round';
+  for (let k = 0; k < 3; k++) {
+    const a0 = time * (0.5 + k * 0.15) + k * 2;
+    ctx.strokeStyle = `rgba(235,250,255,${0.5 - k * 0.1})`;
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.ellipse(200, 120 + k * 60, 60 + k * 40, 12 + k * 4, -0.1, a0, a0 + Math.PI * 1.1);
+    ctx.stroke();
+  }
+  ctx.restore();
+  // cachoeiras caindo das ilhas e sumindo nas nuvens
+  for (const f of FALLS) {
+    const g = ctx.createLinearGradient(0, f.y, 0, f.y + f.len);
+    g.addColorStop(0, `rgba(240,250,255,${f.a})`);
+    g.addColorStop(1, 'rgba(240,250,255,0)');
+    ctx.fillStyle = g;
+    ctx.fillRect(f.x - f.w / 2, f.y, f.w, f.len);
+    ctx.fillStyle = `rgba(255,255,255,${f.a})`;
+    for (let k = 0; k < 4; k++) {
+      const u = (time * 0.8 + k / 4) % 1;
+      ctx.fillRect(f.x - f.w / 2, f.y + u * f.len * 0.8, f.w, 6 * (1 - u));
+    }
+  }
   // nuvens soltas passando devagar
   for (let i = 0; i < 4; i++) {
     const x = ((time * (8 + i * 3) + i * 600) % 2600) - 700;
     cloudPuff(ctx, x, 330 + (i % 2) * 90, 34 + i * 6, 'rgba(255,225,225,0.7)', 'rgba(255,245,230,0.8)');
   }
+  // vento mais embaixo também
+  windCurls(ctx, time + 30, 6, 300, 200, 90, 0.4);
 }
 
 // ======================================================================

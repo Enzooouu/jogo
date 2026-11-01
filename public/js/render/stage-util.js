@@ -45,3 +45,21 @@ export function glowSprite(rgb) {
   glowSprites[rgb] = c;
   return c;
 }
+
+// Contorno de montanha natural: "deslocamento do ponto do meio" (cada pedaço
+// ganha um desvio aleatório, cada vez menor). `anchors` = [[x, y], ...] e
+// `rough` = quanto sobe e desce (0.1 suave, 0.3 serrilhado).
+export function ridgeLine(anchors, rand, rough, levels = 6) {
+  let pts = anchors.map(([x, y]) => [x, y]);
+  for (let level = 0; level < levels; level++) {
+    const next = [pts[0]];
+    for (let k = 1; k < pts.length; k++) {
+      const [ax, ay] = pts[k - 1];
+      const [bx, by] = pts[k];
+      const len = bx - ax;
+      next.push([(ax + bx) / 2 + (rand() - 0.5) * len * 0.15, (ay + by) / 2 + (rand() - 0.5) * len * rough], [bx, by]);
+    }
+    pts = next;
+  }
+  return pts;
+}

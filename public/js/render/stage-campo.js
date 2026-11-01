@@ -11,7 +11,7 @@
 // O campo (ilhas, ponte quebrada, plataforma) é o mesmo do Campo de Treino:
 // só o fundo muda (o tutorial continua com o fundo dele).
 
-import { seeded } from './stage-util.js';
+import { seeded, ridgeLine } from './stage-util.js';
 import { TREINO_ART, cloudSprite, oak, pine, sheep } from './stage-treino.js';
 
 const VIEW_W = 1280;
@@ -183,21 +183,6 @@ const FAR_HILL2 = (x) => 448 - Math.sin(x * 0.0042 + 2.6) * 26 - Math.sin(x * 0.
 // meio" (cada pedaço ganha um desvio aleatório, cada vez menor), com vários
 // picos, ombros e vales. Sombra no lado esquerdo de cada pico (o sol está à
 // direita), riscos de rocha no lado claro e neve só nos picos altos.
-function ridgeLine(anchors, rand, rough) {
-  let pts = anchors.map(([x, y]) => [x, y]);
-  for (let level = 0; level < 6; level++) {
-    const next = [pts[0]];
-    for (let k = 1; k < pts.length; k++) {
-      const [ax, ay] = pts[k - 1];
-      const [bx, by] = pts[k];
-      const len = bx - ax;
-      next.push([(ax + bx) / 2 + (rand() - 0.5) * len * 0.15, (ay + by) / 2 + (rand() - 0.5) * len * rough], [bx, by]);
-    }
-    pts = next;
-  }
-  return pts;
-}
-
 function range(ctx, base, anchors, tone, rand, snowY = null, rough = 0.32) {
   const pts = ridgeLine(anchors, rand, rough);
   const outline = () => {
