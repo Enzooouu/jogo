@@ -25,166 +25,311 @@ const ICE = { top: '#d8f6ff', light: '#a8e4f7', mid: '#5fb4dc', deep: '#1f5a8a',
 
 function paintSky(ctx) {
   const sky = ctx.createLinearGradient(0, 0, 0, VIEW_H);
-  sky.addColorStop(0, '#040818');
-  sky.addColorStop(0.45, '#0b1838');
-  sky.addColorStop(0.8, '#1d3462');
-  sky.addColorStop(1, '#2c4a7c');
+  sky.addColorStop(0, '#02040f');
+  sky.addColorStop(0.35, '#08122c');
+  sky.addColorStop(0.65, '#132650');
+  sky.addColorStop(0.85, '#22396a');
+  sky.addColorStop(1, '#34507e');
   ctx.fillStyle = sky;
   ctx.fillRect(0, 0, VIEW_W, VIEW_H);
-  // estrelas (umas maiores, com brilho em cruz)
   const rand = seeded(17);
-  for (let i = 0; i < 260; i++) {
+  // via láctea: faixa de poeira de estrelas na diagonal
+  ctx.save();
+  ctx.translate(VIEW_W * 0.45, VIEW_H * 0.3);
+  ctx.rotate(-0.42);
+  const band = ctx.createLinearGradient(0, -90, 0, 90);
+  band.addColorStop(0, 'rgba(150,170,230,0)');
+  band.addColorStop(0.5, 'rgba(160,180,240,0.12)');
+  band.addColorStop(1, 'rgba(150,170,230,0)');
+  ctx.fillStyle = band;
+  ctx.fillRect(-900, -90, 1800, 180);
+  for (let i = 0; i < 700; i++) {
+    const x = (rand() - 0.5) * 1800;
+    const y = (rand() + rand() + rand() - 1.5) * 70;
+    ctx.fillStyle = `rgba(230,236,255,${0.15 + rand() * 0.45})`;
+    ctx.fillRect(x, y, 0.9, 0.9);
+  }
+  // nuvens escuras de poeira no meio da faixa
+  for (let i = 0; i < 14; i++) {
+    ctx.fillStyle = 'rgba(6,10,26,0.18)';
+    ctx.beginPath();
+    ctx.ellipse((rand() - 0.5) * 1500, (rand() - 0.5) * 30, 40 + rand() * 80, 6 + rand() * 10, rand() * 0.4, 0, Math.PI * 2);
+    ctx.fill();
+  }
+  ctx.restore();
+  // estrelas (umas maiores, com brilho em cruz)
+  for (let i = 0; i < 300; i++) {
     const x = rand() * VIEW_W;
-    const y = rand() * VIEW_H * 0.7;
-    const r = rand() < 0.08 ? 1.6 : 0.5 + rand() * 0.8;
-    ctx.globalAlpha = 0.35 + rand() * 0.65;
-    ctx.fillStyle = rand() < 0.15 ? '#cfe0ff' : '#ffffff';
+    const y = rand() * VIEW_H * 0.72;
+    const big = rand() < 0.06;
+    const r = big ? 1.5 : 0.4 + rand() * 0.7;
+    ctx.globalAlpha = (0.3 + rand() * 0.7) * (1 - y / (VIEW_H * 0.9));
+    ctx.fillStyle = rand() < 0.2 ? '#cfe0ff' : rand() < 0.1 ? '#ffe6c8' : '#ffffff';
     ctx.beginPath();
     ctx.arc(x, y, r, 0, Math.PI * 2);
     ctx.fill();
-    if (r > 1.5) {
+    if (big) {
       ctx.fillRect(x - 5, y - 0.4, 10, 0.8);
       ctx.fillRect(x - 0.4, y - 5, 0.8, 10);
     }
   }
   ctx.globalAlpha = 1;
-  // lua com brilho e crateras
-  const glow = ctx.createRadialGradient(MOON.x, MOON.y, MOON.r * 0.5, MOON.x, MOON.y, MOON.r * 6);
-  glow.addColorStop(0, 'rgba(210,225,255,0.35)');
-  glow.addColorStop(1, 'rgba(210,225,255,0)');
+  // lua: brilho grande, halo fino e crateras
+  const glow = ctx.createRadialGradient(MOON.x, MOON.y, MOON.r * 0.5, MOON.x, MOON.y, MOON.r * 7);
+  glow.addColorStop(0, 'rgba(210,225,255,0.4)');
+  glow.addColorStop(0.4, 'rgba(180,205,255,0.1)');
+  glow.addColorStop(1, 'rgba(180,205,255,0)');
   ctx.fillStyle = glow;
-  ctx.fillRect(MOON.x - MOON.r * 6, MOON.y - MOON.r * 6, MOON.r * 12, MOON.r * 12);
+  ctx.fillRect(MOON.x - MOON.r * 7, MOON.y - MOON.r * 7, MOON.r * 14, MOON.r * 14);
+  ctx.strokeStyle = 'rgba(200,220,255,0.035)';
+  ctx.lineWidth = 8;
+  ctx.beginPath();
+  ctx.arc(MOON.x, MOON.y, MOON.r * 3.2, 0, Math.PI * 2);
+  ctx.stroke();
   const disc = ctx.createRadialGradient(MOON.x - 10, MOON.y - 10, 4, MOON.x, MOON.y, MOON.r);
   disc.addColorStop(0, '#ffffff');
-  disc.addColorStop(1, '#cdd8ee');
+  disc.addColorStop(0.7, '#e6ecf8');
+  disc.addColorStop(1, '#bfcbe4');
   ctx.fillStyle = disc;
   ctx.beginPath();
   ctx.arc(MOON.x, MOON.y, MOON.r, 0, Math.PI * 2);
   ctx.fill();
-  ctx.fillStyle = 'rgba(150,165,200,0.45)';
-  for (const [dx, dy, r] of [[-10, -6, 7], [9, 8, 5], [12, -12, 4], [-4, 14, 3.5]]) {
+  ctx.fillStyle = 'rgba(150,165,200,0.4)';
+  for (const [dx, dy, r] of [[-10, -6, 7], [9, 8, 5], [12, -12, 4], [-4, 14, 3.5], [-16, 8, 2.5], [4, -18, 2]]) {
     ctx.beginPath();
     ctx.arc(MOON.x + dx, MOON.y + dy, r, 0, Math.PI * 2);
     ctx.fill();
   }
 }
 
-// Aurora boreal: cortinas de luz verde e roxa ondulando
+// Aurora boreal: cortinas de luz que ondulam, com raios verticais e a borda
+// de baixo mais forte (verde) e o topo arroxeado. Desenhada pequena num
+// canvas à parte e ampliada, para ficar macia (sem listras).
 const AURORA = [
-  { base: 120, amp: 40, k: 0.006, speed: 0.25, h: 170, color: [90, 255, 170], alpha: 0.22, phase: 0 },
-  { base: 160, amp: 55, k: 0.0045, speed: 0.18, h: 140, color: [120, 220, 255], alpha: 0.16, phase: 2 },
-  { base: 90, amp: 30, k: 0.008, speed: 0.32, h: 120, color: [190, 120, 255], alpha: 0.14, phase: 4 },
+  { base: 205, amp: 46, k: 0.0055, speed: 0.22, h: 150, phase: 0, sprite: 0, alpha: 0.85 },
+  { base: 150, amp: 36, k: 0.0042, speed: 0.16, h: 120, phase: 2.2, sprite: 1, alpha: 0.6 },
+  { base: 250, amp: 28, k: 0.0075, speed: 0.28, h: 90, phase: 4.1, sprite: 2, alpha: 0.45 },
 ];
+const AURORA_RES = 0.25;
+let auroraCanvas = null;
+let auroraRays = null;
+
+function auroraSprites() {
+  // uma coluna de luz por cor: transparente em cima, cor no meio, borda forte embaixo
+  const colors = [
+    [[150, 90, 255], [70, 255, 160], [190, 255, 210]],
+    [[120, 120, 255], [90, 220, 255], [200, 245, 255]],
+    [[255, 110, 200], [150, 120, 255], [230, 200, 255]],
+  ];
+  return colors.map(([top, mid, edge]) => {
+    const c = document.createElement('canvas');
+    c.width = 1;
+    c.height = 64;
+    const x = c.getContext('2d');
+    const g = x.createLinearGradient(0, 0, 0, 64);
+    g.addColorStop(0, `rgba(${top},0)`);
+    g.addColorStop(0.45, `rgba(${top},0.35)`);
+    g.addColorStop(0.8, `rgba(${mid},0.8)`);
+    g.addColorStop(0.93, `rgba(${edge},1)`);
+    g.addColorStop(1, `rgba(${mid},0)`);
+    x.fillStyle = g;
+    x.fillRect(0, 0, 1, 64);
+    return c;
+  });
+}
 
 function skyAnimated(ctx, time) {
-  ctx.save();
-  ctx.globalCompositeOperation = 'lighter';
-  for (const a of AURORA) {
-    const [r, g, b] = a.color;
-    for (let x = -20; x < VIEW_W + 20; x += 6) {
-      const y = a.base + Math.sin(x * a.k + time * a.speed + a.phase) * a.amp + Math.sin(x * a.k * 2.7 - time * a.speed * 1.6) * a.amp * 0.35;
-      const shimmer = 0.6 + 0.4 * Math.sin(x * 0.05 + time * 1.3 + a.phase);
-      const grad = ctx.createLinearGradient(0, y - 10, 0, y + a.h);
-      grad.addColorStop(0, `rgba(${r},${g},${b},0)`);
-      grad.addColorStop(0.15, `rgba(${r},${g},${b},${a.alpha * shimmer})`);
-      grad.addColorStop(1, `rgba(${r},${g},${b},0)`);
-      ctx.fillStyle = grad;
-      ctx.fillRect(x, y - 10, 7, a.h + 10);
+  if (!auroraCanvas) {
+    auroraCanvas = document.createElement('canvas');
+    auroraCanvas.width = VIEW_W * AURORA_RES;
+    auroraCanvas.height = VIEW_H * AURORA_RES;
+    auroraRays = auroraSprites();
+  }
+  const a = auroraCanvas.getContext('2d');
+  a.setTransform(1, 0, 0, 1, 0, 0);
+  a.clearRect(0, 0, auroraCanvas.width, auroraCanvas.height);
+  a.globalCompositeOperation = 'lighter';
+  a.scale(AURORA_RES, AURORA_RES);
+  for (const c of AURORA) {
+    const sprite = auroraRays[c.sprite];
+    for (let x = -10; x < VIEW_W + 10; x += 4) {
+      const y = c.base + Math.sin(x * c.k + time * c.speed + c.phase) * c.amp + Math.sin(x * c.k * 2.9 - time * c.speed * 1.7) * c.amp * 0.3;
+      // raios: faixas que acendem e apagam devagar
+      const ray = 0.55 + 0.45 * Math.sin(x * 0.045 + time * 0.9 + c.phase) * Math.sin(x * 0.013 - time * 0.4);
+      const fade = Math.min(1, Math.min(x + 60, VIEW_W + 60 - x) / 300);
+      const hh = c.h * (0.8 + 0.4 * Math.sin(x * 0.02 + time * 0.5 + c.phase));
+      a.globalAlpha = Math.max(0, c.alpha * ray * fade);
+      a.drawImage(sprite, x, y - hh, 4, hh + 8);
     }
   }
+  a.globalAlpha = 1;
+  ctx.save();
+  ctx.globalCompositeOperation = 'lighter';
+  ctx.globalAlpha = 0.55;
+  ctx.imageSmoothingEnabled = true;
+  ctx.drawImage(auroraCanvas, 0, 0, VIEW_W, VIEW_H);
   ctx.restore();
-  // algumas estrelas piscando
-  for (let i = 0; i < 14; i++) {
+  // estrelas piscando
+  for (let i = 0; i < 18; i++) {
     const x = (i * 197) % VIEW_W;
     const y = 20 + ((i * 89) % 300);
     const tw = 0.5 + 0.5 * Math.sin(time * (2 + (i % 3)) + i);
     ctx.fillStyle = `rgba(255,255,255,${tw * 0.9})`;
     ctx.fillRect(x - 0.8, y - 0.8, 1.6, 1.6);
   }
+  // estrela cadente de vez em quando
+  const cycle = time % 11;
+  if (cycle < 0.8) {
+    const k = Math.floor(time / 11);
+    const u = cycle / 0.8;
+    const sx = 150 + ((k * 337) % 700);
+    const sy = 40 + ((k * 131) % 120);
+    const x = sx + u * 260;
+    const y = sy + u * 110;
+    const g = ctx.createLinearGradient(x - 80, y - 34, x, y);
+    g.addColorStop(0, 'rgba(255,255,255,0)');
+    g.addColorStop(1, `rgba(255,255,255,${0.9 * (1 - u)})`);
+    ctx.strokeStyle = g;
+    ctx.lineWidth = 1.6;
+    ctx.beginPath();
+    ctx.moveTo(x - 80, y - 34);
+    ctx.lineTo(x, y);
+    ctx.stroke();
+  }
 }
 
 // ================================================================ fundo distante
 
-function mountain(ctx, x, base, h, w, body, shade, rand) {
-  const left = [];
-  const right = [];
-  for (let i = 1; i < 8; i++) {
-    const u = i / 8;
-    left.push([x - w * u + (rand() - 0.5) * w * 0.07, base - h * (1 - u) + (rand() - 0.5) * h * 0.06]);
-    right.push([x + w * u + (rand() - 0.5) * w * 0.07, base - h * (1 - u) + (rand() - 0.5) * h * 0.06]);
+// Montanha: contorno serrilhado, lado da lua (esquerda) claro, lado de
+// sombra azulado, cristas e canaletas de neve descendo do pico
+function mountain(ctx, x, base, h, w, tone, rand) {
+  const pts = [];
+  const steps = 10;
+  for (let i = 0; i <= steps; i++) {
+    const u = i / steps;
+    const px = x - w + u * w * 2;
+    const peak = 1 - Math.abs(u - 0.5) * 2;
+    const jag = i === 0 || i === steps ? 0 : (rand() - 0.5) * h * 0.12;
+    pts.push([px + (rand() - 0.5) * w * 0.05, base - h * Math.pow(peak, 1.15) + jag]);
   }
-  const top = [x, base - h];
-  const path = () => {
+  pts[steps / 2] = [x, base - h];
+  const outline = () => {
     ctx.beginPath();
-    ctx.moveTo(x - w, base + 400);
-    ctx.lineTo(x - w, base);
-    for (const p of [...left].reverse()) ctx.lineTo(p[0], p[1]);
-    ctx.lineTo(top[0], top[1]);
-    for (const p of right) ctx.lineTo(p[0], p[1]);
-    ctx.lineTo(x + w, base);
-    ctx.lineTo(x + w, base + 400);
+    ctx.moveTo(x - w, base + 500);
+    for (const p of pts) ctx.lineTo(p[0], p[1]);
+    ctx.lineTo(x + w, base + 500);
     ctx.closePath();
   };
+  const body = ctx.createLinearGradient(0, base - h, 0, base + 60);
+  body.addColorStop(0, tone.snow);
+  body.addColorStop(0.45, tone.lit);
+  body.addColorStop(1, tone.base);
   ctx.fillStyle = body;
-  path();
+  outline();
   ctx.fill();
   ctx.save();
-  path();
+  outline();
   ctx.clip();
-  // neve cobrindo quase toda a montanha, com o lado da lua (esquerda) claro
-  ctx.fillStyle = 'rgba(220,232,255,0.75)';
+  // lado de sombra (direita da crista principal)
+  ctx.fillStyle = tone.shade;
   ctx.beginPath();
-  ctx.moveTo(top[0], top[1]);
-  ctx.lineTo(x - w * 0.55, top[1] + h * 0.6);
-  for (let i = 1; i <= 7; i++) ctx.lineTo(x - w * 0.55 + (i / 8) * w * 1.1, top[1] + h * (i % 2 ? 0.42 : 0.62));
-  ctx.lineTo(x + w * 0.55, top[1] + h * 0.6);
+  ctx.moveTo(x, base - h);
+  for (const p of pts.slice(steps / 2 + 1)) ctx.lineTo(p[0], p[1]);
+  ctx.lineTo(x + w, base + 500);
+  ctx.lineTo(x + w * 0.12, base + 500);
+  ctx.lineTo(x + w * 0.12, base);
+  for (let k = 1; k < 6; k++) ctx.lineTo(x + w * 0.12 * (1 - k / 6) + (rand() - 0.5) * 14, base - (h * k) / 6);
   ctx.closePath();
   ctx.fill();
-  // lado de sombra (direita, longe da lua)
-  ctx.fillStyle = shade;
-  ctx.beginPath();
-  ctx.moveTo(top[0], top[1]);
-  for (const p of right) ctx.lineTo(p[0], p[1]);
-  ctx.lineTo(x + w, base + 400);
-  ctx.lineTo(x + w * 0.05, base + 400);
-  ctx.lineTo(x - w * 0.05, base - h * 0.4);
-  ctx.closePath();
-  ctx.fill();
+  // cristas descendo do pico
+  ctx.strokeStyle = tone.ridge;
+  ctx.lineWidth = 1.4;
+  for (let r = 0; r < 4; r++) {
+    let rx = x + (rand() - 0.5) * w * 0.15;
+    let ry = base - h * (0.92 - r * 0.07);
+    const dir = r % 2 ? 1 : -1;
+    ctx.beginPath();
+    ctx.moveTo(rx, ry);
+    for (let k = 0; k < 6; k++) {
+      rx += dir * (8 + rand() * 16);
+      ry += h * 0.09;
+      ctx.lineTo(rx, ry);
+    }
+    ctx.stroke();
+  }
+  // canaletas de neve (riscos claros no lado da lua)
+  ctx.strokeStyle = tone.gully;
+  ctx.lineWidth = 2;
+  for (let g = 0; g < 7; g++) {
+    const gx = x - w * 0.5 + rand() * w * 0.6;
+    const gy = base - h * (0.45 + rand() * 0.35);
+    ctx.beginPath();
+    ctx.moveTo(gx, gy);
+    ctx.quadraticCurveTo(gx - 6, gy + h * 0.12, gx - 2 + (rand() - 0.5) * 10, gy + h * 0.28);
+    ctx.stroke();
+  }
   ctx.restore();
 }
 
-function drawFar(ctx, map, rand) {
-  for (const [x, h, w] of [[-520, 260, 320], [20, 330, 380], [560, 280, 330], [1100, 350, 400], [1640, 300, 350], [2060, 260, 300]]) {
-    mountain(ctx, x, 470, h, w, '#3a4e7a', 'rgba(14,24,52,0.55)', rand);
-  }
-  for (const [x, h, w] of [[-280, 180, 250], [300, 210, 270], [820, 170, 240], [1360, 200, 270], [1880, 180, 250]]) {
-    mountain(ctx, x, 500, h, w, '#2c3e66', 'rgba(10,18,40,0.6)', rand);
-  }
-  // floresta escura no pé das montanhas
-  ctx.fillStyle = '#16233f';
+// pinheiro escuro só de silhueta (floresta ao longe)
+function pineSil(ctx, x, y, h) {
   ctx.beginPath();
-  ctx.moveTo(-800, 1400);
-  for (let x = -800; x <= 2100; x += 14) {
-    const h = 16 + rand() * 22;
-    ctx.lineTo(x, 412);
-    ctx.lineTo(x + 7, 412 - h);
-  }
-  ctx.lineTo(2100, 1400);
+  ctx.moveTo(x, y - h);
+  ctx.lineTo(x + h * 0.32, y);
+  ctx.lineTo(x - h * 0.32, y);
   ctx.closePath();
   ctx.fill();
-  // neblina fria
-  const fog = ctx.createLinearGradient(0, 360, 0, 460);
-  fog.addColorStop(0, 'rgba(160,190,240,0)');
-  fog.addColorStop(1, 'rgba(160,190,240,0.3)');
-  ctx.fillStyle = fog;
-  ctx.fillRect(-800, 360, 2900, 1040);
 }
 
-function farAnimated() {}
+const FAR_TONES = [
+  { base: '#3a4c7a', lit: '#5d71a3', snow: '#a9b9dc', shade: 'rgba(20,30,70,0.45)', ridge: 'rgba(30,42,90,0.3)', gully: 'rgba(220,232,255,0.2)' },
+  { base: '#26365c', lit: '#4c6194', snow: '#c3d1ee', shade: 'rgba(10,18,50,0.55)', ridge: 'rgba(14,22,60,0.4)', gully: 'rgba(230,240,255,0.3)' },
+];
+
+function drawFar(ctx, map, rand) {
+  // cordilheira bem longe, clarinha (ar frio)
+  for (const [x, h, w] of [[-560, 250, 330], [-60, 300, 360], [420, 270, 320], [900, 320, 380], [1420, 280, 340], [1900, 260, 320]]) {
+    mountain(ctx, x, 455, h, w, FAR_TONES[0], rand);
+  }
+  // névoa entre as cordilheiras
+  const mist = ctx.createLinearGradient(0, 300, 0, 470);
+  mist.addColorStop(0, 'rgba(170,195,240,0)');
+  mist.addColorStop(1, 'rgba(170,195,240,0.35)');
+  ctx.fillStyle = mist;
+  ctx.fillRect(-800, 300, 2900, 170);
+  // montanhas principais, mais perto
+  for (const [x, h, w] of [[-260, 230, 280], [260, 250, 300], [760, 215, 270], [1250, 260, 300], [1760, 220, 280]]) {
+    mountain(ctx, x, 500, h, w, FAR_TONES[1], rand);
+  }
+  // floresta: pinheiros de silhueta em duas fileiras
+  ctx.fillStyle = '#1c2c4e';
+  for (let x = -800; x <= 2100; x += 9 + rand() * 6) pineSil(ctx, x, 432 + rand() * 6, 22 + rand() * 18);
+  ctx.fillRect(-800, 434, 2900, 1000);
+  ctx.fillStyle = '#14213d';
+  for (let x = -800; x <= 2100; x += 11 + rand() * 8) pineSil(ctx, x, 452 + rand() * 6, 26 + rand() * 22);
+  ctx.fillRect(-800, 454, 2900, 1000);
+  // neblina fria no pé da floresta
+  const fog = ctx.createLinearGradient(0, 400, 0, 490);
+  fog.addColorStop(0, 'rgba(160,190,240,0)');
+  fog.addColorStop(1, 'rgba(160,190,240,0.32)');
+  ctx.fillStyle = fog;
+  ctx.fillRect(-800, 400, 2900, 1000);
+}
+
+// neve caindo devagar lá longe
+function farAnimated(ctx, time) {
+  ctx.fillStyle = 'rgba(235,242,255,0.55)';
+  for (let i = 0; i < 70; i++) {
+    const x = ((i * 211 + Math.sin(time * 0.6 + i) * 18 + time * 8) % 1800) - 260;
+    const y = ((i * 97 + time * (18 + (i % 4) * 5)) % 760) - 40;
+    ctx.fillRect(x, y, 1.6, 1.6);
+  }
+}
 
 // ================================================================ fundo médio
 
 const HILL = (x) => 480 - Math.sin(x * 0.0045 + 0.6) * 34 - Math.sin(x * 0.011 + 1.4) * 10;
+const BACK_HILL = (x) => 452 - Math.sin(x * 0.006 + 2.1) * 26 - Math.sin(x * 0.017) * 8;
 const CABIN = { x: 1120 };
 
 function snowyPine(ctx, x, y, s) {
@@ -193,25 +338,34 @@ function snowyPine(ctx, x, y, s) {
   for (let i = 0; i < 4; i++) {
     const w = (17 - i * 3.6) * s;
     const yy = y - (6 + i * 11) * s;
-    ctx.fillStyle = '#183a32';
+    ctx.fillStyle = i % 2 ? '#1d4238' : '#183a32';
     ctx.beginPath();
     ctx.moveTo(x - w, yy);
     ctx.lineTo(x, yy - 18 * s);
     ctx.lineTo(x + w, yy);
     ctx.closePath();
     ctx.fill();
+    // lado da sombra
+    ctx.fillStyle = 'rgba(5,15,25,0.3)';
+    ctx.beginPath();
+    ctx.moveTo(x, yy - 18 * s);
+    ctx.lineTo(x + w, yy);
+    ctx.lineTo(x + w * 0.2, yy);
+    ctx.closePath();
+    ctx.fill();
     // neve em cima de cada camada
     ctx.fillStyle = SNOW.mid;
     ctx.beginPath();
-    ctx.moveTo(x - w * 0.75, yy - 3 * s);
+    ctx.moveTo(x - w * 0.8, yy - 2 * s);
     ctx.quadraticCurveTo(x - w * 0.3, yy - 12 * s, x, yy - 17 * s);
-    ctx.quadraticCurveTo(x + w * 0.2, yy - 10 * s, x + w * 0.5, yy - 5 * s);
-    ctx.quadraticCurveTo(x, yy - 7 * s, x - w * 0.75, yy - 3 * s);
+    ctx.quadraticCurveTo(x + w * 0.2, yy - 10 * s, x + w * 0.55, yy - 4 * s);
+    ctx.quadraticCurveTo(x, yy - 7 * s, x - w * 0.8, yy - 2 * s);
     ctx.fill();
   }
 }
 
 function cabin(ctx, x, y) {
+  // tábuas
   ctx.fillStyle = '#4a2e1c';
   ctx.fillRect(x - 40, y - 34, 80, 34);
   ctx.strokeStyle = '#2e1c10';
@@ -222,23 +376,28 @@ function cabin(ctx, x, y) {
     ctx.lineTo(x + 40, y - 30 + k * 7);
     ctx.stroke();
   }
-  // janela acesa
-  const win = ctx.createRadialGradient(x + 14, y - 18, 1, x + 14, y - 18, 40);
-  win.addColorStop(0, 'rgba(255,200,110,0.55)');
-  win.addColorStop(1, 'rgba(255,200,110,0)');
-  ctx.fillStyle = win;
-  ctx.fillRect(x - 26, y - 58, 80, 80);
-  ctx.fillStyle = '#ffcf6a';
-  ctx.fillRect(x + 6, y - 25, 16, 13);
-  ctx.fillStyle = '#4a2e1c';
-  ctx.fillRect(x + 13, y - 25, 2, 13);
-  ctx.fillRect(x + 6, y - 19.5, 16, 2);
+  // porta com luz saindo pela fresta
   ctx.fillStyle = '#2e1c10';
   ctx.fillRect(x - 26, y - 22, 14, 22);
+  ctx.fillStyle = 'rgba(255,190,110,0.7)';
+  ctx.fillRect(x - 13, y - 21, 1.2, 20);
+  // janela (a luz pisca em midAnimated)
+  ctx.fillStyle = '#ffcf6a';
+  ctx.fillRect(x + 6, y - 25, 16, 13);
+  // lenha empilhada
+  ctx.fillStyle = '#6a4428';
+  for (let k = 0; k < 3; k++) {
+    for (let j = 0; j < 3 - k; j++) {
+      ctx.beginPath();
+      ctx.arc(x + 48 + j * 6 + k * 3, y - 3 - k * 5.5, 2.8, 0, Math.PI * 2);
+      ctx.fill();
+    }
+  }
   // chaminé e telhado de neve
   ctx.fillStyle = '#5a4a44';
   ctx.fillRect(x + 18, y - 64, 10, 22);
   ctx.fillStyle = SNOW.mid;
+  ctx.fillRect(x + 16, y - 66, 14, 4);
   ctx.beginPath();
   ctx.moveTo(x - 52, y - 30);
   ctx.lineTo(x, y - 62);
@@ -252,46 +411,112 @@ function cabin(ctx, x, y) {
   ctx.lineTo(x + 20, y - 34);
   ctx.closePath();
   ctx.fill();
+  // pingentes no beiral
+  ctx.fillStyle = '#dff6ff';
+  for (let k = -46; k < 48; k += 7) {
+    ctx.beginPath();
+    ctx.moveTo(k + x - 2, y - 31);
+    ctx.lineTo(k + x, y - 24 - (k % 3 === 0 ? 4 : 0));
+    ctx.lineTo(k + x + 2, y - 31);
+    ctx.fill();
+  }
+  // cerquinha
+  ctx.fillStyle = '#5a3a22';
+  for (let k = 0; k < 6; k++) ctx.fillRect(x - 96 + k * 9, y - 14, 3, 14);
+  ctx.fillRect(x - 98, y - 11, 52, 2.5);
+  ctx.fillRect(x - 98, y - 5, 52, 2.5);
+  ctx.fillStyle = SNOW.light;
+  for (let k = 0; k < 6; k++) ctx.fillRect(x - 96.5 + k * 9, y - 16, 4, 2.5);
+}
+
+function hillShape(ctx, fn, x0, x1) {
+  ctx.beginPath();
+  ctx.moveTo(x0, 1400);
+  for (let x = x0; x <= x1; x += 16) ctx.lineTo(x, fn(x));
+  ctx.lineTo(x1, 1400);
+  ctx.closePath();
 }
 
 function drawMid(ctx, map, rand) {
-  // morro de neve
-  const g = ctx.createLinearGradient(0, 430, 0, 720);
-  g.addColorStop(0, '#c7d8f2');
-  g.addColorStop(1, '#7f98c4');
-  ctx.fillStyle = g;
-  ctx.beginPath();
-  ctx.moveTo(-600, 1400);
-  for (let x = -600; x <= 1900; x += 16) ctx.lineTo(x, HILL(x));
-  ctx.lineTo(1900, 1400);
-  ctx.closePath();
+  // morro de trás, mais azulado, com pinheirinhos pequenos
+  const bg = ctx.createLinearGradient(0, 400, 0, 620);
+  bg.addColorStop(0, '#9fb5dc');
+  bg.addColorStop(1, '#6a83b2');
+  ctx.fillStyle = bg;
+  hillShape(ctx, BACK_HILL, -600, 1900);
   ctx.fill();
-  // brilho da lua na borda de cima
-  ctx.strokeStyle = 'rgba(255,255,255,0.6)';
+  for (let i = 0; i < 70; i++) {
+    const x = -580 + i * 36 + rand() * 20;
+    ctx.fillStyle = '#2a4466';
+    pineSil(ctx, x, BACK_HILL(x) + 4, 14 + rand() * 12);
+  }
+  // morro da frente: neve com sombra e brilho da lua na borda
+  const g = ctx.createLinearGradient(0, 430, 0, 720);
+  g.addColorStop(0, '#d6e3f6');
+  g.addColorStop(0.5, '#a9bfe2');
+  g.addColorStop(1, '#7590c0');
+  ctx.fillStyle = g;
+  hillShape(ctx, HILL, -600, 1900);
+  ctx.fill();
+  // ondulações de neve (sombras azuis suaves)
+  ctx.fillStyle = 'rgba(80,110,170,0.16)';
+  for (let i = 0; i < 26; i++) {
+    const x = -560 + i * 100 + rand() * 40;
+    ctx.beginPath();
+    ctx.ellipse(x, HILL(x) + 40 + rand() * 40, 90 + rand() * 60, 10 + rand() * 6, 0, 0, Math.PI * 2);
+    ctx.fill();
+  }
+  ctx.strokeStyle = 'rgba(255,255,255,0.7)';
   ctx.lineWidth = 2;
   ctx.beginPath();
   for (let x = -600; x <= 1900; x += 16) ctx.lineTo(x, HILL(x) + 1);
   ctx.stroke();
-  // pinheiros nevados
-  for (let i = 0; i < 40; i++) {
-    const x = -560 + i * 62 + rand() * 30;
-    if (Math.abs(x - CABIN.x) < 70) continue;
-    snowyPine(ctx, x, HILL(x) + 6, 0.65 + rand() * 0.5);
+  // pinheiros nevados (uns maiores perto da cabana)
+  for (let i = 0; i < 44; i++) {
+    const x = -560 + i * 56 + rand() * 30;
+    if (Math.abs(x - CABIN.x) < 110) continue;
+    snowyPine(ctx, x, HILL(x) + 6, 0.6 + rand() * 0.55);
   }
   cabin(ctx, CABIN.x, HILL(CABIN.x) + 6);
   // lago congelado lá embaixo refletindo a lua
-  const lake = ctx.createLinearGradient(0, 520, 0, 620);
-  lake.addColorStop(0, '#5f88b8');
+  const lake = ctx.createLinearGradient(0, 520, 0, 610);
+  lake.addColorStop(0, '#6c94c2');
   lake.addColorStop(1, '#2a4a78');
   ctx.fillStyle = lake;
   ctx.beginPath();
   ctx.ellipse(640, 560, 900, 46, 0, 0, Math.PI * 2);
   ctx.fill();
-  ctx.fillStyle = 'rgba(230,240,255,0.35)';
+  ctx.strokeStyle = 'rgba(235,245,255,0.55)';
+  ctx.lineWidth = 2;
+  ctx.beginPath();
+  ctx.ellipse(640, 560, 900, 46, 0, Math.PI * 1.05, Math.PI * 1.95);
+  ctx.stroke();
+  ctx.fillStyle = 'rgba(230,240,255,0.4)';
   for (let i = 0; i < 6; i++) ctx.fillRect(MOON.x - 20 + i * 4, 528 + i * 7, 40 - i * 6, 2);
 }
 
 function midAnimated(ctx, time) {
+  // reflexo da aurora no lago lá embaixo
+  ctx.save();
+  ctx.beginPath();
+  ctx.ellipse(640, 560, 900, 46, 0, 0, Math.PI * 2);
+  ctx.clip();
+  ctx.globalCompositeOperation = 'lighter';
+  for (let x = -260; x < 1540; x += 40) {
+    const k = 0.5 + 0.5 * Math.sin(x * 0.01 + time * 0.5) * Math.sin(x * 0.004 - time * 0.2);
+    ctx.fillStyle = `rgba(90,255,180,${0.1 * k})`;
+    ctx.fillRect(x, 528, 30, 60);
+  }
+  ctx.restore();
+  // flocos de neve mais perto
+  ctx.fillStyle = 'rgba(255,255,255,0.75)';
+  for (let i = 0; i < 45; i++) {
+    const x = ((i * 263 + Math.sin(time * 0.8 + i * 1.3) * 26 + time * 14) % 2000) - 360;
+    const y = ((i * 151 + time * (34 + (i % 5) * 8)) % 900) - 120;
+    ctx.beginPath();
+    ctx.arc(x, y, 1.4 + (i % 3) * 0.5, 0, Math.PI * 2);
+    ctx.fill();
+  }
   const base = HILL(CABIN.x) + 6;
   // janela piscando como fogo de lareira
   const f = 0.75 + 0.15 * Math.sin(time * 7.3) + 0.1 * Math.sin(time * 17.1) + 0.05 * Math.sin(time * 31);
