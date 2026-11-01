@@ -1,6 +1,6 @@
 # Ideias de nome para o jogo
 
-O nome atual ("Brawl dos Elementos") é provisório.
+✅ **Nome escolhido: ELEMENTUM** (antes o jogo se chamava "Brawl dos Elementos", nome provisório).
 
 ## Favorito: ELEMENTUM 🏆
 

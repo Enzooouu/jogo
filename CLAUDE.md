@@ -1,4 +1,4 @@
-# Brawl dos Elementos — instruções para o Claude
+# Elementum — instruções para o Claude
 
 ## Como trabalhar com o usuário
 - Responder sempre em português do Brasil, de forma simples (o usuário está aprendendo).

@@ -53,7 +53,7 @@ if (isMain) {
   const dbFile = process.env.DB_PATH || path.join(ROOT, 'data', 'brawl.db');
   const db = openDatabase(dbFile);
   const server = createApp({ db }).listen(port, () => {
-    console.log(`Brawl dos Elementos rodando em http://localhost:${port}`);
+    console.log(`Elementum rodando em http://localhost:${port}`);
     console.log(`Banco de dados: ${dbFile}`);
   });
   const shutdown = () => {

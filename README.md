@@ -1,4 +1,4 @@
-# Brawl dos Elementos (nome provisório)
+# Elementum
 
 Jogo de luta 2D com plataformas que roda no navegador. Mistura Brawlhalla
 (dano acumulado e arremessar o inimigo para fora do mapa), Fireboy and
