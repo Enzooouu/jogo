@@ -12,6 +12,7 @@ import { buildLocalSetup, outcomeFor } from './setup.js';
 import { api } from './api.js';
 import { renderAccountBox, initAuthScreen, setAuthMode, focusAuth, loadProfile } from './screens/account.js';
 import { DemoArena } from './screens/demo.js';
+import { initHomeMenu } from './screens/home-menu.js';
 import { initControls } from './screens/controls.js';
 import { TutorialScreen } from './screens/tutorial.js';
 import { currentBindings, actionOf } from './input/bindings.js';
@@ -40,6 +41,7 @@ const state = {
 const demo = new DemoArena($('#menu-bg'));
 const controls = initControls($('#controls-panel'));
 const versus = new VersusScreen($('#versus-canvas'));
+let homeMenu = null;
 
 // ------------------------------------------------------------ telas
 
@@ -50,6 +52,9 @@ export function show(name) {
   for (const s of SCREENS) $(`#screen-${s}`).hidden = s !== name;
   if (name !== 'tutorial' && tutorial?.active) tutorial.stop();
   state.screen = name;
+  demo.setHome(name === 'home');
+  $('#menu-bg').classList.toggle('home-lit', name === 'home');
+  if (name === 'home') requestAnimationFrame(() => homeMenu?.refresh());
   if (WITH_DEMO.has(name) && state.demo) demo.start();
   else demo.stop();
   if (name !== 'versus') versus.stop();
@@ -84,6 +89,7 @@ function setUser(user) {
     },
   });
   if (state.offline) setOfflineMode();
+  homeMenu?.refresh();
 }
 
 function setOfflineMode() {
@@ -614,6 +620,7 @@ function savePref(key, value) {
 
 function init() {
   buildCards();
+  homeMenu = initHomeMenu($('.home-menu'), () => $('#welcome').hidden && $('#panel-backdrop').hidden);
   $('#home-play').addEventListener('click', () => show('mode'));
   $('#home-tutorial').addEventListener('click', openTutorial);
   $('#welcome-yes').addEventListener('click', () => {

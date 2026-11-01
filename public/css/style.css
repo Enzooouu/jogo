@@ -101,31 +101,81 @@ kbd {
 .dim { position: fixed; inset: 0; background: rgba(8, 4, 14, 0.72); backdrop-filter: blur(3px); }
 .dim.strong { background: radial-gradient(1200px 600px at 50% 120%, rgba(58, 21, 48, 0.92), rgba(12, 6, 16, 0.94) 60%); backdrop-filter: blur(6px); }
 
-.home-shade { position: fixed; inset: 0; background: linear-gradient(90deg, rgba(8,4,14,.95) 0%, rgba(8,4,14,.85) 26%, rgba(8,4,14,0) 55%); }
+/* fundo do menu: degradê translúcido que some aos poucos (o cenário continua aparecendo) */
+.home-shade { position: fixed; inset: 0; background:
+    linear-gradient(90deg, rgba(9,6,18,.82) 0%, rgba(9,6,18,.62) 20%, rgba(9,6,18,.26) 36%, rgba(9,6,18,0) 50%),
+    linear-gradient(0deg, rgba(9,6,18,.35), transparent 22%); }
+/* na tela inicial o cenário fica um pouco mais claro */
+#menu-bg.home-lit { filter: saturate(1.19) brightness(0.84) contrast(1.02); }
+
+/* etiqueta "partida de demonstração": ponto vermelho pulsando, contorno e luz no mesmo ritmo */
 .live-tag {
-  position: fixed; top: 22px; right: 28px; z-index: 1;
-  font-size: 11px; letter-spacing: .2em; font-weight: 800; padding: 5px 10px; border-radius: 4px; background: rgba(255, 60, 80, .85);
+  position: fixed; top: 31px; right: 43px; z-index: 1; display: flex; align-items: center; gap: 9px;
+  padding: 7px 14px 7px 12px; border-radius: 999px; background: rgba(14,9,24,.58); border: 1px solid rgba(232,52,74,.24);
+  -webkit-backdrop-filter: blur(6px); backdrop-filter: blur(6px);
+  font-size: 10px; font-weight: 700; letter-spacing: .22em; color: rgba(255,255,255,.86);
+  animation: liveEdge 2.8s ease-in-out infinite;
 }
+.live-tag::before {
+  content: ""; flex: none; width: 8px; height: 8px; border-radius: 50%;
+  background: radial-gradient(circle at 40% 35%, #ff8c98, #e8344a 60%);
+  animation: liveDot 2.8s ease-in-out infinite;
+}
+@keyframes liveDot {
+  0%, 100% { box-shadow: 0 0 3px .5px rgba(255,70,90,.55), 0 0 0 1.5px rgba(232,52,74,.16); filter: brightness(.92); }
+  50%      { box-shadow: 0 0 9px 2px rgba(255,70,90,.85), 0 0 0 5px rgba(232,52,74,.10); filter: brightness(1.15); }
+}
+@keyframes liveEdge {
+  0%, 100% { border-color: rgba(232,52,74,.22); box-shadow: 0 0 8px rgba(232,52,74,.05); }
+  50%      { border-color: rgba(232,52,74,.55); box-shadow: 0 0 17px rgba(232,52,74,.18); }
+}
+
 .home-menu {
   position: relative; z-index: 1; display: flex; flex-direction: column; justify-content: center; align-items: flex-start;
-  gap: 8px; min-height: 100vh; padding: 40px 0 80px 56px; width: min(640px, 100%);
+  gap: 6px; min-height: 100vh; padding: 40px 0 80px 67px; width: min(640px, 100%);
 }
-.logo { margin-bottom: 26px; }
+.logo { margin: 0 0 32px 8px; }
 .logo b {
-  display: block; white-space: nowrap; font-size: clamp(40px, 6vw, 58px); font-weight: 900; font-style: italic; line-height: .88;
-  background: linear-gradient(90deg, #ffd25a, #ff6a1f 45%, #c77dff 60%, #4fb0ff);
-  -webkit-background-clip: text; background-clip: text; color: transparent; filter: drop-shadow(0 4px 0 #000);
+  display: block; white-space: nowrap; font-size: clamp(40px, 5.3vw, 68px); font-weight: 900; font-style: italic; line-height: .95;
+  letter-spacing: -.01em; padding-right: 8px;
+  background: linear-gradient(90deg, #ffd25a, #ff6a1f 42%, #c77dff 62%, #4fb0ff);
+  -webkit-background-clip: text; background-clip: text; color: transparent;
+  filter: drop-shadow(0 3px 0 rgba(0,0,0,.35)) drop-shadow(0 0 20px rgba(255,106,31,.22));
 }
-.logo small { display: block; margin-top: 10px; letter-spacing: .5em; font-size: 12px; opacity: .6; }
+.logo small { display: block; margin: 14px 0 0 3px; letter-spacing: .5em; font-size: 11px; font-weight: 500; color: rgba(236,230,248,.66); }
+.logo small i { font-style: normal; color: rgba(255,255,255,.28); margin: 0 .2em 0 -.1em; }
+
+/* opções: a faixa laranja (.home-band) desliza até a opção escolhida */
 .home-item {
-  display: block; width: 100%; text-align: left; white-space: nowrap;
-  padding: 12px 22px; font-size: 24px; font-weight: 900; font-style: italic; letter-spacing: .06em;
-  background: none; border: 0; border-left: 4px solid transparent; color: rgba(255, 255, 255, .72);
-  transform: skewX(-10deg); transition: color .12s, background .12s, padding .12s;
+  position: relative; z-index: 1; display: block; width: 100%; height: 50px; padding: 0 0 0 24px; text-align: left; white-space: nowrap;
+  font-size: 19px; line-height: 50px; font-weight: 900; font-style: italic; letter-spacing: .06em;
+  background: none; border: 0; color: rgba(236,232,246,.62);
+  transition: color .25s, transform .32s cubic-bezier(.2,.8,.2,1), font-size .32s cubic-bezier(.2,.8,.2,1), text-shadow .25s;
 }
-.home-item:hover, .home-item:focus-visible { color: #fff; background: linear-gradient(90deg, rgba(255,255,255,.12), rgba(255,255,255,0)); outline: none; padding-left: 30px; }
-.home-item.on { background: linear-gradient(90deg, rgba(255,106,31,.92), rgba(255,106,31,0)); border-left-color: #ffd25a; color: #fff; font-size: 32px; }
-.home-item.on:hover { padding-left: 30px; filter: brightness(1.1); }
+.home-item::before {
+  content: ""; position: absolute; left: 7px; top: 50%; width: 6px; height: 6px; margin-top: -3px;
+  border: 1px solid rgba(255,255,255,.3); transform: rotate(45deg); transition: opacity .25s, border-color .25s;
+}
+.home-item:hover:not(.on) { color: rgba(255,255,255,.9); transform: translateX(4px); }
+.home-item:hover:not(.on)::before { border-color: #ffd25a; }
+.home-item.on { color: #fff; font-size: 24px; transform: translateX(6px); text-shadow: 0 1.5px 4px rgba(90,25,0,.45); }
+.home-item.on::before { opacity: 0; }
+/* a faixa laranja já mostra a opção com foco */
+.home-item:focus, .home-item:focus-visible { outline: none; }
+.home-band {
+  position: absolute; left: 67px; top: 0; width: min(435px, 85vw); height: 50px; pointer-events: none;
+  filter: drop-shadow(0 4px 15px rgba(255,90,20,.28));
+  transform: translateY(var(--y, 0px)) skewX(-12deg); transform-origin: left center;
+  transition: transform .32s cubic-bezier(.2,.8,.2,1);
+}
+.home-band .fill {
+  position: absolute; inset: 0; border-radius: 3px 0 0 3px;
+  background: linear-gradient(90deg, rgba(255,112,34,.97) 0%, rgba(246,96,30,.9) 30%, rgba(255,106,31,.82) 100%);
+  -webkit-mask-image: linear-gradient(90deg, #000 0%, #000 20%, rgba(0,0,0,.86) 33%, rgba(0,0,0,.62) 47%, rgba(0,0,0,.38) 61%, rgba(0,0,0,.18) 75%, rgba(0,0,0,.06) 87%, transparent 97%);
+          mask-image: linear-gradient(90deg, #000 0%, #000 20%, rgba(0,0,0,.86) 33%, rgba(0,0,0,.62) 47%, rgba(0,0,0,.38) 61%, rgba(0,0,0,.18) 75%, rgba(0,0,0,.06) 87%, transparent 97%);
+}
+.home-band .fill::after { content: ""; position: absolute; inset: 0; border-radius: inherit; background: linear-gradient(180deg, rgba(255,255,255,.18), transparent 55%); }
+.home-band::before { content: ""; position: absolute; z-index: 1; left: 0; top: 0; bottom: 0; width: 4px; background: #ffd25a; border-radius: 3px; }
 
 .account-box {
   position: fixed; left: 56px; bottom: 30px; z-index: 1;
@@ -278,7 +328,8 @@ kbd {
 .fight:active { transform: skewX(-12deg) translateY(4px); box-shadow: 0 2px 0 #5a1020; }
 
 @media (prefers-reduced-motion: reduce) {
-  .home-item, .mode-tile, .el-card { transition: none; }
+  .home-item, .home-band, .mode-tile, .el-card { transition: none; }
+  .live-tag, .live-tag::before { animation: none; }
 }
 
 /* ------------------------------------------------------------ partida */

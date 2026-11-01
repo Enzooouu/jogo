@@ -4,12 +4,18 @@ import { Game } from '/shared/game.js';
 import { BotController } from '/shared/ai.js';
 import { DT } from '/shared/constants.js';
 import { Renderer } from '../render/renderer.js';
+import { MenuGlow } from '../render/menu-glow.js';
 
 export class DemoArena {
   constructor(canvas) {
     this.canvas = canvas;
     this.frame = null;
     this.seed = 1;
+    this.glow = null; // luzes extras, só na tela inicial
+  }
+
+  setHome(on) {
+    this.glow = on ? (this.glow ?? new MenuGlow()) : null;
   }
 
   newGame() {
@@ -55,6 +61,7 @@ export class DemoArena {
       }
       if (this.game.phase === 'ended') this.newGame();
       this.renderer.frame(dt, acc / DT);
+      this.glow?.draw(this.canvas.getContext('2d'), this.renderer, dt);
       this.frame = requestAnimationFrame(loop);
     };
     this.frame = requestAnimationFrame(loop);
