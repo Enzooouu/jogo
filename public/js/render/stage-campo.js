@@ -198,8 +198,8 @@ function ridgeLine(anchors, rand, rough) {
   return pts;
 }
 
-function range(ctx, base, anchors, tone, rand, snowY = null) {
-  const pts = ridgeLine(anchors, rand, 0.11);
+function range(ctx, base, anchors, tone, rand, snowY = null, rough = 0.32) {
+  const pts = ridgeLine(anchors, rand, rough);
   const outline = () => {
     ctx.beginPath();
     ctx.moveTo(pts[0][0], 1400);
@@ -285,6 +285,7 @@ function range(ctx, base, anchors, tone, rand, snowY = null) {
     ctx.restore();
   }
   ctx.restore();
+  return pts;
 }
 
 // Morro com retalhos de plantação: faixas de cores diferentes seguindo o
@@ -389,12 +390,73 @@ function village(ctx, x0, fn, rand) {
   ctx.fill();
 }
 
+// contorno da cordilheira do fundo (para as pessoinhas andarem em cima)
+let RIDGE = null;
+
+function ridgeY(x) {
+  let lo = 0;
+  let hi = RIDGE.length - 1;
+  while (hi - lo > 1) {
+    const mid = (lo + hi) >> 1;
+    if (RIDGE[mid][0] <= x) lo = mid;
+    else hi = mid;
+  }
+  const [ax, ay] = RIDGE[lo];
+  const [bx, by] = RIDGE[hi];
+  return ay + ((by - ay) * (x - ax)) / Math.max(1, bx - ax);
+}
+
+// Pessoinhas fazendo trilha lá no alto da cordilheira (bem pequenas)
+const HIKERS = [
+  { x0: -100, speed: 3.2, colors: ['#e2483a', '#ffd166', '#3a7bd5'] },
+  { x0: 700, speed: -2.6, colors: ['#2fa36b', '#f28c28'] },
+  { x0: 1250, speed: 2.2, colors: ['#9b59b6', '#e2483a', '#ffffff', '#3a7bd5'] },
+];
+
+function hiker(ctx, x, y, color, step, dir) {
+  ctx.strokeStyle = '#3a3040';
+  ctx.lineWidth = 0.9;
+  ctx.beginPath();
+  ctx.moveTo(x, y - 3);
+  ctx.lineTo(x - 1.2 * step, y);
+  ctx.moveTo(x, y - 3);
+  ctx.lineTo(x + 1.2 * step, y);
+  ctx.stroke();
+  ctx.fillStyle = color;
+  ctx.fillRect(x - 1.1, y - 6.5, 2.2, 3.8);
+  ctx.fillStyle = '#5a3a28';
+  ctx.fillRect(x - dir * 2.2, y - 6.2, 1.3, 2.8);
+  ctx.fillStyle = '#f2c9a0';
+  ctx.beginPath();
+  ctx.arc(x, y - 7.6, 1.1, 0, Math.PI * 2);
+  ctx.fill();
+}
+
+function farAnimated(ctx, time) {
+  if (!RIDGE) return;
+  for (const g of HIKERS) {
+    const span = 1900;
+    const lead = ((((g.x0 + time * g.speed + 300) % span) + span) % span) - 300;
+    const dir = Math.sign(g.speed);
+    g.colors.forEach((c, i) => {
+      const x = lead - dir * i * 7;
+      const step = Math.sin(time * 6 + i * 1.7);
+      ctx.save();
+      ctx.translate(x, ridgeY(x) + 1);
+      ctx.scale(1.35, 1.35);
+      hiker(ctx, 0, 0, c, step, dir);
+      ctx.restore();
+    });
+  }
+}
+
 function drawFar(ctx, map, rand) {
   // montanhas bem longe, azuladas pela distância (com neve nos picos)
-  range(ctx, 410, [[-800, 410], [-560, 240], [-420, 330], [-280, 270], [-120, 345], [60, 185], [260, 320], [430, 250], [600, 345], [800, 200], [980, 325], [1100, 265], [1260, 350], [1430, 195], [1650, 330], [1800, 255], [1950, 340], [2100, 410]],
-    { top: '#93a7d0', bottom: '#b9c6e2', shade: 'rgba(80,96,150,0.35)', line: 'rgba(90,105,160,0.25)', snow: '#f5f1f2', snowShade: 'rgba(170,185,225,0.6)' }, rand, 262);
+  // (mais baixas: o topo fica abaixo da plataforma do meio)
+  RIDGE = range(ctx, 450, [[-800, 450], [-560, 305], [-330, 345], [-60, 245], [200, 330], [470, 270], [720, 345], [1000, 235], [1260, 310], [1500, 262], [1780, 335], [2100, 450]],
+    { top: '#93a7d0', bottom: '#b9c6e2', shade: 'rgba(80,96,150,0.35)', line: 'rgba(90,105,160,0.25)', snow: '#f5f1f2', snowShade: 'rgba(170,185,225,0.6)' }, rand, 288);
   // serra mais perto, sem neve, um pouco mais escura
-  range(ctx, 425, [[-800, 425], [-600, 335], [-430, 395], [-240, 320], [-40, 400], [180, 330], [380, 398], [560, 340], [760, 405], [960, 325], [1180, 400], [1380, 335], [1600, 400], [1820, 330], [2100, 425]],
+  range(ctx, 455, [[-800, 455], [-520, 370], [-240, 395], [60, 345], [380, 388], [640, 355], [940, 392], [1220, 350], [1520, 385], [1820, 362], [2100, 455]],
     { top: '#7f9cc0', bottom: '#a7bcd8', shade: 'rgba(60,80,130,0.3)', line: 'rgba(70,90,140,0.22)' }, rand);
   // bruma dourada no pé das montanhas
   const fog = ctx.createLinearGradient(0, 300, 0, 420);
@@ -659,7 +721,7 @@ export const CAMPO_ART = {
   sky: paintSky,
   skyAnimated,
   far: drawFar,
-  farAnimated() {},
+  farAnimated,
   mid: drawMid,
   midAnimated,
   haze: ['rgba(255,240,210,0)', 'rgba(255,226,186,0.28)'],
