@@ -52,7 +52,7 @@ test('Lago: três pancadas fortes quebram o gelo, abrem um buraco de água e ele
   const p = g.playerById(1);
   const smash = () => {
     place(p, 671, 520);   // meio de um pedaço do gelo
-    p.vy = LAKE.crack.pound + 20;
+    p.vy = LAKE.crack.fall + 20;
     p.onGround = false;
     run(g, 1, { 1: { down: true } });   // descendo rápido (segurando baixo)
   };
@@ -73,6 +73,30 @@ test('Lago: três pancadas fortes quebram o gelo, abrem um buraco de água e ele
   run(g, Math.ceil(LAKE.crack.open * 60) + 5);
   assert.equal(g.hazardsNow().length, 0);
   assert.ok(Math.abs(p.y + p.h - 530) < 1, `pés em ${p.y + p.h}`);
+});
+
+test('Lago: quem foi arremessado e cai no gelo racha, sem precisar segurar baixo', () => {
+  const g = newLake(['fogo', 'terra']);
+  park(g, 2);
+  const p = g.playerById(1);
+  place(p, 671, 450);   // queda curta: só racha porque foi arremessado
+  p.lastHitBy = 2;
+  p.lastHitTime = g.time;
+  run(g, 60);
+  assert.ok(types(g.drainEvents()).includes('iceCrack'));
+});
+
+test('Lago: golpe forte em quem está em pé no gelo racha embaixo dele', () => {
+  const g = newLake(['terra', 'fogo']);
+  const [a, b] = g.players;
+  place(a, 600, 530);
+  place(b, 640, 530);
+  a.facing = 1;
+  b.damage = 120;
+  run(g, 2);
+  g.drainEvents();
+  run(g, 30, (i) => (i === 0 ? { 1: { attack: true } } : {}));
+  assert.ok(types(g.drainEvents()).includes('iceCrack'));
 });
 
 test('Lago: cair andando (sem pancada) não racha o gelo', () => {

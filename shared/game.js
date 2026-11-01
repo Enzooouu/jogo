@@ -1006,6 +1006,7 @@ export class Game {
 
     const kb = ((profile.kbBase + target.damage * profile.kbScale) * (scale.kb ?? 1)) / statsOf(target).weight;
     const angle = profile.angle;
+    this.lake?.strongHit(target, kb);
     target.vx = dirX * kb * Math.cos(angle);
     target.vy = Math.min(-kb * Math.sin(angle), -180);
     target.onGround = false;

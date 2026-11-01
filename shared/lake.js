@@ -16,8 +16,9 @@ import { ELEMENTS } from './elements.js';
 export const LAKE = {
   cells: 10,                // o gelo é dividido em 10 pedaços que podem quebrar
   crack: {
-    launched: 800,          // quem foi arremessado e cai com essa velocidade racha o gelo
-    pound: 1200,            // descendo rápido (segurando baixo) de bem alto também racha
+    launched: 550,          // quem foi arremessado (golpe nos últimos 2,5 s) e cai com essa velocidade racha
+    fall: 900,              // qualquer queda forte racha (ex.: lá da plataforma do alto)
+    hitKb: 650,             // golpe forte em quem está em pé no gelo também racha embaixo dele
     hits: 3,                // pancadas para quebrar
     open: 10,               // segundos com o buraco aberto
     heal: 20,               // segundos para uma rachadura sumir sozinha
@@ -108,8 +109,18 @@ export class FrozenLake {
   impact(p, vy) {
     const g = this.game;
     const launched = p.lastHitBy !== null && g.time - p.lastHitTime < 2.5 && vy >= LAKE.crack.launched;
-    if (!launched && vy < LAKE.crack.pound) return;
-    const cell = this.cellAt(p.x + p.w / 2);
+    if (!launched && vy < LAKE.crack.fall) return;
+    this.crackAt(p.x + p.w / 2);
+  }
+
+  // Golpe forte em quem está em pé no gelo: racha embaixo dele
+  strongHit(p, kb) {
+    if (kb >= LAKE.crack.hitKb && p.onGround && p.onIce && p.standingOn === 'solid') this.crackAt(p.x + p.w / 2);
+  }
+
+  crackAt(x) {
+    const g = this.game;
+    const cell = this.cellAt(x);
     if (!cell || cell.open > 0) return;
     cell.cracks++;
     cell.healIn = LAKE.crack.heal;
@@ -119,7 +130,7 @@ export class FrozenLake {
       this.version++;
       g.emit('iceBreak', { cell: cell.i, x: cell.x, w: cell.w, y: this.ice.y });
     } else {
-      g.emit('iceCrack', { cell: cell.i, level: cell.cracks, x: p.x + p.w / 2, y: this.ice.y });
+      g.emit('iceCrack', { cell: cell.i, level: cell.cracks, x, y: this.ice.y });
     }
   }
 
