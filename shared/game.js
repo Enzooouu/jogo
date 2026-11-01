@@ -40,11 +40,6 @@ const WIND_FACTOR = { terra: 0.5 };
 
 // Gelo: acelera devagar, quase não freia e corre um pouco mais
 const ICE = { accel: 0.28, friction: 0.07, speed: 1.15 };
-// Parede de espinhos da morte súbita: dano e o empurrão de volta para o
-// meio, que cresce com o dano (%) como um golpe: com muito dano, a parede
-// arremessa por cima da outra parede (e aí cai no fosso)
-const SPIKE_WALL = { damage: 8, kbBase: 420, kbScale: 4.2, angle: 1.0, hitstun: 0.3, cooldown: 0.45 };
-
 const THROWN = { damage: 10, kbBase: 300, kbScale: 3.4, angle: 0.65, speed: 820, gravity: 1100 };
 const EXPLOSION_KB = { kbBase: 220, kbScale: 2.2, angle: 0.75 };
 
@@ -95,7 +90,8 @@ export class Game {
     this.nextStreamIn = this.map.wind?.stream ? this.map.wind.stream.first : Infinity;
     this.respawnIndex = 0;
     this.walls = null;           // paredes de espinhos da morte súbita (Coliseu)
-    this.wallsWarned = false;
+    this.suddenDeath = false;    // o palco já se abriu?
+    this.suddenWarned = false;
     // Plataformas com posição atual (algumas balançam presas a um balão)
     this.platforms = this.map.platforms.map((pl) => ({ ...pl, baseX: pl.x, baseY: pl.y, px: pl.x, py: pl.y, dx: 0, dy: 0 }));
 
@@ -206,7 +202,7 @@ export class Game {
     this.time += DT;
     this.updatePlatforms();
     this.updateWinds();
-    this.updateClosingWalls();
+    this.updateSuddenDeath();
     for (const p of this.players) this.updatePlayer(p, inputs[p.id] ?? EMPTY_INPUT);
     this.updateProjectiles();
     this.updateItems();
@@ -259,87 +255,51 @@ export class Game {
 
   // ---------------------------------------------------------------- morte súbita
 
-  // Plataforma que já caiu (o meio dela ficou do lado de fora das paredes)
+  // Plataforma que caiu na morte súbita (as colunas do Coliseu)
   platformGone(pl) {
-    if (!this.walls) return false;
-    const cx = pl.x + pl.w / 2;
-    return cx < this.walls.left || cx > this.walls.right;
+    return this.suddenDeath && this.map.suddenDeath.dropPlatforms.includes(this.platforms.indexOf(pl));
   }
 
-  // Chão que existe agora: na morte súbita do Coliseu o palco desmorona
-  // atrás das paredes de espinhos (fora delas vira fosso)
+  // Chão que existe agora: na morte súbita do Coliseu o palco se abre e
+  // sobram só os pedaços de `keep`
   solidsNow() {
-    if (!this.walls) return this.map.solids;
-    const { left, right } = this.walls;
-    return this.map.solids
-      .map((s) => {
-        const x0 = Math.max(s.x, left);
-        const x1 = Math.min(s.x + s.w, right);
-        return x1 > x0 ? { ...s, x: x0, w: x1 - x0 } : null;
-      })
-      .filter(Boolean);
+    if (!this.suddenDeath) return this.map.solids;
+    const out = [];
+    for (const s of this.map.solids) {
+      for (const [a, b] of this.map.suddenDeath.keep) {
+        const x0 = Math.max(s.x, a);
+        const x1 = Math.min(s.x + s.w, b);
+        if (x1 > x0) out.push({ ...s, x: x0, w: x1 - x0 });
+      }
+    }
+    return out;
   }
 
-  // Paredes de espinhos (Coliseu): a partir de `start` segundos de luta elas
-  // fecham devagar dos dois lados até `end`, e o palco desmorona atrás delas.
-  // São baixas (`height`): quem encosta leva dano (Terra não, é imune a
-  // espinhos) e é arremessado de volta para o meio; quem passa por cima
-  // (arremessado alto) cai no fosso.
-  updateClosingWalls() {
-    const cfg = this.map.closingWalls;
-    if (!cfg) return;
-    if (this.time < cfg.start) {
-      if (!this.wallsWarned && this.time >= cfg.start - cfg.warn) {
-        this.wallsWarned = true;
+  // Morte súbita (Coliseu): depois de `start` segundos de luta o palco se
+  // abre (o meio e as bordas caem no abismo, as colunas também) e sobem
+  // paredes de espinhos do fosso até o céu nas pontas da arena. Encostar
+  // nelas mata na hora.
+  updateSuddenDeath() {
+    const sd = this.map.suddenDeath;
+    if (!sd) return;
+    if (this.time < sd.start) {
+      if (!this.suddenWarned && this.time >= sd.start - sd.warn) {
+        this.suddenWarned = true;
         this.emit('wallsWarn');
       }
       return;
     }
-    if (!this.walls) this.emit('wallsStart');
-    const k = Math.min(1, (this.time - cfg.start) / (cfg.end - cfg.start));
-    const ease = k * k * (3 - 2 * k);
-    this.walls = {
-      left: cfg.from[0] + (cfg.to[0] - cfg.from[0]) * ease,
-      right: cfg.from[1] + (cfg.to[1] - cfg.from[1]) * ease,
-    };
+    if (!this.suddenDeath) {
+      this.suddenDeath = true;
+      this.walls = { left: sd.walls[0], right: sd.walls[1] };
+      this.emit('collapse');
+    }
     for (const p of this.players) {
-      if (p.state !== 'alive') continue;
-      p.wallSpikeCd = Math.max(0, (p.wallSpikeCd ?? 0) - DT);
-      // a parede é baixa: quem está mais alto que ela passa por cima (e cai no fosso)
-      if (p.y + p.h < cfg.top - cfg.height) continue;
-      // já caindo no fosso (abaixo do palco): segue caindo
-      if (p.y > cfg.top) continue;
-      // de que lado da parede estava no passo anterior: quem já estava fora
-      // (em cima do fosso) só bate nela por fora e segue caindo
-      const prevCx = p.px + p.w / 2;
-      let dir = 0;
-      if (prevCx < this.walls.left) {
-        if (p.x + p.w > this.walls.left) p.x = this.walls.left - p.w;
-        continue;
-      } else if (prevCx > this.walls.right) {
-        if (p.x < this.walls.right) p.x = this.walls.right;
-        continue;
-      } else if (p.x < this.walls.left) {
-        p.x = this.walls.left;
-        dir = 1;
-      } else if (p.x + p.w > this.walls.right) {
-        p.x = this.walls.right - p.w;
-        dir = -1;
-      }
-      if (!dir || p.admin || p.wallSpikeCd > 0) continue;
-      p.wallSpikeCd = SPIKE_WALL.cooldown;
-      const amount = hazardReaction(p.element, 'espinhos') === 'imune' ? 0 : SPIKE_WALL.damage;
-      p.damage += amount;
-      p.stats.damageTaken += amount;
-      const kb = (SPIKE_WALL.kbBase + p.damage * SPIKE_WALL.kbScale) / statsOf(p).weight;
-      p.vx = dir * kb * Math.cos(SPIKE_WALL.angle);
-      p.vy = -kb * Math.sin(SPIKE_WALL.angle);
-      p.onGround = false;
-      p.hitstun = SPIKE_WALL.hitstun;
-      p.dashTime = 0;
-      p.lungeTime = 0;
-      p.attack = null;
-      this.emit('spikeWall', { id: p.id, dir, amount, x: dir > 0 ? this.walls.left : this.walls.right, y: p.y + p.h / 2 });
+      if (p.state !== 'alive' || p.admin) continue;
+      const side = p.x < this.walls.left ? 1 : p.x + p.w > this.walls.right ? -1 : 0;
+      if (!side) continue;
+      this.emit('spikeWall', { id: p.id, dir: side, x: side > 0 ? this.walls.left : this.walls.right, y: p.y + p.h / 2 });
+      this.knockOut(p, 'espinhos');
     }
   }
 
@@ -1158,7 +1118,34 @@ export class Game {
     // armas arremessadas que ficaram no chão não contam no limite
     if (this.items.filter((i) => !i.thrown).length >= ITEMS.maxOnMap) return;
     const { minX, maxX } = this.map.itemSpawn;
+    if (this.map.itemThrow) {
+      // a torcida joga a arma: mira num pedaço de chão que existe agora
+      const floor = this.rng.pick(this.solidsNow());
+      this.throwItem(Math.round(this.rng.range(floor.x + 20, floor.x + floor.w - 54)), floor.y, this.rng.pick(WEAPON_IDS));
+      return;
+    }
     this.dropCrate(Math.round(this.rng.range(minX, maxX)), this.rng.pick(WEAPON_IDS));
+  }
+
+  // Arma arremessada da arquibancada (Coliseu): sai de um dos lados e cai
+  // em arco em (x, chão), já pronta para pegar (sem caixa)
+  throwItem(x, groundY, weapon) {
+    const cfg = this.map.itemThrow;
+    const fromLeft = this.rng.chance(0.5);
+    const sx = fromLeft ? cfg.from[0] : cfg.from[1];
+    const T = cfg.time;
+    const item = {
+      id: this.nextEntityId++, weapon, w: 34, h: 30,
+      x: sx - 17, y: cfg.y - 15,
+      vx: (x - sx) / T,
+      vy: (groundY - cfg.y - 0.5 * ITEMS.throwGravity * T * T) / T,
+      flying: true, dropped: true, landed: false,
+      uses: WEAPONS[weapon].uses, dir: fromLeft ? 1 : -1,
+      life: ITEMS.lifetime,
+    };
+    this.items.push(item);
+    this.emit('itemThrown', { itemId: item.id, weapon, x: sx, y: cfg.y, fromLeft });
+    return item;
   }
 
   // Solta uma caixa de paraquedas em `x` (o tutorial usa direto)
@@ -1174,15 +1161,23 @@ export class Game {
     for (const item of this.items) {
       if (!item.landed) {
         const prevBottom = item.y + item.h;
-        // caixote desce de paraquedas; arma caída despenca
-        item.y += (item.dropped ? ITEMS.dropSpeed : ITEMS.fallSpeed) * DT;
+        if (item.flying) {
+          // jogada pela torcida: voa em arco
+          item.vy += ITEMS.throwGravity * DT;
+          item.x += item.vx * DT;
+          item.y += item.vy * DT;
+        } else {
+          // caixote desce de paraquedas; arma caída despenca
+          item.y += (item.dropped ? ITEMS.dropSpeed : ITEMS.fallSpeed) * DT;
+        }
         const bottom = item.y + item.h;
         const surfaces = [...this.solidsNow(), ...this.platforms.filter((pl) => !this.platformGone(pl))];
         for (const s of surfaces) {
           const inside = item.x + item.w > s.x && item.x < s.x + s.w;
-          if (inside && prevBottom <= s.y + 0.5 && bottom >= s.y) {
+          if (inside && prevBottom <= s.y + 0.5 && bottom >= s.y && !(item.flying && item.vy < 0)) {
             item.y = s.y - item.h;
             item.landed = true;
+            item.flying = false;
             item.platform = this.platforms.indexOf(s);
             if (!item.dropped) {
               // a caixa se quebra no chão e a arma fica caída, com as cargas cheias

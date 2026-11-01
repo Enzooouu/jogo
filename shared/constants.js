@@ -52,7 +52,8 @@ export const ITEMS = {
   firstSpawn: 3,
   maxOnMap: 3,
   fallSpeed: 150,         // queda lenta (caixote com paraquedas)
-  dropSpeed: 520,         // arma arremessada que caiu no chão (sem paraquedas)
+  dropSpeed: 520,
+  throwGravity: 1100,     // arma jogada pela torcida (Coliseu)         // arma arremessada que caiu no chão (sem paraquedas)
   lifetime: 15,           // some se ninguém pegar
 };
 

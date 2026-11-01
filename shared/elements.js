@@ -29,8 +29,8 @@ export const ELEMENTS = {
   ar: {
     id: 'ar', name: 'Ar', enabled: true,
     color: '#bfe9e1', light: '#ffffff', dark: '#5e8f87',
-    description: 'O vento não o empurra. Rápido, pula alto e tem 2 dashes no ar.',
-    stats: { speed: 1.15, jump: 1.1, weight: 0.93, airDashes: 2 },
+    description: 'O vento não o empurra. Rápido e pula alto.',
+    stats: { speed: 1.15, jump: 1.1, weight: 0.93 },
   },
   // Sem elemento nenhum: sofre com todos os perigos e usa as armas padrão
   // (sem efeito), mas bate mais forte. Visual: o manequim preto do tutorial.

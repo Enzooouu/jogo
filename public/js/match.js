@@ -11,7 +11,7 @@ import { DT } from '/shared/constants.js';
 import { Renderer } from './render/renderer.js';
 import { KeyboardController } from './input/keyboard.js';
 import { loadBindings, keymapFrom, currentBindings, actionOf } from './input/bindings.js';
-import { playEvents, beep } from './audio.js';
+import { playEvents, beep, setAmbience } from './audio.js';
 
 export class MatchRunner {
   /**
@@ -84,6 +84,8 @@ export class MatchRunner {
 
   start() {
     this.running = true;
+    // torcida no Coliseu
+    setAmbience(this.game.map.id === 'coliseu' ? 'torcida' : null);
     this.frameId = requestAnimationFrame(this.loop);
   }
 
@@ -139,6 +141,7 @@ export class MatchRunner {
 
   stop() {
     this.running = false;
+    setAmbience(null);
     cancelAnimationFrame(this.frameId);
     this.keyboard?.destroy();
     window.removeEventListener('resize', this.onResize);

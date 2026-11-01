@@ -2,14 +2,15 @@
 //
 //   céu      degradê roxo -> laranja -> dourado, sol baixo e nuvens rosadas
 //   longe    a cidade ao longe (templos, ciprestes) na neblina quente
-//   meio     a parede do coliseu: três andares de arcos, a torcida nas
-//            arquibancadas, faixas vermelhas penduradas
+//   meio     a parede do coliseu (três andares de arcos), o velário (toldo
+//            listrado), a torcida dividida pelos 5 elementos pulando e o
+//            camarote do imperador, que faz joinha quando alguém cai
 //   campo    palco de pedra com faixa grega entalhada sobre o fosso, colunas
 //            quebradas (as plataformas) e uma laje com estandarte no meio;
 //            tochas com fogo animado nas pontas
 //
-// As paredes de espinhos da morte súbita são desenhadas no renderer (elas se
-// mexem). Mesmo formato de TREINO_ART (ver stage.js).
+// A morte súbita (palco se abrindo e paredes de espinhos) é desenhada no
+// renderer. Mesmo formato de TREINO_ART (ver stage.js).
 
 import { roundRect, seeded } from './stage-util.js';
 
@@ -56,21 +57,7 @@ function paintSky(ctx) {
   }
 }
 
-function skyAnimated(ctx, time) {
-  // pássaros voltando para casa
-  ctx.strokeStyle = 'rgba(40,20,40,0.6)';
-  ctx.lineWidth = 1.6;
-  for (let i = 0; i < 5; i++) {
-    const x = ((time * (20 + i * 4) + i * 300) % 1700) - 200;
-    const y = 120 + i * 26 + Math.sin(time * 0.7 + i) * 8;
-    const f = Math.sin(time * 8 + i * 2) * 3;
-    ctx.beginPath();
-    ctx.moveTo(x - 6, y - f);
-    ctx.quadraticCurveTo(x - 3, y - 3, x, y);
-    ctx.quadraticCurveTo(x + 3, y - 3, x + 6, y - f);
-    ctx.stroke();
-  }
-}
+function skyAnimated() {}
 
 // ================================================================ fundo distante
 
@@ -125,147 +112,499 @@ function farAnimated() {}
 
 // ================================================================ fundo médio
 
-// Parede do coliseu: três andares de arcos com a torcida
+// Parede do coliseu: três andares de arcos (com profundidade e a luz do sol
+// da tarde vindo da direita), o toldo listrado (velário) lá em cima, a
+// arquibancada separada pelos 5 elementos com a torcida pulando, e o
+// camarote do imperador à direita.
 const WALL = { top: 200, floors: [[200, 290], [290, 380], [380, 470]] };
+const curve = (x) => ((x - 640) / 900) ** 2 * 60;
+const STANDS = { top: 432, rows: 7, rowH: 15 };
+const BOX = { x: 1030, w: 170 };   // camarote do imperador
+
+// Setores da torcida: um por elemento (cores das camisas, bandeira e símbolo)
+const SECTIONS = [
+  { el: 'fogo', shirts: ['#ff6a1f', '#ffb347', '#c83a12'], flag: ['#ff6a1f', '#ffd25a'] },
+  { el: 'agua', shirts: ['#2f8cff', '#9fe3ff', '#1a5ab8'], flag: ['#2f8cff', '#9fe3ff'] },
+  { el: 'mortal', shirts: ['#2a2830', '#55525e', '#e8e8f2'], flag: ['#1c1a22', '#e8e8f2'] },
+  { el: 'terra', shirts: ['#9a6b3a', '#5f8f3a', '#d8b27a'], flag: ['#8a5a2e', '#9ccf5f'] },
+  { el: 'ar', shirts: ['#bfe9e1', '#7fd6c6', '#ffffff'], flag: ['#7fd6c6', '#ffffff'] },
+];
+const SECTION_W = 256;
+const sectionAt = (x) => SECTIONS[((Math.floor(x / SECTION_W) % 5) + 5) % 5];
+
+function wallPath(ctx, x0, x1, yOf) {
+  ctx.beginPath();
+  for (let x = x0; x <= x1; x += 20) ctx.lineTo(x, yOf(x));
+}
 
 function drawMid(ctx, map, rand) {
   const x0 = -560;
   const x1 = 1840;
-  // sombra da parede (curvada, mais alta nas pontas)
-  const g = ctx.createLinearGradient(0, WALL.top, 0, 640);
-  g.addColorStop(0, '#d9a56e');
+  // corpo da parede
+  const g = ctx.createLinearGradient(0, WALL.top - 60, 0, 640);
+  g.addColorStop(0, '#dcaa72');
   g.addColorStop(1, '#8a5a38');
   ctx.fillStyle = g;
   ctx.beginPath();
   ctx.moveTo(x0, 1400);
-  for (let x = x0; x <= x1; x += 20) ctx.lineTo(x, WALL.top - 60 + ((x - 640) / 900) ** 2 * 60);
+  for (let x = x0; x <= x1; x += 20) ctx.lineTo(x, WALL.top - 60 + curve(x));
   ctx.lineTo(x1, 1400);
   ctx.closePath();
   ctx.fill();
-  // andares de arcos
+  // andares de arcos com profundidade
   WALL.floors.forEach(([top, bottom], f) => {
     const archW = 46 - f * 4;
-    const gap = 14;
+    const gap = 16;
     for (let x = x0; x < x1; x += archW + gap) {
-      const curve = ((x - 640) / 900) ** 2 * 60;
-      const ay = top + curve - 50;
-      const ah = bottom - top - 14;
-      // vão escuro do arco
-      ctx.fillStyle = f === 2 ? '#3a2014' : '#5a2e1c';
+      const ay = top + curve(x) - 50;
+      const ah = bottom - top - 16;
+      const path = () => {
+        ctx.beginPath();
+        ctx.moveTo(x, ay + ah);
+        ctx.lineTo(x, ay + archW / 2);
+        ctx.arc(x + archW / 2, ay + archW / 2, archW / 2, Math.PI, 0);
+        ctx.lineTo(x + archW, ay + ah);
+        ctx.closePath();
+      };
+      // vão: escuro em cima, um pouco de luz embaixo
+      const inside = ctx.createLinearGradient(0, ay, 0, ay + ah);
+      inside.addColorStop(0, '#2a140a');
+      inside.addColorStop(1, f === 2 ? '#4a2614' : '#5a301c');
+      ctx.fillStyle = inside;
+      path();
+      ctx.fill();
+      // espessura da parede: a face de dentro do lado esquerdo pega luz
+      ctx.save();
+      path();
+      ctx.clip();
+      ctx.fillStyle = 'rgba(240,190,130,0.45)';
       ctx.beginPath();
-      ctx.moveTo(x, ay + ah);
-      ctx.lineTo(x, ay + archW / 2);
-      ctx.arc(x + archW / 2, ay + archW / 2, archW / 2, Math.PI, 0);
-      ctx.lineTo(x + archW, ay + ah);
+      ctx.moveTo(x, ay + archW / 2);
+      ctx.lineTo(x + 7, ay + archW / 2 + 4);
+      ctx.lineTo(x + 7, ay + ah);
+      ctx.lineTo(x, ay + ah);
       ctx.closePath();
       ctx.fill();
-      // torcida dentro dos arcos de cima (cabecinhas coloridas)
-      if (f < 2) {
-        for (let k = 0; k < 3; k++) {
-          ctx.fillStyle = ['#c84a3a', '#e8d2a0', '#4a6ab8', '#7ab84a', '#d8a83a', '#f2f2f2'][Math.floor(rand() * 6)];
-          ctx.beginPath();
-          ctx.arc(x + 8 + k * (archW - 16) / 2, ay + ah - 8, 5, 0, Math.PI * 2);
-          ctx.fill();
-          ctx.fillStyle = '#e8b890';
-          ctx.beginPath();
-          ctx.arc(x + 8 + k * (archW - 16) / 2, ay + ah - 16, 4, 0, Math.PI * 2);
-          ctx.fill();
-        }
-      }
-      // coluna entre os arcos
-      ctx.fillStyle = 'rgba(255,230,180,0.35)';
-      ctx.fillRect(x + archW + 2, ay, 4, ah);
+      // vão do outro lado da parede (luz do céu passando)
+      ctx.fillStyle = 'rgba(255,190,120,0.18)';
+      ctx.beginPath();
+      ctx.arc(x + archW / 2 + 6, ay + archW / 2 + 6, archW / 2 - 8, Math.PI, 0);
+      ctx.lineTo(x + archW - 2, ay + ah);
+      ctx.lineTo(x + 14, ay + ah);
+      ctx.closePath();
+      ctx.fill();
+      ctx.restore();
+      // contorno do arco e a pedra do topo (aduela)
+      ctx.strokeStyle = 'rgba(90,50,24,0.7)';
+      ctx.lineWidth = 1.5;
+      path();
+      ctx.stroke();
+      ctx.fillStyle = '#efc790';
+      ctx.beginPath();
+      ctx.moveTo(x + archW / 2 - 4, ay - 3);
+      ctx.lineTo(x + archW / 2 + 4, ay - 3);
+      ctx.lineTo(x + archW / 2 + 3, ay + 6);
+      ctx.lineTo(x + archW / 2 - 3, ay + 6);
+      ctx.closePath();
+      ctx.fill();
+      // coluna entre os arcos: lado do sol claro, lado da sombra escuro
+      const cx = x + archW + 2;
+      ctx.fillStyle = '#f2c88e';
+      ctx.fillRect(cx + gap / 2 - 1, ay - 6, gap / 2 - 2, ah + 6);
+      ctx.fillStyle = 'rgba(110,60,30,0.35)';
+      ctx.fillRect(cx, ay - 6, gap / 2 - 1, ah + 6);
     }
-    // cornija de cada andar
-    ctx.fillStyle = '#e8c08a';
-    ctx.beginPath();
-    for (let x = x0; x <= x1; x += 20) ctx.lineTo(x, bottom - 50 + ((x - 640) / 900) ** 2 * 60);
-    for (let x = x1; x >= x0; x -= 20) ctx.lineTo(x, bottom - 42 + ((x - 640) / 900) ** 2 * 60);
+    // cornija de cada andar, com dentículos
+    ctx.fillStyle = '#ecc48c';
+    wallPath(ctx, x0, x1, (x) => bottom - 52 + curve(x));
+    for (let x = x1; x >= x0; x -= 20) ctx.lineTo(x, bottom - 42 + curve(x));
     ctx.closePath();
     ctx.fill();
+    ctx.fillStyle = 'rgba(110,60,30,0.45)';
+    for (let x = x0; x < x1; x += 8) ctx.fillRect(x, bottom - 44 + curve(x), 4, 3);
   });
-  // arquibancada com o povo na frente da parede
-  const standTop = 430;
-  ctx.fillStyle = '#7a4a2a';
-  ctx.fillRect(x0, standTop, x1 - x0, 400);
-  for (let row = 0; row < 7; row++) {
-    const y = standTop + 8 + row * 15;
-    ctx.fillStyle = 'rgba(0,0,0,0.18)';
-    ctx.fillRect(x0, y + 10, x1 - x0, 3);
-    for (let x = x0 + (row % 2) * 6; x < x1; x += 11 + rand() * 4) {
-      ctx.fillStyle = ['#b83a2a', '#e8dcc0', '#3a5aa8', '#6aa83a', '#d8a83a', '#8a4ab8', '#f2f2f2'][Math.floor(rand() * 7)];
-      ctx.fillRect(x - 4, y - 2, 8, 9);
-      ctx.fillStyle = ['#f0c8a0', '#c89070', '#8a5a3a'][Math.floor(rand() * 3)];
-      ctx.beginPath();
-      ctx.arc(x, y - 6, 3.6, 0, Math.PI * 2);
-      ctx.fill();
-    }
+  // luz do pôr do sol vindo da direita
+  const sun = ctx.createLinearGradient(-200, 0, 1500, 0);
+  sun.addColorStop(0, 'rgba(60,20,40,0.25)');
+  sun.addColorStop(0.7, 'rgba(255,170,90,0)');
+  sun.addColorStop(1, 'rgba(255,200,120,0.18)');
+  ctx.fillStyle = sun;
+  ctx.fillRect(x0, WALL.top - 80, x1 - x0, 400);
+
+  // arquibancada (os degraus; a torcida é animada em midAnimated)
+  const st = ctx.createLinearGradient(0, STANDS.top, 0, STANDS.top + 130);
+  st.addColorStop(0, '#8a5a34');
+  st.addColorStop(1, '#5a3820');
+  ctx.fillStyle = st;
+  ctx.fillRect(x0, STANDS.top - 8, x1 - x0, 400);
+  for (let r = 0; r <= STANDS.rows; r++) {
+    ctx.fillStyle = 'rgba(255,220,170,0.18)';
+    ctx.fillRect(x0, STANDS.top + r * STANDS.rowH + 9, x1 - x0, 2);
   }
-  // camarote do imperador no meio, com toldo vermelho
-  ctx.fillStyle = '#e8c08a';
-  ctx.fillRect(560, standTop - 50, 160, 50);
-  ctx.fillStyle = '#b8282a';
+  // escadinhas separando os setores
+  for (let x = -512; x < x1; x += SECTION_W) {
+    ctx.fillStyle = '#b8895a';
+    ctx.fillRect(x - 7, STANDS.top - 8, 14, 130);
+    ctx.fillStyle = 'rgba(80,50,26,0.5)';
+    for (let r = 0; r < 9; r++) ctx.fillRect(x - 7, STANDS.top - 4 + r * 14, 14, 2);
+  }
+  // muro da frente da arquibancada com panos vermelhos
+  ctx.fillStyle = '#d9b57e';
+  ctx.fillRect(x0, STANDS.top + STANDS.rows * STANDS.rowH + 6, x1 - x0, 40);
+  ctx.fillStyle = 'rgba(110,70,30,0.4)';
+  ctx.fillRect(x0, STANDS.top + STANDS.rows * STANDS.rowH + 6, x1 - x0, 3);
+  for (let x = x0; x < x1; x += 64) {
+    ctx.fillStyle = '#a8202a';
+    ctx.beginPath();
+    const y = STANDS.top + STANDS.rows * STANDS.rowH + 9;
+    ctx.moveTo(x, y);
+    ctx.quadraticCurveTo(x + 32, y + 22, x + 64, y);
+    ctx.lineTo(x + 64, y + 4);
+    ctx.quadraticCurveTo(x + 32, y + 26, x, y + 4);
+    ctx.fill();
+  }
+  // faixa grande de cada setor, pendurada na parede atrás da torcida
+  for (let x = -512; x < x1; x += SECTION_W) {
+    const sec = sectionAt(x + 10);
+    if (x + SECTION_W / 2 > BOX.x - 40 && x + SECTION_W / 2 < BOX.x + BOX.w + 40) continue;
+    sectionBanner(ctx, x + SECTION_W / 2, STANDS.top - 74, sec);
+  }
+  emperorBox(ctx);
+}
+
+// Faixa de um setor: pano na cor do elemento com o símbolo
+function sectionBanner(ctx, x, y, sec) {
+  const [c1, c2] = sec.flag;
+  ctx.fillStyle = c1;
+  ctx.strokeStyle = 'rgba(30,15,5,0.8)';
+  ctx.lineWidth = 2;
   ctx.beginPath();
-  ctx.moveTo(548, standTop - 50);
-  ctx.lineTo(732, standTop - 50);
-  ctx.lineTo(720, standTop - 72);
-  ctx.lineTo(560, standTop - 72);
+  ctx.moveTo(x - 46, y);
+  ctx.lineTo(x + 46, y);
+  ctx.lineTo(x + 46, y + 52);
+  ctx.lineTo(x, y + 64);
+  ctx.lineTo(x - 46, y + 52);
   ctx.closePath();
   ctx.fill();
-  for (let i = 0; i < 8; i++) {
-    ctx.fillStyle = i % 2 ? '#ffd23f' : '#b8282a';
-    ctx.beginPath();
-    ctx.moveTo(548 + i * 23, standTop - 50);
-    ctx.lineTo(548 + (i + 0.5) * 23, standTop - 42);
-    ctx.lineTo(548 + (i + 1) * 23, standTop - 50);
+  ctx.stroke();
+  ctx.fillStyle = c2;
+  ctx.fillRect(x - 46, y + 4, 92, 4);
+  ctx.save();
+  ctx.translate(x, y + 30);
+  ctx.fillStyle = c2;
+  ctx.strokeStyle = c2;
+  ctx.lineWidth = 3;
+  ctx.beginPath();
+  if (sec.el === 'fogo') {
+    ctx.moveTo(0, -15);
+    ctx.quadraticCurveTo(11, -2, 7, 8);
+    ctx.quadraticCurveTo(3, 13, 0, 13);
+    ctx.quadraticCurveTo(-10, 12, -9, 2);
+    ctx.quadraticCurveTo(-6, -5, -2, -2);
+    ctx.quadraticCurveTo(-2, -10, 0, -15);
     ctx.fill();
-  }
-  // faixas vermelhas penduradas no alto da parede
-  for (let i = 0; i < 9; i++) {
-    const x = -300 + i * 260;
-    const y = WALL.top - 60 + ((x - 640) / 900) ** 2 * 60;
-    ctx.fillStyle = '#a8202a';
-    ctx.beginPath();
-    ctx.moveTo(x - 16, y);
-    ctx.lineTo(x + 16, y);
-    ctx.lineTo(x + 16, y + 90);
-    ctx.lineTo(x, y + 78);
-    ctx.lineTo(x - 16, y + 90);
+  } else if (sec.el === 'agua') {
+    ctx.moveTo(0, -15);
+    ctx.quadraticCurveTo(11, 0, 9, 6);
+    ctx.arc(0, 5, 9, 0.1, Math.PI - 0.1);
+    ctx.quadraticCurveTo(-11, 0, 0, -15);
+    ctx.fill();
+  } else if (sec.el === 'terra') {
+    ctx.moveTo(-13, 11);
+    ctx.lineTo(-4, -8);
+    ctx.lineTo(1, 0);
+    ctx.lineTo(6, -13);
+    ctx.lineTo(14, 11);
     ctx.closePath();
     ctx.fill();
-    ctx.fillStyle = '#ffd23f';
-    ctx.beginPath();
-    ctx.arc(x, y + 34, 8, 0, Math.PI * 2);
+  } else if (sec.el === 'ar') {
+    ctx.arc(0, 0, 10, 0.3, Math.PI * 1.7);
+    ctx.moveTo(-12, 6);
+    ctx.quadraticCurveTo(0, 14, 12, 5);
+    ctx.stroke();
+  } else {
+    // Mortal: cabeça de manequim
+    ctx.ellipse(0, -2, 9, 11, 0.15, 0, Math.PI * 2);
     ctx.fill();
-    ctx.fillStyle = '#a8202a';
+    ctx.fillStyle = c1;
     ctx.beginPath();
-    ctx.arc(x, y + 34, 5, 0, Math.PI * 2);
+    ctx.ellipse(-3, -6, 2, 3.5, -0.5, 0, Math.PI * 2);
     ctx.fill();
+  }
+  ctx.restore();
+}
+
+// Camarote do imperador (o imperador é animado em midAnimated)
+function emperorBox(ctx) {
+  const x = BOX.x;
+  const y = STANDS.top - 40;
+  ctx.fillStyle = '#efe2c4';
+  ctx.strokeStyle = 'rgba(40,20,8,0.85)';
+  ctx.lineWidth = 2;
+  ctx.fillRect(x, y, BOX.w, 120);
+  ctx.strokeRect(x, y, BOX.w, 120);
+  // colunas de mármore
+  for (const cx of [x + 10, x + BOX.w - 18]) {
+    ctx.fillStyle = '#fff6e0';
+    ctx.fillRect(cx, y - 60, 8, 60);
+    ctx.strokeRect(cx, y - 60, 8, 60);
+  }
+  // fundo roxo do camarote
+  ctx.fillStyle = '#4a1a5a';
+  ctx.fillRect(x + 18, y - 60, BOX.w - 36, 60);
+  // toldo vermelho e dourado
+  ctx.fillStyle = '#b8282a';
+  ctx.beginPath();
+  ctx.moveTo(x - 10, y - 60);
+  ctx.lineTo(x + BOX.w + 10, y - 60);
+  ctx.lineTo(x + BOX.w - 4, y - 86);
+  ctx.lineTo(x + 4, y - 86);
+  ctx.closePath();
+  ctx.fill();
+  ctx.stroke();
+  for (let i = 0; i < 9; i++) {
+    ctx.fillStyle = i % 2 ? '#ffd23f' : '#b8282a';
+    ctx.beginPath();
+    ctx.moveTo(x - 10 + i * 21, y - 60);
+    ctx.lineTo(x - 10 + (i + 0.5) * 21, y - 51);
+    ctx.lineTo(x - 10 + (i + 1) * 21, y - 60);
+    ctx.fill();
+  }
+  // parapeito com a águia dourada
+  ctx.fillStyle = '#d9b57e';
+  ctx.fillRect(x - 6, y - 4, BOX.w + 12, 14);
+  ctx.strokeRect(x - 6, y - 4, BOX.w + 12, 14);
+  ctx.fillStyle = '#ffd23f';
+  ctx.beginPath();
+  ctx.moveTo(x + BOX.w / 2, y + 30);
+  ctx.lineTo(x + BOX.w / 2 - 22, y + 18);
+  ctx.lineTo(x + BOX.w / 2 - 8, y + 26);
+  ctx.lineTo(x + BOX.w / 2, y + 14);
+  ctx.lineTo(x + BOX.w / 2 + 8, y + 26);
+  ctx.lineTo(x + BOX.w / 2 + 22, y + 18);
+  ctx.closePath();
+  ctx.fill();
+  // trono dourado
+  ctx.fillStyle = '#d8a83a';
+  ctx.fillRect(x + BOX.w / 2 - 16, y - 52, 32, 44);
+  ctx.fillStyle = '#b8862a';
+  ctx.fillRect(x + BOX.w / 2 - 20, y - 56, 40, 6);
+}
+
+// Torcedor: corpinho e cabeça (as cores vêm do setor)
+function fan(ctx, x, y, shirt, skin, flag, arms) {
+  ctx.fillStyle = shirt;
+  ctx.fillRect(x - 4, y - 2, 8, 9);
+  ctx.fillStyle = skin;
+  ctx.beginPath();
+  ctx.arc(x, y - 6, 3.6, 0, Math.PI * 2);
+  ctx.fill();
+  if (arms) {
+    ctx.strokeStyle = skin;
+    ctx.lineWidth = 1.6;
+    ctx.beginPath();
+    ctx.moveTo(x - 3, y - 1);
+    ctx.lineTo(x - 6, y - 10);
+    ctx.moveTo(x + 3, y - 1);
+    ctx.lineTo(x + 6, y - 10);
+    ctx.stroke();
+  }
+  if (flag) {
+    ctx.strokeStyle = '#3a2010';
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.moveTo(x + 5, y);
+    ctx.lineTo(x + 5, y - 18);
+    ctx.stroke();
+    ctx.fillStyle = flag[0];
+    ctx.fillRect(x + 5, y - 18, 10, 7);
+    ctx.fillStyle = flag[1];
+    ctx.fillRect(x + 5, y - 15, 10, 2);
   }
 }
 
-// Torcida animada: bracinhos e bandeirinhas subindo e descendo
+// Grupinhos de 4 torcedores desenhados uma vez por setor (3 jeitos cada)
+const CLUSTER = { w: 44, h: 30 };
+const clusters = new Map();
+function clusterSprite(secIndex, variant) {
+  const key = `${secIndex}:${variant}`;
+  if (clusters.has(key)) return clusters.get(key);
+  const c = document.createElement('canvas');
+  c.width = CLUSTER.w * 2;
+  c.height = CLUSTER.h * 2;
+  const ctx = c.getContext('2d');
+  ctx.scale(2, 2);
+  const sec = SECTIONS[secIndex];
+  const rand = seeded(secIndex * 31 + variant * 7 + 3);
+  for (let i = 0; i < 4; i++) {
+    const shirt = sec.shirts[Math.floor(rand() * sec.shirts.length)];
+    const skin = ['#f0c8a0', '#c89070', '#8a5a3a', '#e8b890'][Math.floor(rand() * 4)];
+    const flag = variant === 1 && i === 2 ? sec.flag : null;
+    const arms = variant === 2 ? i % 2 === 0 : rand() < 0.25;
+    fan(ctx, 6 + i * 11, 22, shirt, skin, flag, arms);
+  }
+  clusters.set(key, c);
+  return c;
+}
+
+// Empolgação da torcida (sobe quando alguém cai) e o gesto do imperador
+const MOOD = { excite: 0, gesture: null, gestureT: 0 };
+
 function midAnimated(ctx, time) {
-  for (let i = 0; i < 40; i++) {
-    const x = -500 + i * 61;
-    const y = 446 + (i % 5) * 15;
-    const up = Math.max(0, Math.sin(time * 4 + i * 1.3));
-    if (up < 0.3) continue;
-    ctx.strokeStyle = '#f0c8a0';
-    ctx.lineWidth = 2;
-    ctx.beginPath();
-    ctx.moveTo(x, y - 4);
-    ctx.lineTo(x + 3, y - 8 - up * 8);
-    ctx.stroke();
-    if (i % 3 === 0) {
-      ctx.fillStyle = ['#ffd23f', '#b8282a', '#3a8aff'][i % 3 === 0 ? (i / 3) % 3 : 0];
-      ctx.beginPath();
-      ctx.moveTo(x + 3, y - 8 - up * 8);
-      ctx.lineTo(x + 13, y - 5 - up * 8);
-      ctx.lineTo(x + 3, y - 2 - up * 8);
-      ctx.fill();
+  const dt = MOOD.last == null ? 0 : Math.max(0, Math.min(0.1, time - MOOD.last));
+  MOOD.last = time;
+  MOOD.excite = Math.max(0, MOOD.excite - dt * 0.5);
+  if (MOOD.gesture) {
+    MOOD.gestureT += dt;
+    if (MOOD.gestureT > 2.4) MOOD.gesture = null;
+  }
+
+  // torcida pulando, setor por setor
+  for (let r = 0; r < STANDS.rows; r++) {
+    const y = STANDS.top + r * STANDS.rowH - 16;
+    for (let x = -560 + (r % 2) * 22; x < 1840; x += CLUSTER.w) {
+      if (x + CLUSTER.w > BOX.x - 6 && x < BOX.x + BOX.w + 6) continue;
+      const secIndex = SECTIONS.indexOf(sectionAt(x + CLUSTER.w / 2));
+      const seed = Math.abs(Math.sin(x * 12.9898 + r * 78.233) * 43758.5453) % 1;
+      const variant = Math.floor(seed * 3);
+      const speed = 5 + seed * 3;
+      const amp = 2.5 + MOOD.excite * 7;
+      const hop = Math.abs(Math.sin(time * speed + seed * 10)) * amp;
+      ctx.drawImage(clusterSprite(secIndex, variant), x, y - hop, CLUSTER.w, CLUSTER.h);
     }
   }
+
+  // imperador no trono
+  const ex = BOX.x + BOX.w / 2;
+  const ey = STANDS.top - 54;
+  ctx.fillStyle = '#6a2a8a';
+  ctx.fillRect(ex - 9, ey + 2, 18, 22);
+  ctx.fillStyle = '#ffffff';
+  ctx.fillRect(ex - 9, ey + 8, 18, 3);
+  ctx.fillStyle = '#f0c8a0';
+  ctx.beginPath();
+  ctx.arc(ex, ey - 4, 7, 0, Math.PI * 2);
+  ctx.fill();
+  // coroa de louros
+  ctx.strokeStyle = '#ffd23f';
+  ctx.lineWidth = 2;
+  ctx.beginPath();
+  ctx.arc(ex, ey - 4, 7.5, Math.PI * 0.9, Math.PI * 2.1);
+  ctx.stroke();
+  // braço: parado no colo, ou erguido fazendo joinha / polegar para baixo
+  const up = MOOD.gesture ? Math.min(1, MOOD.gestureT / 0.25) : 0;
+  const hx = ex + 10 + up * 10;
+  const hy = ey + 14 - up * 24;
+  ctx.strokeStyle = '#f0c8a0';
+  ctx.lineWidth = 3.5;
+  ctx.beginPath();
+  ctx.moveTo(ex + 7, ey + 6);
+  ctx.lineTo(hx, hy);
+  ctx.stroke();
+  if (MOOD.gesture) {
+    const dir = MOOD.gesture === 'up' ? -1 : 1;
+    ctx.fillStyle = '#f0c8a0';
+    ctx.fillRect(hx - 3, hy - 3, 6, 6);
+    ctx.fillRect(hx - 1, hy + dir * 3 - (dir < 0 ? 4 : 0), 3, 5);
+    // balão grande com o polegar, para dar para ver de longe
+    const pop = Math.min(1, MOOD.gestureT / 0.2);
+    const bx = ex;
+    const by = ey - 58 - (1 - pop) * 10;
+    ctx.globalAlpha = Math.min(1, (2.4 - MOOD.gestureT) / 0.3);
+    ctx.fillStyle = MOOD.gesture === 'up' ? '#3fbf5a' : '#d8282a';
+    ctx.strokeStyle = '#ffffff';
+    ctx.lineWidth = 3;
+    ctx.beginPath();
+    ctx.arc(bx, by, 22 * pop, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.stroke();
+    ctx.save();
+    ctx.translate(bx, by);
+    ctx.scale(pop, pop * -dir);
+    ctx.fillStyle = '#ffffff';
+    // mão fechada com o polegar para cima (virada para baixo quando dir = 1)
+    ctx.fillRect(-9, -2, 14, 12);
+    ctx.fillRect(-3, -13, 6, 12);
+    ctx.fillRect(-12, 0, 4, 9);
+    ctx.restore();
+    ctx.globalAlpha = 1;
+  }
+  // guardas com lança dos dois lados
+  for (const gx of [BOX.x + 26, BOX.x + BOX.w - 26]) {
+    ctx.fillStyle = '#b8282a';
+    ctx.fillRect(gx - 5, ey + 4, 10, 18);
+    ctx.fillStyle = '#c8c8d0';
+    ctx.beginPath();
+    ctx.arc(gx, ey - 2, 6, Math.PI, 0);
+    ctx.fill();
+    ctx.fillStyle = '#f0c8a0';
+    ctx.fillRect(gx - 4, ey - 2, 8, 6);
+    ctx.strokeStyle = '#6a4a2a';
+    ctx.lineWidth = 1.5;
+    ctx.beginPath();
+    ctx.moveTo(gx + 7, ey + 24);
+    ctx.lineTo(gx + 7, ey - 26);
+    ctx.stroke();
+    ctx.fillStyle = '#d8d8e0';
+    ctx.beginPath();
+    ctx.moveTo(gx + 4, ey - 26);
+    ctx.lineTo(gx + 7, ey - 34);
+    ctx.lineTo(gx + 10, ey - 26);
+    ctx.fill();
+  }
+
+  velarium(ctx, time);
+
+  // pássaros voltando para casa
+  ctx.strokeStyle = 'rgba(40,20,40,0.6)';
+  ctx.lineWidth = 1.6;
+  for (let i = 0; i < 4; i++) {
+    const x = ((time * (20 + i * 4) + i * 300) % 1700) - 200;
+    const y = 40 + i * 20 + Math.sin(time * 0.7 + i) * 8;
+    const f = Math.sin(time * 8 + i * 2) * 3;
+    ctx.beginPath();
+    ctx.moveTo(x - 6, y - f);
+    ctx.quadraticCurveTo(x - 3, y - 3, x, y);
+    ctx.quadraticCurveTo(x + 3, y - 3, x + 6, y - f);
+    ctx.stroke();
+  }
+}
+
+// Velário: o toldo listrado que os romanos esticavam por cima do coliseu.
+// Faixas de pano saindo do alto da tela até a beira da parede, com a barra
+// ondulada balançando no vento e as cordas.
+function velarium(ctx, time) {
+  const hem = (x) => WALL.top - 70 + curve(x) * 0.6 - 40 * Math.cos(((x - 640) / 1500) * Math.PI) + Math.sin(time * 1.2 + x * 0.01) * 3;
+  const stripes = 28;
+  const xa = -560;
+  const xb = 1840;
+  for (let i = 0; i < stripes; i++) {
+    const a = xa + ((xb - xa) * i) / stripes;
+    const b = xa + ((xb - xa) * (i + 1)) / stripes;
+    ctx.fillStyle = i % 2 ? '#f2e6cc' : '#c0392b';
+    ctx.beginPath();
+    ctx.moveTo(a + (a - 640) * 0.6, -420);
+    ctx.lineTo(b + (b - 640) * 0.6, -420);
+    ctx.lineTo(b, hem(b));
+    ctx.quadraticCurveTo((a + b) / 2, hem((a + b) / 2) + 14, a, hem(a));
+    ctx.closePath();
+    ctx.fill();
+  }
+  // sombra embaixo do pano e cordas
+  ctx.strokeStyle = 'rgba(60,30,20,0.55)';
+  ctx.lineWidth = 1.2;
+  for (let i = 0; i <= stripes; i++) {
+    const x = xa + ((xb - xa) * i) / stripes;
+    ctx.beginPath();
+    ctx.moveTo(x, hem(x));
+    ctx.lineTo(x + (x - 640) * 0.6, -420);
+    ctx.stroke();
+  }
+  ctx.strokeStyle = '#7a4a2a';
+  ctx.lineWidth = 2;
+  ctx.beginPath();
+  for (let x = xa; x <= xb; x += 20) ctx.lineTo(x, hem(x) + 6);
+  ctx.stroke();
 }
 
 // ================================================================ campo (mundo)
@@ -531,8 +870,9 @@ function drawTerrain(ctx, map, rand) {
   for (const p of map.platforms) if (p.y <= floor.y - 200) slab(ctx, p);
 }
 
-let WALLS = null;
-const standing = (x) => !WALLS || (x > WALLS.left && x < WALLS.right);
+// Morte súbita: o palco se abriu (colunas, estátuas e braseiros caem)
+let GAME = null;
+const sudden = () => Boolean(GAME?.suddenDeath);
 
 // Fogo dos braseiros
 function brazierFire(ctx, x, y, time) {
@@ -566,20 +906,34 @@ export const COLISEU_ART = {
   midAnimated,
   terrain: drawTerrain,
   behind() {},
-  // o renderer avisa onde estão as paredes de espinhos
-  setWalls(walls) {
-    WALLS = walls;
+  // o renderer passa a partida (para saber se o palco já se abriu)
+  setGame(game) {
+    GAME = game;
+  },
+  // reações ao que acontece na luta: a torcida pula mais e o imperador faz
+  // joinha (alguém derrubou alguém) ou polegar para baixo (caiu sozinho)
+  onEvent(e) {
+    if (e.type === 'ko') {
+      MOOD.excite = 1;
+      MOOD.gesture = e.killer != null ? 'up' : 'down';
+      MOOD.gestureT = 0;
+    } else if (e.type === 'collapse' || e.type === 'wallsWarn') {
+      MOOD.excite = 1;
+    } else if (e.type === 'hit' && e.kb > 650) {
+      MOOD.excite = Math.max(MOOD.excite, 0.5);
+    }
   },
   front(ctx, map, time) {
+    if (sudden()) return;
     const floor = map.solids[0];
     for (const p of map.platforms) {
-      if (p.y <= floor.y - 200 || !standing(p.x + p.w / 2)) continue;
+      if (p.y <= floor.y - 200) continue;
       brokenColumn(ctx, p, floor.y);
       capital(ctx, p);
     }
-    for (const [x, dir] of [[floor.x + 26, 1], [floor.x + floor.w - 26, -1]]) if (standing(x)) statue(ctx, x, floor.y, dir);
+    statue(ctx, floor.x + 26, floor.y, 1);
+    statue(ctx, floor.x + floor.w - 26, floor.y, -1);
     for (const [x, k] of [[floor.x + 70, 0], [floor.x + floor.w - 70, 1.3]]) {
-      if (!standing(x)) continue;
       brazier(ctx, x, floor.y);
       brazierFire(ctx, x, floor.y, time + k);
     }

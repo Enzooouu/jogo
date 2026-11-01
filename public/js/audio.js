@@ -81,8 +81,68 @@ function noise({ dur = 0.15, vol = 0.3, freq = 1200, delay = 0 }) {
   src.start(t);
 }
 
+// Barulho de fundo do mapa (só o Coliseu tem: o murmúrio da torcida)
+let ambience = null;
+let crowdLoop = null;
+
+export function setAmbience(kind) {
+  if (kind === ambience) return;
+  ambience = kind;
+  if (crowdLoop) {
+    try {
+      crowdLoop.stop();
+    } catch {
+      // já tinha parado
+    }
+    crowdLoop = null;
+  }
+  const c = ensure();
+  if (!c || kind !== 'torcida') return;
+  // ruído filtrado em loop: parece um monte de gente conversando longe
+  const len = c.sampleRate * 2;
+  const buffer = c.createBuffer(1, len, c.sampleRate);
+  const data = buffer.getChannelData(0);
+  for (let i = 0; i < len; i++) data[i] = (Math.random() * 2 - 1) * (0.7 + 0.3 * Math.sin(i / 1800));
+  const src = c.createBufferSource();
+  src.buffer = buffer;
+  src.loop = true;
+  const band = c.createBiquadFilter();
+  band.type = 'bandpass';
+  band.frequency.value = 520;
+  band.Q.value = 0.8;
+  const gain = c.createGain();
+  gain.gain.value = 0.05;
+  src.connect(band).connect(gain).connect(master);
+  src.start();
+  crowdLoop = src;
+}
+
+// Torcida: comemoração (alguém caiu) e "uooooh" (golpe forte)
+function cheer(vol = 0.35, delay = 0) {
+  noise({ dur: 1.6, vol, freq: 2200, delay });
+  noise({ dur: 1.2, vol: vol * 0.6, freq: 900, delay: delay + 0.1 });
+}
+
+function ooh() {
+  tone({ freq: 240, to: 170, dur: 0.8, type: 'sawtooth', vol: 0.05 });
+  tone({ freq: 300, to: 210, dur: 0.8, type: 'triangle', vol: 0.05 });
+  noise({ dur: 0.7, vol: 0.12, freq: 700 });
+}
+
 // Toca o som de cada evento da partida.
 export function playEvents(events, localId) {
+  if (ambience === 'torcida') {
+    for (const e of events) {
+      if (e.type === 'ko') cheer();
+      else if (e.type === 'hit' && e.kb > 650) ooh();
+      else if (e.type === 'itemThrown') cheer(0.12);
+      else if (e.type === 'collapse') {
+        noise({ dur: 1.8, vol: 0.6, freq: 300 });
+        tone({ freq: 70, to: 25, dur: 1.6, type: 'sawtooth', vol: 0.35 });
+        cheer(0.4, 0.3);
+      }
+    }
+  }
   for (const e of events) {
     switch (e.type) {
       case 'jump':

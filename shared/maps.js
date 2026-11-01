@@ -223,8 +223,9 @@ export const MAPS = {
   },
 
   // Coliseu romano no fim da tarde: palco de pedra sobre o fosso, colunas
-  // quebradas como plataformas e a torcida na arquibancada. Morte súbita:
-  // depois de 2:30 de luta, paredes de espinhos fecham dos dois lados.
+  // quebradas como plataformas e a torcida na arquibancada, que joga as
+  // armas. Morte súbita: depois de 2:30 de luta o palco se abre (sobram dois
+  // pedaços e a laje do alto) e sobem paredes de espinhos que matam.
   coliseu: {
     id: 'coliseu',
     name: 'Coliseu',
@@ -239,17 +240,19 @@ export const MAPS = {
       { x: 560, y: 285, w: 160 },
     ],
     hazards: [],
-    // paredes de espinhos: posição da face de dentro (esquerda, direita), de
-    // onde saem até onde chegam; `top` = chão do palco, `height` = altura da
-    // parede acima dele; `warn` = segundos de aviso antes
-    closingWalls: { start: 150, end: 215, warn: 5, from: [200, 1080], to: [470, 810], top: 520, height: 70 },
+    // walls = face de dentro das paredes de espinhos (esquerda, direita);
+    // keep = pedaços do palco que não caem; dropPlatforms = índices das
+    // plataformas que caem; warn = segundos de aviso antes
+    suddenDeath: { start: 150, warn: 5, walls: [70, 1210], keep: [[330, 530], [750, 950]], dropPlatforms: [0, 1] },
+    // a torcida joga as armas (de fora da tela, dos dois lados)
+    itemThrow: { from: [-80, 1360], y: 330, time: 1.3 },
     spawns: [
       { x: 330, y: 520 }, { x: 950, y: 520 }, { x: 440, y: 520 }, { x: 840, y: 520 },
       { x: 540, y: 520 }, { x: 740, y: 520 }, { x: 260, y: 520 }, { x: 1020, y: 520 },
     ],
-    // reaparece sempre no meio (fica dentro das paredes quando elas fecham)
+    // reaparece em cima dos pedaços que não caem na morte súbita
     respawns: [
-      { x: 560, y: 150 }, { x: 720, y: 150 }, { x: 600, y: 120 }, { x: 680, y: 120 },
+      { x: 430, y: 150 }, { x: 850, y: 150 }, { x: 640, y: 150 }, { x: 430, y: 150 },
     ],
     itemSpawn: { minX: 240, maxX: 1040, y: -40 },
     decor: [],

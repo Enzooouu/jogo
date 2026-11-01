@@ -35,9 +35,12 @@ export class BotController {
       this.lastOut = { ...EMPTY_INPUT };
       return this.lastOut;
     }
-    if (!this.stage) {
-      this.stage = stageBounds(game.map);
-      this.islands = islandsOf(game.map);
+    // o chão pode mudar no meio da partida (morte súbita do Coliseu)
+    if (!this.stage || this.suddenDeath !== game.suddenDeath) {
+      this.suddenDeath = game.suddenDeath;
+      const now = currentMap(game);
+      this.stage = stageBounds(now);
+      this.islands = islandsOf(now);
     }
 
     this.thinkTimer--;
@@ -62,7 +65,7 @@ export class BotController {
     if (home && me.onGround) this.crossing = null;
     const crossing = this.crossing && game.tick < this.crossing.until ? this.crossing : null;
     const crossIsland = crossing && this.islands.find((i) => crossing.x >= i.left && crossing.x <= i.right);
-    const back = home ? null : crossIsland ? { island: crossIsland, x: crossing.x } : recoveryTarget(this.islands, game.map, me.element, cx);
+    const back = home ? null : crossIsland ? { island: crossIsland, x: crossing.x } : recoveryTarget(this.islands, currentMap(game), me.element, cx);
     const island = home ?? back.island;
     const offStage = !home;
     // Cabeça abaixo do chão da ilha (e fora das piscinas) = embaixo dela.
@@ -264,12 +267,12 @@ export class BotController {
       if (y < feet + 2) return;
       if (!best || y < best.y) best = { y, kind, type };
     };
-    for (const s of game.map.solids) if (x >= s.x && x <= s.x + s.w) consider(s.y, 'solid');
-    for (const p of game.platforms) if (x >= p.x && x <= p.x + p.w) consider(p.y, 'platform');
+    for (const s of currentMap(game).solids) if (x >= s.x && x <= s.x + s.w) consider(s.y, 'solid');
+    for (const p of game.platforms) if (!game.platformGone(p) && x >= p.x && x <= p.x + p.w) consider(p.y, 'platform');
     for (const h of game.map.hazards) if (x >= h.x && x <= h.x + h.w) consider(h.y, 'hazard', h.type);
     if (!best) {
       // Sem nada embaixo: só é seguro se ainda estou em cima do chão atual.
-      return me.standingOn === 'solid' && game.map.solids.some((s) => x >= s.x && x <= s.x + s.w && Math.abs(s.y - feet) < 2);
+      return me.standingOn === 'solid' && currentMap(game).solids.some((s) => x >= s.x && x <= s.x + s.w && Math.abs(s.y - feet) < 2);
     }
     if (best.kind === 'hazard') return hazardReaction(me.element, best.type) === 'imune';
     return true;
@@ -281,7 +284,7 @@ export class BotController {
     const feet = me.y + me.h;
     for (let d = 10; d <= 280; d += 10) {
       const x = fromX + dir * d;
-      const solid = game.map.solids.find((s) => x >= s.x && x <= s.x + s.w && s.y > feet - 70 && s.y < feet + 50);
+      const solid = currentMap(game).solids.find((s) => x >= s.x && x <= s.x + s.w && s.y > feet - 70 && s.y < feet + 50);
       if (!solid) continue;
       const target = x + dir * 40;
       const deadly = game.map.hazards.some((h) => target >= h.x - 20 && target <= h.x + h.w + 20 && hazardReaction(me.element, h.type) === 'morre');
@@ -307,6 +310,11 @@ export class BotController {
     }
     return item;
   }
+}
+
+// O mapa com o chão de agora (na morte súbita do Coliseu parte do palco cai)
+function currentMap(game) {
+  return game.suddenDeath ? { ...game.map, solids: game.solidsNow() } : game.map;
 }
 
 function dist(a, b) {

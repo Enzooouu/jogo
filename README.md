@@ -66,7 +66,7 @@ Dá para trocar todas essas teclas (menos o `Esc`) em **Controles**, no menu ini
 - Cada time é de um elemento só, e dois times nunca têm o mesmo elemento.
 - Cada jogador tem 3 vidas. Perde uma vida quem **cai do mapa** ou **toca num perigo mortal**.
 - Cada golpe aumenta o dano (%) do alvo; quanto mais dano, mais longe ele voa.
-- Foi arremessado? Use o **dash** (1 no ar; recarrega ao pisar no chão ou se pendurar na parede; o Ar tem 2) e se pendure na parede para subir.
+- Foi arremessado? Use o **dash** (1 no ar; recarrega ao pisar no chão ou se pendurar na parede) e se pendure na parede para subir.
 - A câmera se afasta sozinha quando alguém sai da área principal.
 - Vence o time que eliminar o outro. Se o tempo (4 min) acabar, vence quem tem mais vidas.
 
@@ -103,7 +103,7 @@ time, e quem pegar recebe ela com as mesmas cargas que tinha:
 | Cajado | Bola de Fogo: explode e queima | Jato d'Água: atravessa e empurra | Pedrada: arco, atordoa | Tornado: lento, atravessa e puxa | Cajado: esfera de força, sem efeito |
 | Lança (investida para a frente; no ar 1 vez por pulo) | Lança Ígnea: queima | Tridente da Maré: deixa lento | Lança de Rocha: forte, atordoa | Lança do Vento: investida mais longa | Lança: sem efeito |
 
-**Mapas:** na tela antes da luta (Versus) escolha **Caldeira**, **Campo Aberto** (grama de dia, sem piscina, espinho nem vento: duas ilhas com um buraco no meio, onde ficava uma ponte que quebrou, e uma plataforma de madeira no alto; só vale derrubar o outro) **Pico dos Ventos**, **Lago Congelado** (noite de neve com aurora boreal: o gelo do meio **escorrega**, demora para parar e para virar; as margens de neve são firmes; tem um buraco no gelo com água) ou **Coliseu** (palco de pedra sobre o fosso, colunas quebradas e a torcida; **morte súbita** depois de 2:30 de luta: paredes de espinhos baixas fecham dos dois lados e o palco desmorona atrás delas; encostar nelas dá dano e arremessa para o meio, e quanto mais dano você tem, mais longe vai, às vezes por cima da outra parede)
+**Mapas:** na tela antes da luta (Versus) escolha **Caldeira**, **Campo Aberto** (grama de dia, sem piscina, espinho nem vento: duas ilhas com um buraco no meio, onde ficava uma ponte que quebrou, e uma plataforma de madeira no alto; só vale derrubar o outro) **Pico dos Ventos**, **Lago Congelado** (noite de neve com aurora boreal: o gelo do meio **escorrega**, demora para parar e para virar; as margens de neve são firmes; tem um buraco no gelo com água) ou **Coliseu** (palco de pedra sobre o fosso, colunas quebradas, velário listrado e a torcida dividida pelos 5 elementos pulando; a **torcida joga as armas** em vez das caixas; o **imperador** faz joinha quando alguém derruba alguém e polegar para baixo quando alguém cai sozinho; **morte súbita** depois de 2:30 de luta: o palco se abre (sobram dois pedaços e a laje do alto) e sobem paredes de espinhos até o céu nas pontas, que **matam** quem encosta)
 (ilhas no céu, plataformas penduradas em balões que balançam em arco quando
 alguém anda em cima ou o vento bate, correntes de vento que atravessam o mapa
 de ponta a ponta além das rajadas comuns, lava, lago e espinhos no meio).

@@ -74,6 +74,7 @@ export class Renderer {
     const g = this.game;
     const P = this.particles;
     for (const e of events) {
+      this.stage.art.onEvent?.(e);
       switch (e.type) {
         case 'start':
           // no treino do tutorial não tem "LUTA!"
@@ -83,17 +84,27 @@ export class Renderer {
           this.banner = { text: 'MORTE SÚBITA!', time: 2.4, max: 2.4, color: '#ff5b4a' };
           this.shake(4, 0.4);
           break;
-        case 'wallsStart':
-          this.pushFeed('As paredes de espinhos estão fechando!', null, true);
+        case 'collapse':
+          // o palco se abre: tremor, poeira e pedaços caindo no abismo
+          this.collapseAt = this.time;
+          this.shake(16, 0.9);
+          this.pushFeed('O palco desabou! Cuidado com os espinhos!', null, true);
+          for (const [a, b] of this.fallenRanges()) {
+            for (let i = 0; i < 10; i++) {
+              const x = a + Math.random() * (b - a);
+              P.add({ x, y: g.map.solids[0].y - 4, vx: (Math.random() - 0.5) * 120, vy: -120 - Math.random() * 200, life: 1.2, size: 7, grow: 26, color: 'rgba(220,190,140,0.35)', drag: 1.2 });
+            }
+          }
           break;
-        case 'spikeWall': {
-          // encostou na parede de espinhos: faíscas e o dano
-          P.burst(e.x, e.y, { type: 'spark', count: 14, speed: 380, angle: e.dir > 0 ? 0 : Math.PI, spread: 1.4, life: 0.35, size: 2.5, color: '#ffd0a0', drag: 3 });
-          P.burst(e.x, e.y, { count: 6, speed: 160, life: 0.5, size: 3, color: '#c83a2a', gravity: 500 });
-          if (e.amount > 0) P.add({ type: 'text', text: `+${e.amount}%`, x: e.x + e.dir * 30, y: e.y - 30, vy: -60, life: 0.8, size: 17, color: '#ff7a7a' });
-          this.shake(6, 0.15);
+        case 'itemThrown':
+          // arma voando da arquibancada
+          P.burst(e.x, e.y, { type: 'spark', count: 6, speed: 160, life: 0.4, size: 2, color: '#ffe8a3', drag: 2 });
           break;
-        }
+        case 'spikeWall':
+          // encostou na parede de espinhos: faíscas
+          P.burst(e.x, e.y, { type: 'spark', count: 18, speed: 420, angle: e.dir > 0 ? 0 : Math.PI, spread: 1.4, life: 0.4, size: 2.5, color: '#ffd0a0', drag: 3 });
+          P.burst(e.x, e.y, { count: 8, speed: 180, life: 0.6, size: 3, color: '#c83a2a', gravity: 500 });
+          break;
         case 'launch':
           // tutorial: empurrão da etapa "voltar para a arena"
           P.add({ type: 'ring', x: e.x, y: e.y, size: 8, grow: 260, life: 0.35, color: '#ffffff' });
@@ -338,7 +349,7 @@ export class Renderer {
       updateCelebration(this.celebration, dt, this);
       drawCelebration(ctx, this.celebration, 'back');
     }
-    this.stage.art.setWalls?.(this.game.walls);
+    this.stage.art.setGame?.(this.game);
     this.stage.drawTerrain(ctx, this.time, this.game.platforms, alpha);
     this.stage.drawHazards(ctx, this.time, false);
     // desenho extra no mundo (ex.: bandeira de chegada do tutorial)
@@ -349,7 +360,7 @@ export class Renderer {
     this.drawProjectiles(ctx);
     this.drawPlayers(ctx, alpha);
     this.particles.draw(ctx);
-    this.drawClosingWalls(ctx);
+    this.drawSuddenDeath(ctx);
     drawCelebration(ctx, this.celebration, 'front');
     this.stage.drawHazards(ctx, this.time, true);
     if (this.debug) this.drawDebug(ctx);
@@ -513,115 +524,134 @@ export class Renderer {
     }
   }
 
-  // Paredes de espinhos da morte súbita (Coliseu): barreiras baixas de
-  // madeira com espinhos de ferro virados para dentro. No aviso elas sobem do
-  // fosso nas pontas do palco; depois fecham, e atrás delas o palco
-  // desmoronou (vira fosso escuro, com a beira quebrada).
-  drawClosingWalls(ctx) {
-    const g = this.game;
-    const cfg = g.map.closingWalls;
-    if (!cfg || g.time < cfg.start - cfg.warn) return;
-    const rise = Math.min(1, (g.time - (cfg.start - cfg.warn)) / cfg.warn);
-    const ease = 1 - (1 - rise) ** 3;
-    const left = g.walls?.left ?? cfg.from[0];
-    const right = g.walls?.right ?? cfg.from[1];
-    // palco que já caiu
-    if (g.walls) {
-      for (const [x, dir] of [[left, 1], [right, -1]]) this.drawCollapsed(ctx, x, cfg.top, dir);
+  // Trechos do palco que caem na morte súbita (fora dos pedaços que ficam)
+  fallenRanges() {
+    const sd = this.game.map.suddenDeath;
+    const floor = this.game.map.solids[0];
+    const out = [];
+    // as pontas incluem a moldura do palco, que passa um pouco das bordas
+    let x = floor.x - 12;
+    for (const [a, b] of sd.keep) {
+      if (a > x) out.push([x, a]);
+      x = Math.max(x, b);
     }
-    const lift = (1 - ease) * (cfg.height + 40);
-    for (const [x, dir] of [[left, 1], [right, -1]]) this.drawSpikeWall(ctx, x, cfg.top, cfg.height, lift, dir);
+    if (x < floor.x + floor.w + 12) out.push([x, floor.x + floor.w + 12]);
+    return out;
   }
 
-  drawCollapsed(ctx, x, top, dir) {
-    const far = x - dir * 2000;
+  // Morte súbita do Coliseu: no aviso, as paredes de espinhos sobem do fosso
+  // até o céu nas pontas da arena; depois o palco se abre (os pedaços caem
+  // girando no abismo e fica o buraco escuro)
+  drawSuddenDeath(ctx) {
+    const g = this.game;
+    const sd = g.map.suddenDeath;
+    if (!sd || g.time < sd.start - sd.warn) return;
+    const floor = g.map.solids[0];
+    if (g.suddenDeath) {
+      const since = this.collapseAt != null ? this.time - this.collapseAt : 9;
+      for (const [a, b] of this.fallenRanges()) this.drawFallen(ctx, a, b, floor, since);
+    }
+    const rise = Math.min(1, (g.time - (sd.start - sd.warn)) / sd.warn);
+    const top = 1100 - (1 - (1 - rise) ** 3) * 1900;
+    this.drawSpikeWall(ctx, sd.walls[0], top, 1);
+    this.drawSpikeWall(ctx, sd.walls[1], top, -1);
+  }
+
+  drawFallen(ctx, a, b, floor, since) {
     ctx.save();
-    const pit = ctx.createLinearGradient(0, top - 10, 0, top + 260);
-    pit.addColorStop(0, '#2a1a10');
-    pit.addColorStop(1, '#080402');
+    // buraco até o abismo
+    const pit = ctx.createLinearGradient(0, floor.y - 10, 0, floor.y + 300);
+    pit.addColorStop(0, '#1e120a');
+    pit.addColorStop(1, '#030101');
     ctx.fillStyle = pit;
-    ctx.fillRect(Math.min(far, x), top - 8, 2000, 1200);
-    // beira quebrada do palco (pedras em zigue-zague)
+    ctx.fillRect(a, floor.y - 10, b - a, 1100);
+    // beiradas quebradas dos pedaços que ficaram
     ctx.fillStyle = '#a8814f';
     ctx.strokeStyle = '#1e1208';
     ctx.lineWidth = 2;
-    ctx.beginPath();
-    ctx.moveTo(x, top - 8);
-    for (let i = 0; i <= 8; i++) {
-      const y = top - 8 + i * 12;
-      ctx.lineTo(x - dir * (6 + ((i * 37) % 5) * 4), y);
-    }
-    ctx.lineTo(x, top + 96);
-    ctx.closePath();
-    ctx.fill();
-    ctx.stroke();
-    // pedras caindo no fosso
-    const t = this.time;
-    for (let i = 0; i < 6; i++) {
-      const u = (t * 0.6 + i / 6) % 1;
-      const px = x - dir * (20 + ((i * 53) % 90));
-      const py = top + u * 360;
-      ctx.globalAlpha = 1 - u;
-      ctx.fillStyle = '#8a6a44';
-      ctx.fillRect(px - 5, py - 5, 10, 10);
-    }
-    ctx.restore();
-  }
-
-  drawSpikeWall(ctx, x, top, height, lift, dir) {
-    const y0 = top - height + lift;
-    ctx.save();
-    // barreira de madeira com faixas de ferro (atrás da borda)
-    const w = 46;
-    const bx = dir > 0 ? x - w : x;
-    const wood = ctx.createLinearGradient(bx, 0, bx + w, 0);
-    wood.addColorStop(0, dir > 0 ? '#3a2010' : '#7a4a26');
-    wood.addColorStop(1, dir > 0 ? '#7a4a26' : '#3a2010');
-    ctx.fillStyle = wood;
-    ctx.fillRect(bx, y0, w, height + 200);
-    ctx.strokeStyle = '#141018';
-    ctx.lineWidth = 2;
-    ctx.strokeRect(bx, y0, w, height + 200);
-    ctx.fillStyle = '#5a5a64';
-    for (const yy of [y0 + 14, y0 + height * 0.55]) {
-      ctx.fillRect(bx, yy, w, 7);
-      ctx.fillStyle = '#9a9aa4';
-      ctx.fillRect(bx + 6, yy + 2, 3, 3);
-      ctx.fillRect(bx + w - 9, yy + 2, 3, 3);
-      ctx.fillStyle = '#5a5a64';
-    }
-    // ponta de cima afiada
-    ctx.fillStyle = '#6a3a1c';
-    ctx.beginPath();
-    for (let i = 0; i < 4; i++) {
-      const sx = bx + (i * w) / 4;
-      ctx.moveTo(sx, y0);
-      ctx.lineTo(sx + w / 8, y0 - 12);
-      ctx.lineTo(sx + w / 4, y0);
-    }
-    ctx.fill();
-    ctx.stroke();
-    // espinhos de ferro virados para dentro
-    for (let y = y0 + 6; y < top - 2; y += 18) {
-      const g = ctx.createLinearGradient(x, 0, x + dir * 26, 0);
-      g.addColorStop(0, '#7a7a86');
-      g.addColorStop(1, '#f0f0f8');
-      ctx.fillStyle = g;
+    for (const [x, dir] of [[a, 1], [b, -1]]) {
+      if (x <= floor.x || x >= floor.x + floor.w) continue;
       ctx.beginPath();
-      ctx.moveTo(x, y);
-      ctx.lineTo(x + dir * 26, y + 7);
-      ctx.lineTo(x, y + 14);
+      ctx.moveTo(x, floor.y - 6);
+      for (let i = 0; i <= 7; i++) ctx.lineTo(x + dir * (4 + ((i * 41) % 5) * 3), floor.y - 6 + i * 12);
+      ctx.lineTo(x, floor.y + 84);
       ctx.closePath();
       ctx.fill();
       ctx.stroke();
     }
-    // correntes puxando para fora
-    ctx.strokeStyle = '#4a4a52';
-    ctx.lineWidth = 3;
-    ctx.beginPath();
-    ctx.moveTo(bx + w / 2, y0 + 20);
-    ctx.lineTo(bx + w / 2 - dir * 260, y0 - 140);
-    ctx.stroke();
+    // blocos do palco caindo e girando nos primeiros segundos
+    if (since < 3) {
+      const n = Math.max(1, Math.round((b - a) / 45));
+      for (let i = 0; i < n; i++) {
+        const k = (i + 0.5) / n;
+        const fall = Math.max(0, since - k * 0.25);
+        const x = a + k * (b - a);
+        const y = floor.y + 30 + 900 * fall * fall;
+        ctx.save();
+        ctx.globalAlpha = Math.max(0, 1 - fall / 1.4);
+        ctx.translate(x, y);
+        ctx.rotate((i % 2 ? 1 : -1) * fall * 2.5);
+        ctx.fillStyle = '#d9b57e';
+        ctx.fillRect(-22, -30, 44, 60);
+        ctx.fillStyle = '#f2dcae';
+        ctx.fillRect(-22, -30, 44, 10);
+        ctx.strokeRect(-22, -30, 44, 60);
+        ctx.restore();
+      }
+    }
+    ctx.restore();
+  }
+
+  // Paliçada de madeira com espinhos de ferro virados para dentro, do fundo
+  // do fosso até o céu (encostar mata)
+  drawSpikeWall(ctx, x, top, dir) {
+    const w = 60;
+    const bx = dir > 0 ? x - w : x;
+    const bottom = 1300;
+    ctx.save();
+    const wood = ctx.createLinearGradient(bx, 0, bx + w, 0);
+    wood.addColorStop(0, dir > 0 ? '#2e180a' : '#7a4a26');
+    wood.addColorStop(1, dir > 0 ? '#7a4a26' : '#2e180a');
+    ctx.fillStyle = wood;
+    ctx.fillRect(bx, top, w, bottom - top);
+    ctx.strokeStyle = '#141018';
+    ctx.lineWidth = 2;
+    ctx.strokeRect(bx, top, w, bottom - top);
+    // tábuas, faixas de ferro e pregos
+    ctx.strokeStyle = 'rgba(20,10,4,0.5)';
+    ctx.lineWidth = 1.2;
+    for (const k of [0.33, 0.66]) {
+      ctx.beginPath();
+      ctx.moveTo(bx + w * k, top);
+      ctx.lineTo(bx + w * k, bottom);
+      ctx.stroke();
+    }
+    for (let y = top + 40; y < bottom; y += 120) {
+      ctx.fillStyle = '#4a4a54';
+      ctx.fillRect(bx, y, w, 9);
+      ctx.fillStyle = '#9a9aa6';
+      for (const px of [bx + 8, bx + w / 2, bx + w - 8]) ctx.fillRect(px - 1.5, y + 3, 3, 3);
+    }
+    // espinhos de ferro com a ponta suja de vermelho
+    for (let y = top + 8; y < bottom; y += 20) {
+      const g = ctx.createLinearGradient(x, 0, x + dir * 30, 0);
+      g.addColorStop(0, '#6a6a76');
+      g.addColorStop(1, '#f2f2fa');
+      ctx.fillStyle = g;
+      ctx.strokeStyle = '#141018';
+      ctx.lineWidth = 1.5;
+      ctx.beginPath();
+      ctx.moveTo(x, y);
+      ctx.lineTo(x + dir * 30, y + 8);
+      ctx.lineTo(x, y + 16);
+      ctx.closePath();
+      ctx.fill();
+      ctx.stroke();
+      ctx.fillStyle = 'rgba(170,30,30,0.6)';
+      ctx.beginPath();
+      ctx.arc(x + dir * 26, y + 8, 2, 0, Math.PI * 2);
+      ctx.fill();
+    }
     ctx.restore();
   }
 
@@ -1381,8 +1411,9 @@ export class Renderer {
 
 function koText(game, e, victim) {
   const killer = e.killer !== null ? game.playerById(e.killer) : null;
-  const where = { lava: ' na lava', agua: ' na água', queda: '' }[e.cause] ?? '';
+  const where = { lava: ' na lava', agua: ' na água', espinhos: ' nos espinhos', queda: '' }[e.cause] ?? '';
   if (killer) return `${killer.name} nocauteou ${victim.name}${where}`;
+  if (e.cause === 'espinhos') return `${victim.name} se espetou nos espinhos`;
   if (e.cause === 'lava') return `${victim.name} derreteu na lava`;
   if (e.cause === 'agua') return `${victim.name} se apagou na água`;
   return `${victim.name} caiu do mapa`;

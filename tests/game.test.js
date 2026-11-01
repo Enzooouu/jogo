@@ -978,13 +978,17 @@ test('levar golpe no ar não devolve o dash', () => {
   assert.equal(b.airDashes, 0, 'continua sem dash');
 });
 
-test('um aperto de dash gasta só um dos 2 dashes do Ar', () => {
+test('um aperto de dash gasta só um dash (elemento com 2 dashes no ar)', () => {
+  // nenhum elemento tem 2 dashes hoje (o Ar tinha); testa com um Ar de mentira
+  const saved = ELEMENTS.ar.stats.airDashes;
+  ELEMENTS.ar.stats.airDashes = 2;
   const g = duel('ar', 'fogo');
   g.nextWindIn = Infinity;
   const p = g.playerById(1);
   p.x = 640; p.y = 100; p.vy = 0;
   run(g, 1);
   run(g, 6, { 1: makeInput({ dash: true, right: true }) });
+  ELEMENTS.ar.stats.airDashes = saved;
   assert.equal(p.airDashes, 1);
 });
 
@@ -1130,30 +1134,36 @@ test('Lago Congelado: no gelo demora muito mais para parar do que na neve', () =
   assert.ok(gelo > neve * 3, `gelo ${Math.round(gelo)}px x neve ${Math.round(neve)}px`);
 });
 
-test('Coliseu: paredes de espinhos fecham na morte súbita e arremessam para o meio', () => {
+test('Coliseu: na morte súbita o palco se abre, as colunas caem e os espinhos matam', () => {
   const g = newGame(['fogo', 'terra'], { mapId: 'coliseu', items: false });
-  const cfg = g.map.closingWalls;
+  const sd = g.map.suddenDeath;
   const [fogo, terra] = g.players;
-  // pula direto para o meio da morte súbita e encosta os dois nas paredes,
-  // por dentro
-  g.time = cfg.start + (cfg.end - cfg.start) * 0.5;
-  g.step({});
-  place(fogo, g.walls.left + 14, 520);
-  place(terra, g.walls.right - 14, 520);
-  const events = [];
-  for (let i = 0; i < 10; i++) {
-    g.step({});
-    events.push(...g.drainEvents());
-  }
-  assert.ok(g.walls.left > cfg.from[0] && g.walls.right < cfg.from[1], 'as paredes andaram');
-  const hits = events.filter((e) => e.type === 'spikeWall');
-  assert.equal(new Set(hits.map((e) => e.id)).size, 2, 'os dois encostaram');
-  assert.ok(fogo.damage >= 8, 'fogo leva dano');
-  assert.equal(terra.damage, 0, 'terra é imune a espinhos');
-  assert.ok(fogo.vx > 0 && terra.vx < 0, 'arremessados para o meio');
-  // o palco desmoronou do lado de fora das paredes
-  const floor = g.solidsNow()[0];
-  assert.ok(floor.x >= g.walls.left - 0.01 && floor.x + floor.w <= g.walls.right + 0.01);
+  assert.equal(g.solidsNow().length, 1, 'antes: palco inteiro');
+  g.time = sd.start;
+  place(fogo, 640, 520);  // no meio, que vai cair
+  place(terra, 430, 520); // num pedaço que fica
+  run(g, 2);
+  assert.ok(g.suddenDeath);
+  assert.deepEqual(g.solidsNow().map((s) => [s.x, s.x + s.w]), sd.keep);
+  assert.ok(g.platformGone(g.platforms[0]) && g.platformGone(g.platforms[1]) && !g.platformGone(g.platforms[2]));
+  run(g, 60);
+  assert.ok(fogo.y > 520, 'quem estava no meio caiu no buraco');
+  assert.equal(terra.y + terra.h, 520, 'quem estava no pedaço que fica continua em pé');
+  // encostar na parede de espinhos mata (até a Terra, imune a espinhos comuns)
+  const lives = terra.lives;
+  terra.x = sd.walls[0] - 10;
+  run(g, 1);
+  assert.equal(terra.lives, lives - 1);
+});
+
+test('Coliseu: a torcida joga as armas, que caem no palco prontas para pegar', () => {
+  const g = newGame(['fogo', 'agua'], { mapId: 'coliseu' });
+  park(g, 1, 2);
+  const item = g.throwItem(600, 520, 'lanca');
+  run(g, 120);
+  assert.ok(item.landed, 'caiu no palco');
+  assert.ok(Math.abs(item.x + item.w / 2 - 617) < 40, `caiu perto do alvo (${Math.round(item.x)})`);
+  assert.equal(item.uses, WEAPONS.lanca.uses);
 });
 
 test('mapas novos: bots terminam partidas sem travar', () => {
