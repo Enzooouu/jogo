@@ -15,6 +15,7 @@ import { roundRect, seeded } from './stage-util.js';
 const VIEW_W = 1280;
 const VIEW_H = 720;
 const MOON = { x: 1060, y: 105, r: 34 };
+const DEEP = 2600; // até onde a terra e o gelo descem
 const INK = '#0a1020';
 const SNOW = { light: '#ffffff', mid: '#e3eefc', shade: '#b4c8e8', deep: '#8aa4cc' };
 const ICE = { top: '#d8f6ff', light: '#a8e4f7', mid: '#5fb4dc', deep: '#1f5a8a', dark: '#0e2c4e' };
@@ -470,15 +471,6 @@ function iceSheet(ctx, s, rand) {
   }
 }
 
-// Fundo do buraco no gelo: pedra escura e gelada
-function holeBottom(ctx, s) {
-  const g = ctx.createLinearGradient(0, s.y, 0, s.y + 160);
-  g.addColorStop(0, '#0e2440');
-  g.addColorStop(1, '#040a16');
-  ctx.fillStyle = g;
-  ctx.fillRect(s.x, s.y, s.w, 1000 - s.y);
-}
-
 // Plataforma de gelo com pingentes embaixo
 function icePlatform(ctx, p, rand) {
   const h = 14;
@@ -564,12 +556,11 @@ function snowman(ctx, x, y) {
 function drawTerrain(ctx, map, rand) {
   // pinheirinhos nevados atrás das margens
   for (const s of map.solids) {
-    if (s.ice || map.hazards.some((h) => Math.abs(h.y + h.h - s.y) < 3)) continue;
+    if (s.ice) continue;
     for (let i = 0; i < 2; i++) snowyPine(ctx, s.x + 30 + i * (s.w - 60), s.y + 4, 1.4 + rand() * 0.3);
   }
   for (const s of map.solids) {
-    if (map.hazards.some((h) => Math.abs(h.y + h.h - s.y) < 3 && h.x < s.x + s.w && h.x + h.w > s.x)) holeBottom(ctx, s);
-    else if (s.ice) iceSheet(ctx, s, rand);
+    if (s.ice) iceSheet(ctx, s, rand);
     else snowBank(ctx, s, rand);
   }
   for (const p of map.platforms) icePlatform(ctx, p, rand);
@@ -587,7 +578,24 @@ export const GELO_ART = {
   mid: drawMid,
   midAnimated,
   terrain: drawTerrain,
-  behind() {},
+  // o terreno guardado em imagem vai até y 980: daqui para baixo a terra e o
+  // gelo continuam até o fim da tela, mesmo com a câmera afastada
+  behind(ctx, map) {
+    for (const s of map.solids) {
+      ctx.fillStyle = s.ice ? ICE.dark : '#1e1c2a';
+      ctx.fillRect(s.x, 970, s.w, DEEP - 970);
+    }
+    ctx.strokeStyle = INK;
+    ctx.lineWidth = 2.5;
+    ctx.beginPath();
+    for (const s of map.solids) {
+      ctx.moveTo(s.x, 970);
+      ctx.lineTo(s.x, DEEP);
+      ctx.moveTo(s.x + s.w, 970);
+      ctx.lineTo(s.x + s.w, DEEP);
+    }
+    ctx.stroke();
+  },
   // brilhinhos piscando na superfície do gelo
   front(ctx, map, time) {
     for (const s of map.solids) {

@@ -196,9 +196,7 @@ export const MAPS = {
     blast: { left: -260, right: 1540, top: -560, bottom: 1000 },
     solids: [
       { x: 150, y: 530, w: 180, h: 190 },               // margem de neve (esquerda)
-      { x: 330, y: 530, w: 280, h: 190, ice: true },    // gelo
-      { x: 610, y: 562, w: 60, h: 158 },                // fundo do buraco no gelo
-      { x: 670, y: 530, w: 280, h: 190, ice: true },    // gelo
+      { x: 330, y: 530, w: 620, h: 190, ice: true },    // gelo (lago inteiro congelado)
       { x: 950, y: 530, w: 180, h: 190 },               // margem de neve (direita)
     ],
     platforms: [
@@ -206,12 +204,10 @@ export const MAPS = {
       { x: 740, y: 400, w: 150, ice: true },
       { x: 565, y: 290, w: 150, ice: true },
     ],
-    hazards: [
-      { type: 'agua', x: 610, y: 540, w: 60, h: 22 },
-    ],
+    hazards: [],
     spawns: [
       { x: 230, y: 530 }, { x: 1050, y: 530 }, { x: 420, y: 530 }, { x: 860, y: 530 },
-      { x: 540, y: 530, near: 'agua' }, { x: 740, y: 530, near: 'agua' },
+      { x: 560, y: 530 }, { x: 720, y: 530 },
       { x: 465, y: 400 }, { x: 815, y: 400 },
     ],
     respawns: [
