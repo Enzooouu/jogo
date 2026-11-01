@@ -472,17 +472,8 @@ function midAnimated(ctx, time) {
       const secIndex = SECTIONS.indexOf(sectionAt(x + archW / 2));
       const seed = Math.abs(Math.sin(x * 7.13 + f * 91.7) * 43758.5453) % 1;
       const hop = Math.abs(Math.sin(time * (5 + seed * 3) + seed * 10)) * (2 + MOOD.excite * 5);
-      ctx.save();
-      // só aparece dentro do vão do arco
-      ctx.beginPath();
-      ctx.moveTo(x, ay + ah);
-      ctx.lineTo(x, ay + archW / 2);
-      ctx.arc(x + archW / 2, ay + archW / 2, archW / 2, Math.PI, 0);
-      ctx.lineTo(x + archW, ay + ah);
-      ctx.closePath();
-      ctx.clip();
+      // cabe inteiro no vão do arco (fica embaixo, perto do chão do andar)
       ctx.drawImage(clusterSprite(secIndex, Math.floor(seed * 3)), x + 3, ay + ah - h + 3 - hop, w, h);
-      ctx.restore();
     }
   }
 
@@ -705,6 +696,175 @@ function stage(ctx, s, rand) {
   ctx.strokeRect(s.x - 4, s.y - 5, s.w + 8, 10);
   ctx.fillStyle = 'rgba(160,110,60,0.5)';
   for (let i = 0; i < s.w / 6; i++) ctx.fillRect(s.x + rand() * s.w, s.y - 4 + rand() * 7, 1.5, 1.5);
+  stageDetails(ctx, s, rand);
+}
+
+// Rachaduras e o medalhão dos 4 elementos na frente do palco, e armas velhas
+// de batalhas antigas caídas no chão (só enfeite, não dá para pegar)
+function stageDetails(ctx, s, rand) {
+  // rachaduras na pedra da frente
+  ctx.strokeStyle = 'rgba(70,40,16,0.65)';
+  ctx.lineWidth = 1.4;
+  for (let i = 0; i < 7; i++) {
+    let x = s.x + 30 + rand() * (s.w - 60);
+    let y = s.y + 24;
+    ctx.beginPath();
+    ctx.moveTo(x, y);
+    for (let k = 0; k < 4; k++) {
+      x += (rand() - 0.5) * 18;
+      y += 8 + rand() * 8;
+      ctx.lineTo(x, y);
+    }
+    ctx.stroke();
+  }
+  // medalhão de bronze no meio da frente com os 4 elementos
+  const mx = s.x + s.w / 2;
+  const my = s.y + 46;
+  ctx.fillStyle = '#b8862a';
+  ctx.strokeStyle = INK;
+  ctx.lineWidth = 2;
+  ctx.beginPath();
+  ctx.arc(mx, my, 24, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.stroke();
+  ctx.fillStyle = '#e8c060';
+  ctx.beginPath();
+  ctx.arc(mx, my, 19, 0, Math.PI * 2);
+  ctx.fill();
+  ['#ff6a1f', '#2f8cff', '#9a6b3a', '#7fd6c6'].forEach((c, i) => {
+    const a = -Math.PI / 2 + (i * Math.PI) / 2;
+    ctx.fillStyle = c;
+    ctx.beginPath();
+    ctx.arc(mx + Math.cos(a) * 11, my + Math.sin(a) * 11, 5, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.strokeStyle = 'rgba(40,20,8,0.7)';
+    ctx.lineWidth = 1;
+    ctx.stroke();
+  });
+  ctx.fillStyle = '#1c1a22';
+  ctx.beginPath();
+  ctx.arc(mx, my, 4.5, 0, Math.PI * 2);
+  ctx.fill();
+  // armas velhas caídas no chão do palco
+  const top = s.y - 4;
+  const spots = [s.x + 40, s.x + 150, s.x + 300, s.x + 560, s.x + 720, s.x + s.w - 50];
+  spots.forEach((x, i) => {
+    const kind = i % 4;
+    if (kind === 0) oldShield(ctx, x, top, ['#a8202a', '#2f6fd6', '#6a8a3a'][i % 3]);
+    else if (kind === 1) oldHelmet(ctx, x, top);
+    else if (kind === 2) oldSword(ctx, x, top, i % 2 ? 1 : -1);
+    else oldSpear(ctx, x, top);
+  });
+}
+
+// escudo redondo deitado de lado, meio enterrado na areia
+function oldShield(ctx, x, y, paint) {
+  ctx.save();
+  ctx.translate(x, y);
+  ctx.rotate(-0.25);
+  ctx.fillStyle = paint;
+  ctx.strokeStyle = INK;
+  ctx.lineWidth = 1.6;
+  ctx.beginPath();
+  ctx.ellipse(0, -6, 15, 9, 0, Math.PI, 0);
+  ctx.closePath();
+  ctx.fill();
+  ctx.stroke();
+  ctx.strokeStyle = '#d8b04a';
+  ctx.lineWidth = 2;
+  ctx.beginPath();
+  ctx.ellipse(0, -6, 12, 7, 0, Math.PI, 0);
+  ctx.stroke();
+  ctx.fillStyle = '#d8b04a';
+  ctx.beginPath();
+  ctx.arc(0, -8, 3, 0, Math.PI * 2);
+  ctx.fill();
+  // tinta descascada
+  ctx.fillStyle = 'rgba(200,170,120,0.6)';
+  ctx.fillRect(-8, -12, 4, 3);
+  ctx.restore();
+}
+
+// elmo de gladiador caído
+function oldHelmet(ctx, x, y) {
+  ctx.fillStyle = '#9a9aa6';
+  ctx.strokeStyle = INK;
+  ctx.lineWidth = 1.6;
+  ctx.beginPath();
+  ctx.moveTo(x - 10, y);
+  ctx.quadraticCurveTo(x - 11, y - 16, x, y - 17);
+  ctx.quadraticCurveTo(x + 11, y - 16, x + 10, y);
+  ctx.closePath();
+  ctx.fill();
+  ctx.stroke();
+  ctx.fillStyle = '#2a2a32';
+  ctx.fillRect(x - 6, y - 10, 12, 3);
+  ctx.fillRect(x - 1, y - 10, 2, 8);
+  // penacho vermelho
+  ctx.fillStyle = '#c0392b';
+  ctx.beginPath();
+  ctx.moveTo(x - 8, y - 16);
+  ctx.quadraticCurveTo(x, y - 26, x + 9, y - 15);
+  ctx.quadraticCurveTo(x, y - 20, x - 8, y - 16);
+  ctx.fill();
+  ctx.fillStyle = 'rgba(255,255,255,0.4)';
+  ctx.fillRect(x - 6, y - 14, 3, 6);
+}
+
+// espada velha cravada torta no chão
+function oldSword(ctx, x, y, dir) {
+  ctx.save();
+  ctx.translate(x, y + 2);
+  ctx.rotate(dir * 0.35);
+  ctx.fillStyle = '#b8b8c4';
+  ctx.strokeStyle = INK;
+  ctx.lineWidth = 1.3;
+  ctx.beginPath();
+  ctx.moveTo(-2, 0);
+  ctx.lineTo(-2, -22);
+  ctx.lineTo(2, -22);
+  ctx.lineTo(2, 0);
+  ctx.closePath();
+  ctx.fill();
+  ctx.stroke();
+  ctx.fillStyle = '#8a6a3a';
+  ctx.fillRect(-7, -25, 14, 3);
+  ctx.fillStyle = '#5a3a1e';
+  ctx.fillRect(-1.5, -33, 3, 8);
+  ctx.fillStyle = '#d8b04a';
+  ctx.beginPath();
+  ctx.arc(0, -34, 2.2, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.restore();
+}
+
+// lança quebrada deitada
+function oldSpear(ctx, x, y) {
+  ctx.strokeStyle = '#6a4a2a';
+  ctx.lineWidth = 2.4;
+  ctx.beginPath();
+  ctx.moveTo(x - 26, y - 2);
+  ctx.lineTo(x + 10, y - 6);
+  ctx.stroke();
+  ctx.fillStyle = '#a8a8b4';
+  ctx.strokeStyle = INK;
+  ctx.lineWidth = 1.2;
+  ctx.beginPath();
+  ctx.moveTo(x + 10, y - 9);
+  ctx.lineTo(x + 24, y - 7);
+  ctx.lineTo(x + 10, y - 3);
+  ctx.closePath();
+  ctx.fill();
+  ctx.stroke();
+  // ponta quebrada da haste
+  ctx.strokeStyle = '#6a4a2a';
+  ctx.lineWidth = 1.6;
+  ctx.beginPath();
+  ctx.moveTo(x - 26, y - 2);
+  ctx.lineTo(x - 30, y - 5);
+  ctx.moveTo(x - 26, y - 2);
+  ctx.lineTo(x - 29, y + 1);
+  ctx.stroke();
 }
 
 // Coluna quebrada que vai do palco até a plataforma (o capitel é a plataforma)
@@ -981,20 +1141,6 @@ function fosso(ctx, floor, rand) {
     ctx.fillStyle = '#6a4a22';
     ctx.fillRect(tx - 8, top + 84, 16, 8);
   }
-  // pilares que seguram o palco
-  for (const px of [floor.x + 40, floor.x + floor.w / 2 - 28, floor.x + floor.w - 96]) {
-    const g = ctx.createLinearGradient(px, 0, px + 56, 0);
-    g.addColorStop(0, STONE.deep);
-    g.addColorStop(0.4, STONE.mid);
-    g.addColorStop(1, STONE.shadow);
-    ctx.fillStyle = g;
-    ctx.fillRect(px, floor.y + 70, 56, 900);
-    ctx.strokeStyle = INK;
-    ctx.lineWidth = 2;
-    ctx.strokeRect(px, floor.y + 70, 56, 900);
-    ctx.fillStyle = 'rgba(40,20,8,0.3)';
-    for (let y = floor.y + 110; y < floor.y + 500; y += 40) ctx.fillRect(px, y, 56, 3);
-  }
   // chão de areia lá no fundo, com escudos e lanças velhas
   const sandY = top + 230;
   const sand = ctx.createLinearGradient(0, sandY, 0, sandY + 60);
@@ -1023,6 +1169,45 @@ function fosso(ctx, floor, rand) {
   ctx.fillRect(x0, top, x1 - x0, 1000);
 }
 
+// Pilares que seguram o palco (desenhados a cada quadro: caem na morte súbita)
+const pillarsOf = (floor) => [floor.x + 40, floor.x + floor.w / 2 - 28, floor.x + floor.w - 96];
+
+// cada pilar é desenhado uma vez numa tela pequena e depois só copiado
+let PILLAR_SPRITE = null;
+function pillar(ctx, px, floor) {
+  if (!PILLAR_SPRITE || PILLAR_SPRITE.floorY !== floor.y) {
+    const c = document.createElement('canvas');
+    c.width = 60 * 2;
+    c.height = 610 * 2;
+    const p = c.getContext('2d');
+    p.scale(2, 2);
+    p.translate(2, -floor.y - 68);
+    pillarArt(p, 0, floor);
+    PILLAR_SPRITE = { canvas: c, floorY: floor.y };
+  }
+  ctx.drawImage(PILLAR_SPRITE.canvas, px - 2, floor.y + 68, 60, 610);
+}
+
+function pillarArt(ctx, px, floor) {
+  const g = ctx.createLinearGradient(px, 0, px + 56, 0);
+  g.addColorStop(0, STONE.deep);
+  g.addColorStop(0.4, STONE.mid);
+  g.addColorStop(1, STONE.shadow);
+  ctx.fillStyle = g;
+  ctx.fillRect(px, floor.y + 70, 56, 600);
+  ctx.strokeStyle = INK;
+  ctx.lineWidth = 2;
+  ctx.strokeRect(px, floor.y + 70, 56, 600);
+  ctx.fillStyle = 'rgba(40,20,8,0.3)';
+  for (let y = floor.y + 110; y < floor.y + 500; y += 40) ctx.fillRect(px, y, 56, 3);
+  // escurece embaixo, como o resto do fosso
+  const deep = ctx.createLinearGradient(0, floor.y + 120, 0, floor.y + 380);
+  deep.addColorStop(0, 'rgba(10,4,0,0)');
+  deep.addColorStop(1, 'rgba(10,4,0,0.7)');
+  ctx.fillStyle = deep;
+  ctx.fillRect(px, floor.y + 120, 56, 560);
+}
+
 const fossoTorches = (floor) => [floor.x + 75, floor.x + floor.w / 2 - 125, floor.x + floor.w / 2 + 125, floor.x + floor.w - 75];
 
 // O palco é desenhado uma vez numa tela própria e copiado a cada quadro: na
@@ -1032,7 +1217,7 @@ let STAGE_SPRITE = null;
 function stageSprite(floor) {
   if (STAGE_SPRITE && STAGE_SPRITE.floor === floor) return STAGE_SPRITE;
   const pad = 14;
-  const rect = { x: floor.x - pad, y: floor.y - 10, w: floor.w + pad * 2, h: 104 };
+  const rect = { x: floor.x - pad, y: floor.y - 40, w: floor.w + pad * 2, h: 134 };
   const canvas = document.createElement('canvas');
   canvas.width = rect.w * 2;
   canvas.height = rect.h * 2;
@@ -1118,6 +1303,24 @@ export const COLISEU_ART = {
     // (o fogo nasce em cima do suporte, que fica em floor.y + 104)
     for (const [i, tx] of fossoTorches(floor).entries()) brazierFire(ctx, tx, floor.y + 104 + 57, time + i);
     const sp = stageSprite(floor);
+    // pilares: em pé até a morte súbita, depois caem girando no abismo
+    const since = sudden() ? GAME.time - map.suddenDeath.start : -1;
+    if (since < 0) {
+      for (const px of pillarsOf(floor)) pillar(ctx, px, floor);
+    } else if (since < 3) {
+      pillarsOf(floor).forEach((px, i) => {
+        const fall = Math.max(0, since - 0.15 - i * 0.12);
+        const cx = px + 28;
+        const cy = floor.y + 200;
+        ctx.save();
+        ctx.globalAlpha = Math.max(0, 1 - fall / 2.4);
+        ctx.translate(cx, cy + 600 * fall * fall);
+        ctx.rotate((i % 2 ? -1 : 1) * fall * 0.9);
+        ctx.translate(-cx, -cy);
+        pillar(ctx, px, floor);
+        ctx.restore();
+      });
+    }
     if (sudden()) {
       const sd = map.suddenDeath;
       for (const [a, b] of sd.keep) {
@@ -1137,7 +1340,6 @@ export const COLISEU_ART = {
         }
       }
       // pedaços que caíram: blocos do próprio palco caindo e girando
-      const since = GAME.time - sd.start;
       if (since < 3) {
         let x = sp.rect.x;
         const fallen = [];
