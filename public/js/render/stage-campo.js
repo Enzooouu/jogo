@@ -179,48 +179,118 @@ function skyAnimated(ctx, time) {
 const FAR_HILL = (x) => 420 - Math.sin(x * 0.0035 + 0.4) * 30 - Math.sin(x * 0.009 + 2) * 10;
 const FAR_HILL2 = (x) => 448 - Math.sin(x * 0.0042 + 2.6) * 26 - Math.sin(x * 0.011 + 1) * 8;
 
-function ridge(ctx, base, peaks, colors, snow, rand) {
-  ctx.fillStyle = colors[0];
-  ctx.beginPath();
-  ctx.moveTo(-800, 1400);
-  for (const [x, h, w] of peaks) {
-    ctx.lineTo(x - w, base);
-    ctx.lineTo(x - w * 0.4, base - h * 0.62 + (rand() - 0.5) * 10);
-    ctx.lineTo(x, base - h);
-    ctx.lineTo(x + w * 0.45, base - h * 0.58 + (rand() - 0.5) * 10);
-    ctx.lineTo(x + w, base);
+// Cordilheira de verdade: contorno feito por "deslocamento do ponto do
+// meio" (cada pedaço ganha um desvio aleatório, cada vez menor), com vários
+// picos, ombros e vales. Sombra no lado esquerdo de cada pico (o sol está à
+// direita), riscos de rocha no lado claro e neve só nos picos altos.
+function ridgeLine(anchors, rand, rough) {
+  let pts = anchors.map(([x, y]) => [x, y]);
+  for (let level = 0; level < 6; level++) {
+    const next = [pts[0]];
+    for (let k = 1; k < pts.length; k++) {
+      const [ax, ay] = pts[k - 1];
+      const [bx, by] = pts[k];
+      const len = bx - ax;
+      next.push([(ax + bx) / 2 + (rand() - 0.5) * len * 0.15, (ay + by) / 2 + (rand() - 0.5) * len * rough], [bx, by]);
+    }
+    pts = next;
   }
-  ctx.lineTo(2100, base);
-  ctx.lineTo(2100, 1400);
-  ctx.closePath();
-  ctx.fill();
-  // lado de sombra (o sol está à direita) e pontinha de neve
-  for (const [x, h, w] of peaks) {
-    ctx.fillStyle = colors[1];
+  return pts;
+}
+
+function range(ctx, base, anchors, tone, rand, snowY = null) {
+  const pts = ridgeLine(anchors, rand, 0.11);
+  const outline = () => {
     ctx.beginPath();
-    ctx.moveTo(x, base - h);
-    ctx.lineTo(x - w * 0.4, base - h * 0.62);
-    ctx.lineTo(x - w, base);
-    ctx.lineTo(x - w * 0.1, base);
+    ctx.moveTo(pts[0][0], 1400);
+    for (const [x, y] of pts) ctx.lineTo(x, y);
+    ctx.lineTo(pts[pts.length - 1][0], 1400);
+    ctx.closePath();
+  };
+  const g = ctx.createLinearGradient(0, base - 260, 0, base + 40);
+  g.addColorStop(0, tone.top);
+  g.addColorStop(1, tone.bottom);
+  ctx.fillStyle = g;
+  outline();
+  ctx.fill();
+  ctx.save();
+  outline();
+  ctx.clip();
+  // picos e vales do contorno
+  const peaks = [];
+  for (let k = 1; k < pts.length - 1; k++) {
+    const y = pts[k][1];
+    if (y < pts[k - 1][1] && y <= pts[k + 1][1]) peaks.push(k);
+  }
+  // sombra: do vale à esquerda até o pico, descendo em diagonal
+  ctx.fillStyle = tone.shade;
+  for (const p of peaks) {
+    let v = p - 1;
+    while (v > 0 && pts[v - 1][1] > pts[v][1]) v--;
+    const [px, py] = pts[p];
+    const [vx] = pts[v];
+    if (base - py < 30) continue;
+    ctx.beginPath();
+    ctx.moveTo(pts[v][0], pts[v][1]);
+    for (let k = v; k <= p; k++) ctx.lineTo(pts[k][0], pts[k][1]);
+    ctx.lineTo(px + (base - py) * 0.18, base + 40);
+    ctx.lineTo(vx, base + 40);
     ctx.closePath();
     ctx.fill();
-    if (snow) {
-      ctx.fillStyle = snow;
+  }
+  // riscos de rocha descendo no lado claro
+  ctx.strokeStyle = tone.line;
+  ctx.lineWidth = 1.2;
+  for (const p of peaks) {
+    const [px, py] = pts[p];
+    const tall = base - py;
+    if (tall < 40) continue;
+    for (let r = 0; r < 4; r++) {
+      let x = px + 4 + r * tall * 0.08 + rand() * 6;
+      let y = py + 6 + r * tall * 0.1;
       ctx.beginPath();
-      ctx.moveTo(x, base - h);
-      ctx.lineTo(x - w * 0.16, base - h * 0.82);
-      ctx.lineTo(x - w * 0.05, base - h * 0.86);
-      ctx.lineTo(x + w * 0.06, base - h * 0.8);
-      ctx.lineTo(x + w * 0.17, base - h * 0.84);
+      ctx.moveTo(x, y);
+      for (let k = 0; k < 4; k++) {
+        x += 2 + rand() * 8;
+        y += tall * 0.07;
+        ctx.lineTo(x, y);
+      }
+      ctx.stroke();
+    }
+  }
+  // neve só lá em cima, com a borda irregular
+  if (snowY != null) {
+    // (o recorte da montanha já está valendo: só pinta dentro dela)
+    ctx.fillStyle = tone.snow;
+    ctx.save();
+    ctx.beginPath();
+    ctx.moveTo(pts[0][0], -400);
+    ctx.lineTo(pts[pts.length - 1][0], -400);
+    for (let x = pts[pts.length - 1][0]; x >= pts[0][0]; x -= 9) ctx.lineTo(x, snowY + Math.sin(x * 0.09) * 6 + (rand() - 0.3) * 14);
+    ctx.closePath();
+    ctx.fill();
+    // neve na sombra fica azulada
+    ctx.fillStyle = tone.snowShade;
+    for (const p of peaks) {
+      let v = p - 1;
+      while (v > 0 && pts[v - 1][1] > pts[v][1]) v--;
+      ctx.beginPath();
+      ctx.moveTo(pts[v][0], pts[v][1]);
+      for (let k = v; k <= p; k++) ctx.lineTo(pts[k][0], pts[k][1]);
+      ctx.lineTo(pts[p][0] + 30, snowY + 30);
+      ctx.lineTo(pts[v][0], snowY + 30);
       ctx.closePath();
       ctx.fill();
     }
+    ctx.restore();
   }
+  ctx.restore();
 }
 
 // Morro com retalhos de plantação: faixas de cores diferentes seguindo o
 // morro, linhas de plantio e cercas vivas (com arvorezinhas) entre elas
-const FIELD_COLORS = ['#d8bf5c', '#93bf58', '#b3cf68', '#a58ac8', '#a77d52', '#e0c873', '#7fb354'];
+// cores de plantação de verdade: tons de verde, trigo maduro e terra arada
+const FIELD_COLORS = ['#8fb85a', '#9cc265', '#7faa50', '#a8c46a', '#cdb868', '#c2ad5e', '#a99367', '#93b860'];
 
 function fieldHill(ctx, fn, base, rows, rand) {
   ctx.fillStyle = '#86b25a';
@@ -320,9 +390,12 @@ function village(ctx, x0, fn, rand) {
 }
 
 function drawFar(ctx, map, rand) {
-  // montanhas bem longe, azuladas pela distância
-  ridge(ctx, 400, [[-420, 190, 280], [60, 240, 320], [560, 200, 290], [1080, 250, 330], [1600, 210, 300], [2020, 190, 280]], ['#9db0d6', '#8a9cc6'], '#f4f1f4', rand);
-  ridge(ctx, 420, [[-200, 130, 230], [330, 150, 250], [820, 120, 220], [1350, 150, 250], [1860, 130, 230]], ['#86a3c4', '#7690b6'], null, rand);
+  // montanhas bem longe, azuladas pela distância (com neve nos picos)
+  range(ctx, 410, [[-800, 410], [-560, 240], [-420, 330], [-280, 270], [-120, 345], [60, 185], [260, 320], [430, 250], [600, 345], [800, 200], [980, 325], [1100, 265], [1260, 350], [1430, 195], [1650, 330], [1800, 255], [1950, 340], [2100, 410]],
+    { top: '#93a7d0', bottom: '#b9c6e2', shade: 'rgba(80,96,150,0.35)', line: 'rgba(90,105,160,0.25)', snow: '#f5f1f2', snowShade: 'rgba(170,185,225,0.6)' }, rand, 262);
+  // serra mais perto, sem neve, um pouco mais escura
+  range(ctx, 425, [[-800, 425], [-600, 335], [-430, 395], [-240, 320], [-40, 400], [180, 330], [380, 398], [560, 340], [760, 405], [960, 325], [1180, 400], [1380, 335], [1600, 400], [1820, 330], [2100, 425]],
+    { top: '#7f9cc0', bottom: '#a7bcd8', shade: 'rgba(60,80,130,0.3)', line: 'rgba(70,90,140,0.22)' }, rand);
   // bruma dourada no pé das montanhas
   const fog = ctx.createLinearGradient(0, 300, 0, 420);
   fog.addColorStop(0, 'rgba(255,226,186,0)');
