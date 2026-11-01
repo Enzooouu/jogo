@@ -27,7 +27,7 @@ export const LAKE = {
   blizzard: { first: 22, every: [18, 26], warn: 2.2, active: 4.5, push: 170, down: 700 },
   icicle: { first: 7, every: [4, 7], shake: 0.9, damage: 5, gravity: 1900, r: 8 },
   snow: { first: 5, every: [7, 11], max: 2, per: 3, w: 30, h: 16 },
-  snowball: { speed: 780, lift: -190, gravity: 1250, r: 9, kb: 360, angle: 0.4 },
+  snowball: { damage: 1, fireDamage: 3, speed: 780, lift: -190, gravity: 1250, r: 9, kb: 360, angle: 0.4 },
 };
 
 export class FrozenLake {
@@ -309,17 +309,18 @@ export class FrozenLake {
     }
   }
 
-  // Bola de neve acertou alguém: sempre 1 de dano, para qualquer
-  // personagem; em quem é de Água ela devolve 1 de vida
+  // Bola de neve acertou alguém: 1 de dano (3 no Fogo, que derrete com o
+  // frio); em quem é de Água ela devolve 1 de vida
   snowHit(owner, t, dir) {
     const g = this.game;
     const cfg = LAKE.snowball;
     const heal = t.element === 'agua';
-    const amount = heal ? -Math.min(1, t.damage) : 1;
+    const hurt = t.element === 'fogo' ? LAKE.snowball.fireDamage : LAKE.snowball.damage;
+    const amount = heal ? -Math.min(1, t.damage) : hurt;
     t.damage += amount;
     if (!heal) {
-      t.stats.damageTaken += 1;
-      owner.stats.damageDealt += 1;
+      t.stats.damageTaken += hurt;
+      owner.stats.damageDealt += hurt;
       owner.stats.hits++;
     }
     const kb = (cfg.kb + t.damage * 0.6) / (ELEMENTS[t.element].stats?.weight ?? 1);
@@ -332,6 +333,6 @@ export class FrozenLake {
     t.lungeTime = 0;
     t.lastHitBy = owner.id;
     t.lastHitTime = g.time;
-    g.emit('snowHit', { attacker: owner.id, target: t.id, heal, x: t.x + t.w / 2, y: t.y + t.h * 0.4 });
+    g.emit('snowHit', { attacker: owner.id, target: t.id, heal, damage: amount, x: t.x + t.w / 2, y: t.y + t.h * 0.4 });
   }
 }

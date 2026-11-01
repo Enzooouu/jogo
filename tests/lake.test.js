@@ -151,8 +151,8 @@ test('Lago: pingente treme, cai e machuca quem está embaixo', () => {
   assert.equal(g.lake.icicles.length, 0);
 });
 
-test('Lago: bola de neve dá 1 de dano em qualquer um e devolve 1 para quem é de Água', () => {
-  for (const [target, expected] of [['terra', 11], ['fogo', 11], ['agua', 9]]) {
+test('Lago: bola de neve dá 1 de dano, 3 no Fogo, e devolve 1 para quem é de Água', () => {
+  for (const [target, expected] of [['terra', 11], ['ar', 11], ['fogo', 13], ['agua', 9]]) {
     const g = newLake(['mortal', target]);
     const [me, other] = g.players;
     place(me, 500, 530);

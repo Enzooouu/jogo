@@ -1307,7 +1307,7 @@ export const GELO_ART = {
         break;
       case 'snowHit':
         P.burst(e.x, e.y, { count: 14, speed: 220, life: 0.5, size: 3.2, color: '#ffffff', gravity: 600 });
-        P.add({ type: 'text', text: e.heal ? '-1' : '1', x: e.x, y: e.y - 24, vy: -60, life: 0.7, size: 16, color: e.heal ? '#8dffb0' : '#fff3c4' });
+        P.add({ type: 'text', text: e.heal ? '-1' : `${e.damage}`, x: e.x, y: e.y - 24, vy: -60, life: 0.7, size: 16, color: e.heal ? '#8dffb0' : '#fff3c4' });
         break;
       default:
     }
