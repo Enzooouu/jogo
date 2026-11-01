@@ -114,7 +114,7 @@ function paintSky(ctx) {
 // Nuvens fofas: cada formato é desenhado uma vez numa tela pequena e depois
 // só copiado (sombra azulada embaixo, luz do sol vindo da direita)
 const cloudSprites = new Map();
-function cloudSprite(seed) {
+export function cloudSprite(seed) {
   if (cloudSprites.has(seed)) return cloudSprites.get(seed);
   const W = 320;
   const H = 150;
@@ -319,7 +319,7 @@ const BACK_HILL = (x) => 470 - Math.sin(x * 0.004 + 1.2) * 40 - Math.sin(x * 0.0
 const FRONT_HILL = (x) => 540 - Math.sin(x * 0.0055 + 3.4) * 30 - Math.sin(x * 0.0127 + 3.4) * 9;
 
 // Árvore redonda com sombra à esquerda e luz à direita
-function oak(ctx, x, y, s, rand, hue = 0) {
+export function oak(ctx, x, y, s, rand, hue = 0) {
   const greens = hue ? ['#4d8a5a', '#5f9c66', '#79b67a', '#9ccf91'] : ['#2f7a32', '#3f923a', '#5bb04a', '#8fd468'];
   ctx.fillStyle = '#5b3d22';
   ctx.beginPath();
@@ -358,7 +358,7 @@ function oak(ctx, x, y, s, rand, hue = 0) {
 }
 
 // Pinheiro em camadas
-function pine(ctx, x, y, s, hue = 0) {
+export function pine(ctx, x, y, s, hue = 0) {
   const greens = hue ? ['#3f7a5c', '#5a9a74'] : ['#22603a', '#33804a'];
   ctx.fillStyle = '#5b3d22';
   ctx.fillRect(x - 2 * s, y - 8 * s, 4 * s, 8 * s);
@@ -499,7 +499,7 @@ function tower(ctx, x, y) {
   ctx.fillRect(x - 1, y - 150, 2, 28);
 }
 
-function sheep(ctx, x, y, s, dir) {
+export function sheep(ctx, x, y, s, dir) {
   ctx.save();
   ctx.translate(x, y);
   ctx.scale(dir * s, s);

@@ -10,6 +10,7 @@
 import { roundRect, shadeHex, seeded } from './stage-util.js';
 import { PICO_ART } from './stage-pico.js';
 import { TREINO_ART } from './stage-treino.js';
+import { CAMPO_ART } from './stage-campo.js';
 import { GELO_ART } from './stage-gelo.js';
 import { COLISEU_ART } from './stage-coliseu.js';
 import { drawVolcano, volcanoAnimated, drawMidLava, midLavaAnimated } from './volcano.js';
@@ -39,7 +40,8 @@ export class StageRenderer {
     this.scale = 0;
     // cada mapa tem o seu cenário; os perigos são desenhados igual em todos
     const ARTS = { treino: TREINO_ART, gelo: GELO_ART, coliseu: COLISEU_ART };
-    this.art = ARTS[map.art] ?? (map.id === 'pico' ? PICO_ART : CALDEIRA_ART);
+    // o Campo Aberto usa o campo do treino, mas com um fundo só dele
+    this.art = map.id === 'campo' ? CAMPO_ART : ARTS[map.art] ?? (map.id === 'pico' ? PICO_ART : CALDEIRA_ART);
     // pedaço do mundo guardado em imagem (o cenário pode pedir outro)
     this.terrainRect = this.art.terrainRect ?? { x: 60, y: -420, w: 1160, h: 1400 };
     this.setScale(scale);
