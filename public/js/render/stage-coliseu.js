@@ -1133,6 +1133,7 @@ function fosso(ctx, floor, rand) {
     // pedra do topo do arco
     ctx.fillStyle = '#f2d4a0';
     ctx.fillRect(gx - 8, gy - 10, 16, 14);
+    gateLedge(ctx, gx, gy + h);
   }
   // suportes das tochas entre os portões (o fogo é animado em front)
   for (const tx of fossoTorches(floor)) {
@@ -1180,6 +1181,55 @@ function fossoSprite(floor) {
   fosso(ctx, floor, seeded(77));
   FOSSO_SPRITE = { floor, rect, canvas };
   return FOSSO_SPRITE;
+}
+
+// Sacada de pedra embaixo de cada portão: o chão onde as feras saíam, com
+// mãos-francesas (suportes em curva) presas na parede
+function gateLedge(ctx, gx, y) {
+  const w = 160;
+  const x0 = gx - w / 2;
+  ctx.strokeStyle = INK;
+  ctx.lineWidth = 2;
+  // suportes em curva
+  for (const sx of [x0 + 18, gx - 10, x0 + w - 38]) {
+    const g = ctx.createLinearGradient(sx, 0, sx + 20, 0);
+    g.addColorStop(0, '#8a6038');
+    g.addColorStop(1, '#5a3a1e');
+    ctx.fillStyle = g;
+    ctx.beginPath();
+    ctx.moveTo(sx, y + 18);
+    ctx.lineTo(sx + 20, y + 18);
+    ctx.lineTo(sx + 20, y + 30);
+    ctx.quadraticCurveTo(sx + 16, y + 62, sx + 4, y + 70);
+    ctx.lineTo(sx, y + 70);
+    ctx.closePath();
+    ctx.fill();
+    ctx.stroke();
+  }
+  // laje com moldura
+  const slab = ctx.createLinearGradient(0, y, 0, y + 20);
+  slab.addColorStop(0, '#e8c48c');
+  slab.addColorStop(1, '#a8804e');
+  ctx.fillStyle = slab;
+  ctx.fillRect(x0, y, w, 20);
+  ctx.strokeRect(x0, y, w, 20);
+  ctx.fillStyle = '#f2d8a8';
+  ctx.fillRect(x0 - 6, y - 4, w + 12, 7);
+  ctx.strokeRect(x0 - 6, y - 4, w + 12, 7);
+  ctx.strokeStyle = 'rgba(70,40,16,0.5)';
+  ctx.lineWidth = 1.2;
+  for (let x = x0 + 32; x < x0 + w; x += 32) {
+    ctx.beginPath();
+    ctx.moveTo(x, y + 3);
+    ctx.lineTo(x, y + 20);
+    ctx.stroke();
+  }
+  // sombra embaixo da sacada
+  const shade = ctx.createLinearGradient(0, y + 20, 0, y + 70);
+  shade.addColorStop(0, 'rgba(10,4,0,0.45)');
+  shade.addColorStop(1, 'rgba(10,4,0,0)');
+  ctx.fillStyle = shade;
+  ctx.fillRect(x0, y + 20, w, 50);
 }
 
 // Pilares que seguram o palco (desenhados a cada quadro: caem na morte súbita)
