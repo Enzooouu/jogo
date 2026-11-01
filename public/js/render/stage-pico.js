@@ -897,23 +897,57 @@ function decorStatic(ctx, d) {
       ctx.lineWidth = 2;
       ctx.stroke();
       break;
-    case 'santuario':
-      // pedra baixa com o símbolo do Ar
-      ctx.fillStyle = '#c4a6b0';
-      roundRect(ctx, d.x - 16, d.y - 22, 32, 22, 6);
+    case 'santuario': {
+      // lanterna de pedra do vento: base, coluna, caixa da luz e telhadinho
+      const x = d.x;
+      const y = d.y;
+      const stone = (sx, sy, w, h) => {
+        const g = ctx.createLinearGradient(sx, 0, sx + w, 0);
+        g.addColorStop(0, '#9a8496');
+        g.addColorStop(0.6, '#c9b3bc');
+        g.addColorStop(1, '#e4cfd2');
+        ctx.fillStyle = g;
+        roundRect(ctx, sx, sy, w, h, 2);
+        ctx.fill();
+        ctx.strokeStyle = INK;
+        ctx.lineWidth = 2;
+        ctx.stroke();
+      };
+      stone(x - 15, y - 7, 30, 7);
+      stone(x - 5, y - 26, 10, 19);
+      stone(x - 13, y - 31, 26, 5);
+      // caixa da luz (a luz é animada)
+      stone(x - 10, y - 47, 20, 16);
+      ctx.fillStyle = '#2a3a44';
+      ctx.fillRect(x - 6, y - 44, 12, 10);
+      // telhadinho curvo com bolinha em cima
+      ctx.fillStyle = '#6d5a7c';
+      ctx.beginPath();
+      ctx.moveTo(x - 17, y - 46);
+      ctx.quadraticCurveTo(x - 8, y - 50, x - 6, y - 58);
+      ctx.lineTo(x + 6, y - 58);
+      ctx.quadraticCurveTo(x + 8, y - 50, x + 17, y - 46);
+      ctx.closePath();
       ctx.fill();
       ctx.strokeStyle = INK;
       ctx.lineWidth = 2;
       ctx.stroke();
-      ctx.strokeStyle = '#4fb8a8';
-      ctx.lineWidth = 2;
+      ctx.fillStyle = '#c9b3bc';
       ctx.beginPath();
-      for (const dy of [-16, -11, -6]) {
-        ctx.moveTo(d.x - 8, d.y + dy);
-        ctx.quadraticCurveTo(d.x, d.y + dy - 4, d.x + 8, d.y + dy);
-      }
+      ctx.arc(x, y - 61, 3.5, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.stroke();
+      // símbolo do vento entalhado na coluna
+      ctx.strokeStyle = 'rgba(60,40,70,0.55)';
+      ctx.lineWidth = 1.2;
+      ctx.beginPath();
+      ctx.moveTo(x - 3, y - 19);
+      ctx.quadraticCurveTo(x, y - 22, x + 3, y - 19);
+      ctx.moveTo(x - 3, y - 14);
+      ctx.quadraticCurveTo(x, y - 17, x + 3, y - 14);
       ctx.stroke();
       break;
+    }
     default:
       break;
   }
@@ -950,11 +984,30 @@ function decorAnimated(ctx, d, time) {
       break;
     }
     case 'santuario': {
+      // luz do vento dentro da lanterna e folhinhas girando em volta
+      const x = d.x;
+      const y = d.y;
+      const f = 0.8 + Math.sin(time * 3) * 0.15 + Math.sin(time * 7.3) * 0.05;
+      ctx.fillStyle = `rgba(170,255,235,${f})`;
+      ctx.fillRect(x - 6, y - 44, 12, 10);
       ctx.globalCompositeOperation = 'lighter';
-      ctx.globalAlpha = 0.35 + Math.sin(time * 2) * 0.15;
-      ctx.drawImage(glowSprite('120,230,210'), d.x - 40, d.y - 52, 80, 60);
+      ctx.globalAlpha = 0.3 * f;
+      ctx.drawImage(glowSprite('120,230,210'), x - 30, y - 62, 60, 46);
       ctx.globalAlpha = 1;
       ctx.globalCompositeOperation = 'source-over';
+      for (let k = 0; k < 3; k++) {
+        const a = time * 2.2 + (k * Math.PI * 2) / 3;
+        const lx = x + Math.cos(a) * 20;
+        const ly = y - 38 + Math.sin(a) * 6;
+        ctx.fillStyle = k % 2 ? '#9fdc6e' : '#7fd0c6';
+        ctx.save();
+        ctx.translate(lx, ly);
+        ctx.rotate(a * 2);
+        ctx.beginPath();
+        ctx.ellipse(0, 0, 3.2, 1.5, 0, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.restore();
+      }
       break;
     }
     default:
