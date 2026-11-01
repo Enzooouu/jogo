@@ -37,10 +37,11 @@ export class StageRenderer {
   constructor(map, scale = 1) {
     this.map = map;
     this.scale = 0;
-    this.terrainRect = { x: 60, y: -420, w: 1160, h: 1400 };
     // cada mapa tem o seu cenário; os perigos são desenhados igual em todos
     const ARTS = { treino: TREINO_ART, gelo: GELO_ART, coliseu: COLISEU_ART };
     this.art = ARTS[map.art] ?? (map.id === 'pico' ? PICO_ART : CALDEIRA_ART);
+    // pedaço do mundo guardado em imagem (o cenário pode pedir outro)
+    this.terrainRect = this.art.terrainRect ?? { x: 60, y: -420, w: 1160, h: 1400 };
     this.setScale(scale);
   }
 

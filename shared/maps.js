@@ -196,9 +196,10 @@ export const MAPS = {
     height: 720,
     blast: { left: -260, right: 1540, top: -560, bottom: 1000 },
     solids: [
-      { x: 90, y: 530, w: 240, h: 190 },                // margem de neve (esquerda)
-      { x: 330, y: 530, w: 620, h: 190, ice: true },    // gelo (lago inteiro congelado)
-      { x: 950, y: 530, w: 240, h: 190 },               // margem de neve (direita)
+      // vão até bem embaixo (y 1700): ninguém passa por baixo do mapa
+      { x: 90, y: 530, w: 240, h: 1170 },               // margem de neve (esquerda)
+      { x: 330, y: 530, w: 620, h: 1170, ice: true },   // gelo (lago inteiro congelado)
+      { x: 950, y: 530, w: 240, h: 1170 },              // margem de neve (direita)
     ],
     platforms: [
       { x: 230, y: 395, w: 200, ice: true },

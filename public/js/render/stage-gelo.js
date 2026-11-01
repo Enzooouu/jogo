@@ -15,7 +15,8 @@ import { roundRect, seeded } from './stage-util.js';
 const VIEW_W = 1280;
 const VIEW_H = 720;
 const MOON = { x: 1060, y: 105, r: 34 };
-const DEEP = 2600; // até onde a terra e o gelo descem
+const DEEP = 2600; // até onde a terra e o gelo descem (desenho)
+const CACHE_BOTTOM = 1700; // fim do pedaço guardado em imagem
 const INK = '#0a1020';
 const SNOW = { light: '#ffffff', mid: '#e3eefc', shade: '#b4c8e8', deep: '#8aa4cc' };
 const ICE = { top: '#d8f6ff', light: '#a8e4f7', mid: '#5fb4dc', deep: '#1f5a8a', dark: '#0e2c4e' };
@@ -353,7 +354,7 @@ function icicle(ctx, x, y, w, len) {
 // Margem: barranco de pedra congelada em camadas, pedras com geada e uma
 // camada grossa de neve em cima (com sombra azulada por baixo)
 function snowBank(ctx, s, rand) {
-  const bottom = 1000;
+  const bottom = CACHE_BOTTOM;
   const g = ctx.createLinearGradient(0, s.y, 0, s.y + 300);
   g.addColorStop(0, '#4b4f6e');
   g.addColorStop(0.5, '#2e3049');
@@ -365,7 +366,7 @@ function snowBank(ctx, s, rand) {
   ctx.rect(s.x, s.y, s.w, bottom - s.y);
   ctx.clip();
   // camadas de rocha (faixas onduladas)
-  for (let k = 0; k < 5; k++) {
+  for (let k = 0; k < 22; k++) {
     const y0 = s.y + 46 + k * 52 + rand() * 10;
     ctx.fillStyle = k % 2 ? 'rgba(120,140,190,0.10)' : 'rgba(10,10,25,0.18)';
     ctx.beginPath();
@@ -376,9 +377,9 @@ function snowBank(ctx, s, rand) {
     ctx.fill();
   }
   // pedras arredondadas, iluminadas pela lua por cima
-  for (let i = 0; i < s.w / 22; i++) {
+  for (let i = 0; i < s.w / 5; i++) {
     const x = s.x + 10 + rand() * (s.w - 20);
-    const y = s.y + 40 + rand() * 230;
+    const y = s.y + 40 + rand() * (bottom - s.y - 60);
     const rx = 6 + rand() * 12;
     const ry = rx * (0.55 + rand() * 0.25);
     ctx.fillStyle = rand() < 0.5 ? '#3d4160' : '#353855';
@@ -673,12 +674,27 @@ const FROZEN = [
   ['espinha', 0.17, 150, 0.25, 0.75],
 ];
 
-function drawFrozen(ctx, s) {
-  for (const [type, fx, depth, rot, sc, c] of FROZEN) {
+// o mesmo tanto de coisas em cada "andar" do gelo, até lá embaixo (cada
+// andar espelhado e deslocado para não parecer repetido)
+function drawFrozen(ctx, s, bottom) {
+  for (let floor = 0; s.y + floor * 170 < bottom; floor++) {
+    for (const [type, fx0, depth0, rot0, sc, c] of FROZEN) {
+      const flip = floor % 2 === 1;
+      const fx = flip ? 1 - fx0 : (fx0 + floor * 0.13) % 1;
+      const depth = depth0 + floor * 170;
+      const rot = flip ? -rot0 + Math.PI : rot0;
+      if (s.y + depth > bottom - 20) continue;
+      drawFrozenOne(ctx, s, type, fx, depth, rot, sc, c, floor);
+    }
+  }
+}
+
+function drawFrozenOne(ctx, s, type, fx, depth, rot, sc, c, floor) {
+  {
     ctx.save();
     ctx.translate(s.x + 24 + fx * (s.w - 48), s.y + depth);
     ctx.rotate(rot);
-    ctx.globalAlpha = Math.max(0.35, 0.85 - depth / 260);
+    ctx.globalAlpha = floor === 0 ? Math.max(0.35, 0.85 - depth / 260) : 0.42;
     if (type === 'peixe') frozenFish(ctx, sc, FISH_COLORS[c]);
     else if (type === 'espinha') fishBones(ctx, sc);
     else if (type === 'amonite') ammonite(ctx, sc);
@@ -708,15 +724,16 @@ function drawFrozen(ctx, s) {
 // Gelo do lago: placa grossa e transparente, com coisas presas dentro,
 // camadas, bolhas, rachaduras e o brilho liso em cima
 function iceSheet(ctx, s, rand) {
-  const bottom = 1000;
+  const bottom = CACHE_BOTTOM;
   ctx.save();
   ctx.beginPath();
   ctx.rect(s.x, s.y, s.w, bottom - s.y);
   ctx.clip();
-  const g = ctx.createLinearGradient(0, s.y, 0, s.y + 230);
+  const g = ctx.createLinearGradient(0, s.y, 0, bottom);
   g.addColorStop(0, ICE.light);
-  g.addColorStop(0.12, '#7cc8ea');
-  g.addColorStop(0.45, ICE.deep);
+  g.addColorStop(0.03, '#7cc8ea');
+  g.addColorStop(0.15, ICE.deep);
+  g.addColorStop(0.5, '#174878');
   g.addColorStop(1, ICE.dark);
   ctx.fillStyle = g;
   ctx.fillRect(s.x, s.y, s.w, bottom - s.y);
@@ -727,16 +744,18 @@ function iceSheet(ctx, s, rand) {
   ctx.fillStyle = moon;
   ctx.fillRect(s.x, s.y, s.w, 300);
   // coisas presas no gelo, com uma camada de gelo azulado por cima
-  drawFrozen(ctx, s);
+  drawFrozen(ctx, s, bottom);
   const veil = ctx.createLinearGradient(0, s.y, 0, s.y + 200);
   veil.addColorStop(0, 'rgba(150,215,240,0.18)');
-  veil.addColorStop(1, 'rgba(20,70,120,0.4)');
+  veil.addColorStop(1, 'rgba(20,70,120,0.3)');
   ctx.fillStyle = veil;
-  ctx.fillRect(s.x, s.y, s.w, 220);
+  ctx.fillRect(s.x, s.y, s.w, 200);
+  ctx.fillStyle = 'rgba(20,70,120,0.3)';
+  ctx.fillRect(s.x, s.y + 200, s.w, bottom - s.y - 200);
   // camadas do congelamento (linhas finas e onduladas)
   ctx.strokeStyle = 'rgba(200,240,255,0.16)';
   ctx.lineWidth = 1;
-  for (let k = 0; k < 5; k++) {
+  for (let k = 0; k < 34; k++) {
     const y0 = s.y + 26 + k * 34;
     ctx.beginPath();
     for (let x = s.x; x <= s.x + s.w; x += 12) ctx.lineTo(x, y0 + Math.sin(x * 0.03 + k * 1.7) * 3);
@@ -754,9 +773,9 @@ function iceSheet(ctx, s, rand) {
     ctx.fill();
   }
   // bolhas presas no gelo
-  for (let i = 0; i < s.w / 10; i++) {
+  for (let i = 0; i < s.w / 2; i++) {
     const x = s.x + rand() * s.w;
-    const y = s.y + 16 + rand() * 150;
+    const y = s.y + 16 + rand() * (bottom - s.y - 30);
     const r = 0.8 + rand() * 2.6;
     ctx.strokeStyle = 'rgba(230,250,255,0.55)';
     ctx.lineWidth = 0.8;
@@ -1043,7 +1062,12 @@ function drawHole(ctx, c, y, time) {
   g.addColorStop(0, '#0d3558');
   g.addColorStop(1, '#03101f');
   ctx.fillStyle = g;
-  ctx.fillRect(c.x, y - 4, c.w, 980 - y);
+  ctx.fillRect(c.x, y - 4, c.w, 60);
+  const fade = ctx.createLinearGradient(0, y + 56, 0, y + 90);
+  fade.addColorStop(0, '#071a30');
+  fade.addColorStop(1, 'rgba(7,26,48,0)');
+  ctx.fillStyle = fade;
+  ctx.fillRect(c.x, y + 56, c.w, 34);
   ctx.fillStyle = 'rgba(220,245,255,0.95)';
   for (const side of [0, 1]) {
     const x0 = side ? c.x + c.w : c.x;
@@ -1217,6 +1241,8 @@ export const GELO_ART = {
   mid: drawMid,
   midAnimated,
   terrain: drawTerrain,
+  // guarda em imagem do alto das margens (pinheiros) até y 1700
+  terrainRect: { x: 60, y: 300, w: 1160, h: CACHE_BOTTOM - 300 },
   setGame(game) {
     GAME = game;
   },
@@ -1225,15 +1251,15 @@ export const GELO_ART = {
   behind(ctx, map) {
     for (const s of map.solids) {
       ctx.fillStyle = s.ice ? ICE.dark : '#1b1b2c';
-      ctx.fillRect(s.x, 970, s.w, DEEP - 970);
+      ctx.fillRect(s.x, CACHE_BOTTOM - 10, s.w, DEEP - CACHE_BOTTOM + 10);
     }
     ctx.strokeStyle = INK;
     ctx.lineWidth = 2.5;
     ctx.beginPath();
     for (const s of map.solids) {
-      ctx.moveTo(s.x, 970);
+      ctx.moveTo(s.x, CACHE_BOTTOM - 10);
       ctx.lineTo(s.x, DEEP);
-      ctx.moveTo(s.x + s.w, 970);
+      ctx.moveTo(s.x + s.w, CACHE_BOTTOM - 10);
       ctx.lineTo(s.x + s.w, DEEP);
     }
     ctx.stroke();
