@@ -200,8 +200,9 @@ function skyAnimated(ctx, time) {
 
 // ================================================================ fundo distante
 
-// Montanha: contorno serrilhado, lado da lua (esquerda) claro, lado de
-// sombra azulado, cristas e canaletas de neve descendo do pico
+// Montanha: rocha azulada embaixo e neve só da metade para cima (com a
+// borda da neve em zigue-zague, escorrendo pelas canaletas). Lado da lua
+// (esquerda) claro, lado de sombra azulado, cristas descendo do pico.
 function mountain(ctx, x, base, h, w, tone, rand) {
   const pts = [];
   const steps = 10;
@@ -220,16 +221,41 @@ function mountain(ctx, x, base, h, w, tone, rand) {
     ctx.lineTo(x + w, base + 500);
     ctx.closePath();
   };
+  // rocha
   const body = ctx.createLinearGradient(0, base - h, 0, base + 60);
-  body.addColorStop(0, tone.snow);
-  body.addColorStop(0.45, tone.lit);
-  body.addColorStop(1, tone.base);
+  body.addColorStop(0, tone.rockTop);
+  body.addColorStop(1, tone.rock);
   ctx.fillStyle = body;
   outline();
   ctx.fill();
   ctx.save();
   outline();
   ctx.clip();
+  // faixas e manchas na rocha
+  ctx.strokeStyle = tone.ridge;
+  ctx.lineWidth = 1.2;
+  for (let k = 0; k < 9; k++) {
+    const sx = x - w * 0.8 + rand() * w * 1.6;
+    const sy = base - h * (0.05 + rand() * 0.4);
+    ctx.beginPath();
+    ctx.moveTo(sx, sy);
+    ctx.lineTo(sx + (rand() - 0.5) * 30, sy + h * 0.15);
+    ctx.stroke();
+  }
+  // neve: do pico até mais ou menos a metade, borda em zigue-zague
+  const snowLine = base - h * (0.48 + rand() * 0.06);
+  ctx.fillStyle = tone.snow;
+  ctx.beginPath();
+  ctx.moveTo(x - w * 1.1, snowLine - 400);
+  ctx.lineTo(x + w * 1.1, snowLine - 400);
+  ctx.lineTo(x + w * 1.1, snowLine);
+  for (let k = 0; k <= 16; k++) {
+    const px = x + w * 1.1 - (k / 16) * w * 2.2;
+    const down = k % 2 ? h * (0.05 + rand() * 0.1) : -h * (0.02 + rand() * 0.04);
+    ctx.lineTo(px + (rand() - 0.5) * 8, snowLine + down);
+  }
+  ctx.closePath();
+  ctx.fill();
   // lado de sombra (direita da crista principal)
   ctx.fillStyle = tone.shade;
   ctx.beginPath();
@@ -257,17 +283,14 @@ function mountain(ctx, x, base, h, w, tone, rand) {
     }
     ctx.stroke();
   }
-  // canaletas de neve (riscos claros no lado da lua)
-  ctx.strokeStyle = tone.gully;
-  ctx.lineWidth = 2;
-  for (let g = 0; g < 7; g++) {
-    const gx = x - w * 0.5 + rand() * w * 0.6;
-    const gy = base - h * (0.45 + rand() * 0.35);
-    ctx.beginPath();
-    ctx.moveTo(gx, gy);
-    ctx.quadraticCurveTo(gx - 6, gy + h * 0.12, gx - 2 + (rand() - 0.5) * 10, gy + h * 0.28);
-    ctx.stroke();
-  }
+  // brilho da lua na neve do lado esquerdo do pico
+  ctx.fillStyle = tone.glint;
+  ctx.beginPath();
+  ctx.moveTo(x, base - h);
+  ctx.lineTo(x - w * 0.18, base - h * 0.72);
+  ctx.lineTo(x - w * 0.05, base - h * 0.78);
+  ctx.closePath();
+  ctx.fill();
   ctx.restore();
 }
 
@@ -282,8 +305,8 @@ function pineSil(ctx, x, y, h) {
 }
 
 const FAR_TONES = [
-  { base: '#3a4c7a', lit: '#5d71a3', snow: '#a9b9dc', shade: 'rgba(20,30,70,0.45)', ridge: 'rgba(30,42,90,0.3)', gully: 'rgba(220,232,255,0.2)' },
-  { base: '#26365c', lit: '#4c6194', snow: '#c3d1ee', shade: 'rgba(10,18,50,0.55)', ridge: 'rgba(14,22,60,0.4)', gully: 'rgba(230,240,255,0.3)' },
+  { rock: '#2d3b62', rockTop: '#3f5080', snow: '#a8b8db', glint: 'rgba(235,242,255,0.25)', shade: 'rgba(16,24,60,0.42)', ridge: 'rgba(20,30,70,0.35)' },
+  { rock: '#1c2744', rockTop: '#2f3e66', snow: '#d4def4', glint: 'rgba(255,255,255,0.35)', shade: 'rgba(8,14,44,0.5)', ridge: 'rgba(10,16,46,0.45)' },
 ];
 
 function drawFar(ctx, map, rand) {
