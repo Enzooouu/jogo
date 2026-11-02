@@ -13,6 +13,7 @@ import { api } from './api.js';
 import { renderAccountBox, initAuthScreen, setAuthMode, focusAuth, loadProfile } from './screens/account.js';
 import { DemoArena } from './screens/demo.js';
 import { initHomeMenu } from './screens/home-menu.js';
+import { MapPicker, RANDOM_MAP, pickRandomMap } from './screens/maps.js';
 import { initControls } from './screens/controls.js';
 import { TutorialScreen } from './screens/tutorial.js';
 import { currentBindings, actionOf } from './input/bindings.js';
@@ -27,7 +28,7 @@ const state = {
   teamSize: Number(loadPref('tamanho', '2')) || 2,
   mode: 'times',
   difficulty: loadPref('dificuldade', 'normal'),
-  mapId: loadPref('mapa', 'caldeira'),
+  mapChoice: loadPref('mapa', RANDOM_MAP), // id do mapa ou 'aleatorio'
   demo: loadPref('demo', '1') === '1',
   admin: loadPref('adm', '0') === '1', // modo ADM (testes): golpes dão 999%
   runner: null,
@@ -42,10 +43,18 @@ const demo = new DemoArena($('#menu-bg'));
 const controls = initControls($('#controls-panel'));
 const versus = new VersusScreen($('#versus-canvas'));
 let homeMenu = null;
+// tela de mapas: ao continuar, guarda a escolha e vai para o versus
+const mapPicker = new MapPicker($('#screen-maps'), {
+  onContinue(id) {
+    state.mapChoice = id;
+    savePref('mapa', id);
+    goVersus();
+  },
+});
 
 // ------------------------------------------------------------ telas
 
-const SCREENS = ['home', 'mode', 'cards', 'versus', 'game', 'tutorial', 'result', 'auth', 'profile'];
+const SCREENS = ['home', 'mode', 'cards', 'maps', 'versus', 'game', 'tutorial', 'result', 'auth', 'profile'];
 const WITH_DEMO = new Set(['home', 'mode', 'cards', 'auth', 'profile', 'result']);
 
 export function show(name) {
@@ -61,6 +70,8 @@ export function show(name) {
   if (name === 'cards') startCardAnimation();
   else stopCardAnimation();
   if (name === 'mode') drawModeTiles();
+  if (name === 'maps') mapPicker.open(state.mapChoice);
+  else mapPicker.stop();
   closePanels();
 }
 
@@ -188,72 +199,142 @@ function chooseMode(teamSize, mode = 'times') {
 
 // ------------------------------------------------------------ passo 2: cartas
 
+// carta "?": sorteia o elemento na hora da partida
+const RANDOM_ELEMENT = 'aleatorio';
+const WEAPON_EFFECT = {
+  fogo: 'Armas queimam o alvo',
+  agua: 'Armas deixam o alvo lento',
+  terra: 'Armas atordoam o alvo',
+  ar: 'Tornado puxa os inimigos',
+  mortal: 'Bate 40% mais forte',
+};
+
+// nível de 1 a 5 de cada atributo (3 = normal)
+function statLevel(v, step) {
+  return Math.max(1, Math.min(5, Math.round(3 + (v - 1) / step)));
+}
+
 function buildCards() {
   const list = $('#card-list');
   list.innerHTML = '';
-  for (const el of Object.values(ELEMENTS)) {
-    const reactions = HAZARD_REACTION[el.id] ?? {};
-    const imune = Object.keys(reactions).filter((h) => reactions[h] === 'imune').map((h) => HAZARDS[h].name).join(', ');
-    const morre = Object.keys(reactions).filter((h) => reactions[h] === 'morre').map((h) => HAZARDS[h].name).join(', ');
-    const machuca = Object.keys(reactions).filter((h) => reactions[h] === 'dano').map((h) => HAZARDS[h].name).join(', ');
-    const rows = [['Imune', imune || '—'], ['Morre', morre || '—']];
-    if (machuca) rows.push(['Machuca', machuca]);
-    for (const id of Object.keys(WEAPONS)) {
-      if (WEAPONS[id].byElement?.[el.id]) rows.push([WEAPONS[id].name, weaponProfile(id, el.id).name]);
-    }
-    // sem elemento: armas padrão e dano extra
-    if (el.stats.damage && el.stats.damage !== 1) {
-      rows.push(['Armas', 'Padrão (sem efeito)'], ['Dano', `+${Math.round((el.stats.damage - 1) * 100)}%`]);
-    }
+  const make = (id, name, color, light, dark) => {
     const card = document.createElement('button');
     card.type = 'button';
     card.className = 'el-card';
-    card.dataset.element = el.id;
-    card.disabled = !el.enabled;
-    card.style.setProperty('--c1', el.color);
-    card.style.setProperty('--c2', el.dark);
-    card.innerHTML = `<div class="top"><span class="n"></span>${el.enabled ? '<i class="sel" hidden>SELECIONADO</i>' : '<i>EM BREVE</i>'}</div>
-      <canvas aria-hidden="true"></canvas><dl></dl><p class="desc"></p>`;
-    card.querySelector('.desc').textContent = el.description;
-    card.querySelector('.n').textContent = el.name.toUpperCase();
-    const dl = card.querySelector('dl');
-    for (const [k, v] of rows) {
-      const dt = document.createElement('dt');
-      dt.textContent = k;
-      const dd = document.createElement('dd');
-      dd.textContent = v;
-      dl.append(dt, dd);
-    }
-    card.addEventListener('click', () => selectElement(el.id));
-    card.addEventListener('dblclick', () => el.enabled && goVersus());
+    card.dataset.element = id;
+    card.style.setProperty('--c1', color);
+    card.style.setProperty('--c2', dark);
+    card.style.setProperty('--c3', light);
+    card.innerHTML = `<i class="sel">SELECIONADO</i><div class="stage"><canvas aria-hidden="true"></canvas></div>
+      <div class="info"><span class="n"></span><span class="tl"></span><div class="bars"></div><ul class="perks"></ul></div>`;
+    card.querySelector('.n').textContent = name;
+    card.addEventListener('click', () => selectElement(id));
+    card.addEventListener('dblclick', () => show('maps'));
     list.appendChild(card);
+    return card;
+  };
+  // carta aleatória primeiro
+  const rnd = make(RANDOM_ELEMENT, 'ALEATÓRIO', '#c77dff', '#ffffff', '#3a1e5c');
+  rnd.classList.add('random');
+  rnd.querySelector('.tl').textContent = 'Sorteia um elemento a cada partida';
+  rnd.querySelector('.bars').innerHTML = '<p class="rnd-note">Fogo, Água, Terra, Ar ou Mortal: você só descobre na hora da luta.</p>';
+  for (const el of Object.values(ELEMENTS)) {
+    if (!el.enabled) continue;
+    const card = make(el.id, el.name.toUpperCase(), el.color, el.light, el.dark);
+    card.querySelector('.tl').textContent = el.description.split('.')[0] + '.';
+    const st = { speed: 1, jump: 1, weight: 1, damage: 1, ...el.stats };
+    const bars = card.querySelector('.bars');
+    for (const [label, level] of [
+      ['Velocidade', statLevel(st.speed, 0.07)], ['Pulo', statLevel(st.jump, 0.07)],
+      ['Peso', statLevel(st.weight, 0.06)], ['Força', statLevel(st.damage, 0.18)],
+    ]) {
+      const row = document.createElement('div');
+      row.className = 'bar';
+      row.innerHTML = `<span></span><b>${'<i></i>'.repeat(5)}</b>`;
+      row.querySelector('span').textContent = label;
+      row.querySelectorAll('i').forEach((seg, k) => seg.classList.toggle('on', k < level));
+      bars.appendChild(row);
+    }
+    const reactions = HAZARD_REACTION[el.id] ?? {};
+    const names = (kind) => Object.keys(reactions).filter((h) => reactions[h] === kind).map((h) => HAZARDS[h].name).join(', ');
+    const perks = card.querySelector('.perks');
+    for (const [cls, text] of [['good', names('imune') && `Imune: ${names('imune')}`], ['bad', names('morre') && `Morre: ${names('morre')}`], ['mid', names('dano') && `Machuca: ${names('dano')}`], ['fx', WEAPON_EFFECT[el.id]]]) {
+      if (!text) continue;
+      const li = document.createElement('li');
+      li.className = cls;
+      li.textContent = text;
+      perks.appendChild(li);
+    }
   }
-  selectElement(ELEMENTS[state.element]?.enabled ? state.element : 'fogo');
+  const start = state.element === RANDOM_ELEMENT || ELEMENTS[state.element]?.enabled ? state.element : 'fogo';
+  selectElement(start);
+  // ← → trocam a carta, Enter continua
+  window.addEventListener('keydown', (e) => {
+    if (state.screen !== 'cards') return;
+    const cards = [...document.querySelectorAll('.el-card')];
+    const i = cards.findIndex((c) => c.dataset.element === state.element);
+    if (e.code === 'ArrowRight' || e.code === 'ArrowLeft') {
+      e.preventDefault();
+      const next = cards[(i + (e.code === 'ArrowRight' ? 1 : -1) + cards.length) % cards.length];
+      selectElement(next.dataset.element);
+      next.focus({ preventScroll: true });
+    } else if (e.code === 'Enter' && !(e.target instanceof HTMLButtonElement && !e.target.classList.contains('el-card'))) {
+      e.preventDefault();
+      show('maps');
+    }
+  });
 }
 
 function selectElement(id) {
   state.element = id;
   savePref('elemento', id);
-  for (const card of document.querySelectorAll('.el-card')) {
-    const on = card.dataset.element === id;
-    card.classList.toggle('on', on);
-    const sel = card.querySelector('.sel');
-    if (sel) sel.hidden = !on;
-  }
+  for (const card of document.querySelectorAll('.el-card')) card.classList.toggle('on', card.dataset.element === id);
 }
 
 let cardFrame = null;
 function startCardAnimation() {
   if (cardFrame) return;
   const t0 = performance.now();
+  const order = ['fogo', 'agua', 'terra', 'ar', 'mortal'];
   const loop = (now) => {
     const t = (now - t0) / 1000 + 1;
     for (const card of document.querySelectorAll('.el-card')) {
       const { ctx, w, h } = fitCanvas(card.querySelector('canvas'));
       const on = card.classList.contains('on');
-      const el = card.dataset.element;
-      const weapon = { fogo: 'espada', agua: 'cajado', terra: 'espada', ar: 'cajado', mortal: 'lanca' }[el];
-      drawPortrait(ctx, el, w / 2, h - 10, Math.min(1.85, h / 94), {
+      const id = card.dataset.element;
+      // brilho redondo embaixo do lutador (pedestal)
+      const glow = ctx.createRadialGradient(w / 2, h - 14, 4, w / 2, h - 14, w * 0.5);
+      glow.addColorStop(0, on ? 'rgba(255,255,255,0.28)' : 'rgba(255,255,255,0.12)');
+      glow.addColorStop(1, 'rgba(255,255,255,0)');
+      ctx.fillStyle = glow;
+      ctx.beginPath();
+      ctx.ellipse(w / 2, h - 12, w * 0.42, 14, 0, 0, Math.PI * 2);
+      ctx.fill();
+      if (id === RANDOM_ELEMENT) {
+        // silhueta trocando de elemento por trás do "?"
+        const el = order[Math.floor(t * (on ? 3 : 1)) % order.length];
+        ctx.save();
+        ctx.globalAlpha = 0.3;
+        drawPortrait(ctx, el, w / 2, h - 10, Math.min(1.85, h / 94), { time: t });
+        ctx.restore();
+        const s = Math.min(w, h);
+        ctx.font = `italic 900 ${Math.round(s * 0.62)}px system-ui, sans-serif`;
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        const bob = Math.sin(t * 2.5) * 4;
+        ctx.lineWidth = 8;
+        ctx.strokeStyle = 'rgba(20,8,40,0.7)';
+        ctx.strokeText('?', w / 2, h * 0.48 + bob);
+        const g = ctx.createLinearGradient(0, h * 0.2, 0, h * 0.75);
+        g.addColorStop(0, '#ffd25a');
+        g.addColorStop(0.5, '#ff6a1f');
+        g.addColorStop(1, '#c77dff');
+        ctx.fillStyle = g;
+        ctx.fillText('?', w / 2, h * 0.48 + bob);
+        continue;
+      }
+      const weapon = { fogo: 'espada', agua: 'cajado', terra: 'espada', ar: 'cajado', mortal: 'lanca' }[id];
+      drawPortrait(ctx, id, w / 2, h - 10, Math.min(1.85, h / 94), {
         time: on ? t : 0,
         extra: weapon ? { weapon: { id: weapon } } : {},
       });
@@ -291,7 +372,7 @@ function goVersus() {
   if (ffa) fillRivals($('#vs-right'), theirs);
   else fillSide($('#vs-right'), 'ADVERSÁRIO', b, theirs, me.id);
   setChips('#diff-seg', state.difficulty);
-  setChips('#map-seg', state.mapId);
+  $('#vs-map-name').textContent = `${getMap(setup.mapId).name}${state.mapChoice === RANDOM_MAP ? ' (sorteado)' : ''}`;
   show('versus');
   versus.start(setup);
   $('#play-btn').focus();
@@ -354,15 +435,18 @@ function playerName() {
 }
 
 function newSetup() {
+  // escolha "?" (aleatório): sorteia o elemento e o mapa a cada partida
+  const enabled = Object.values(ELEMENTS).filter((e) => e.enabled).map((e) => e.id);
+  const element = state.element === RANDOM_ELEMENT ? enabled[Math.floor(Math.random() * enabled.length)] : state.element;
   const setup = buildLocalSetup({
-    element: state.element,
+    element,
     name: playerName(),
     teamSize: state.teamSize,
     mode: state.mode,
     difficulty: state.difficulty,
     admin: state.admin,
   });
-  setup.mapId = MAPS[state.mapId] ? state.mapId : 'caldeira';
+  setup.mapId = state.mapChoice === RANDOM_MAP ? pickRandomMap() : MAPS[state.mapChoice] ? state.mapChoice : 'caldeira';
   return setup;
 }
 
@@ -570,7 +654,7 @@ window.addEventListener('keydown', (e) => {
   }
   // Esc volta um passo nos menus
   if (e.code === 'Escape') {
-    const back = { mode: 'home', cards: 'mode', versus: 'cards', auth: 'home', profile: 'home' }[state.screen];
+    const back = { mode: 'home', cards: 'mode', maps: 'cards', versus: 'maps', auth: 'home', profile: 'home' }[state.screen];
     if (state.screen === 'home') closePanels();
     else if (back) show(back);
   }
@@ -680,14 +764,8 @@ function init() {
     tile.addEventListener('click', () => chooseMode(Number(tile.dataset.size)));
   }
   $('.mode-tile[data-mode="ffa"]').addEventListener('click', () => chooseMode(1, 'ffa'));
-  $('#cards-next').addEventListener('click', goVersus);
-  $('#map-seg').addEventListener('click', (e) => {
-    const btn = e.target.closest('button');
-    if (!btn) return;
-    state.mapId = btn.dataset.value;
-    savePref('mapa', state.mapId);
-    setChips('#map-seg', state.mapId);
-  });
+  $('#cards-next').addEventListener('click', () => show('maps'));
+  $('#maps-next').addEventListener('click', () => mapPicker.onContinue(mapPicker.current()));
   $('#diff-seg').addEventListener('click', (e) => {
     const btn = e.target.closest('button');
     if (!btn) return;
@@ -698,7 +776,6 @@ function init() {
   $('#play-btn').addEventListener('click', () => {
     const setup = state.pendingSetup ?? newSetup();
     setup.difficulty = state.difficulty;
-    setup.mapId = state.mapId;
     startMatch(setup);
   });
   $('#resume-btn').addEventListener('click', () => setPaused(false));

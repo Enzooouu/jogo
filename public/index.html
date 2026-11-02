@@ -79,7 +79,7 @@
       <div class="dim"></div>
       <header class="step-head">
         <button type="button" class="back" data-back="home">‹ Voltar</button>
-        <div><small>PASSO 1 DE 3</small><h1>ESCOLHA O MODO</h1></div>
+        <div><small>PASSO 1 DE 4</small><h1>ESCOLHA O MODO</h1></div>
       </header>
       <div class="mode-grid">
         <button type="button" class="mode-tile" data-size="1"><canvas></canvas><b>1 × 1</b><span>Duelo: você contra um bot</span></button>
@@ -94,7 +94,7 @@
       <div class="dim strong"></div>
       <header class="step-head">
         <button type="button" class="back" data-back="mode">‹ Voltar</button>
-        <div><small>PASSO 2 DE 3</small><h1>ESCOLHA A CARTA DO SEU TIME</h1></div>
+        <div><small>PASSO 2 DE 4</small><h1>ESCOLHA SEU ELEMENTO</h1></div>
       </header>
       <div id="card-list" class="card-list"></div>
       <div class="step-foot">
@@ -103,12 +103,32 @@
       </div>
     </section>
 
+    <!-- ===================== MAPA ===================== -->
+    <section id="screen-maps" class="screen menu-screen" hidden>
+      <div class="maps-bg"></div>
+      <header class="step-head">
+        <button type="button" class="back" data-back="cards">‹ Voltar</button>
+        <div><small>PASSO 3 DE 4</small><h1>ESCOLHA O MAPA</h1></div>
+        <div class="map-arrows">
+          <button type="button" class="map-prev" aria-label="Mapa anterior">‹</button>
+          <button type="button" class="map-next" aria-label="Próximo mapa">›</button>
+        </div>
+      </header>
+      <div class="map-track"></div>
+      <div class="map-under">
+        <div class="map-desc"><p></p><div class="map-tags"></div></div>
+        <div class="map-progress"><i></i></div>
+        <div class="map-meta"><div class="map-dots"></div><span class="map-count"></span></div>
+        <button type="button" id="maps-next" class="go-btn">CONTINUAR ›</button>
+      </div>
+    </section>
+
     <!-- ===================== VERSUS ===================== -->
     <section id="screen-versus" class="screen" hidden>
       <canvas id="versus-canvas" aria-hidden="true"></canvas>
       <header class="vs-top">
-        <button type="button" class="back" data-back="cards">‹ Voltar</button>
-        <div class="vs-title"><h1 id="vs-title"></h1><p>PASSO 3 DE 3 · CONFIRA OS TIMES</p></div>
+        <button type="button" class="back" data-back="maps">‹ Voltar</button>
+        <div class="vs-title"><h1 id="vs-title"></h1><p>PASSO 4 DE 4 · CONFIRA OS TIMES</p></div>
         <span></span>
       </header>
       <div class="vs-side l" id="vs-left"></div>
@@ -119,13 +139,9 @@
           <button type="button" data-value="normal">Normal</button>
           <button type="button" data-value="dificil">Difícil</button>
         </div>
-        <div class="chips" id="map-seg">
-          <button type="button" data-value="caldeira">Caldeira</button>
-          <button type="button" data-value="pico">Pico dos Ventos</button>
-          <button type="button" data-value="campo">Campo Aberto</button>
-          <button type="button" data-value="gelo">Lago Congelado</button>
-          <button type="button" data-value="coliseu">Coliseu</button>
-          <button type="button" data-value="navio">Navio Voador</button>
+        <div class="vs-map">
+          <span>MAPA</span><b id="vs-map-name"></b>
+          <button type="button" class="vs-map-change" data-back="maps">Trocar</button>
         </div>
         <button type="button" id="play-btn" class="fight">LUTAR</button>
         <p class="hint" id="save-hint"></p>
