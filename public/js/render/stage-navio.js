@@ -343,11 +343,9 @@ function plank(ctx, x0, x1, y, h, c1, c2) {
   ctx.fillRect(x0, y, x1 - x0, h);
 }
 
-// casco, convés e tombadilho (sem os mastros), em coordenadas do mundo
-function hull(ctx, sh, c, sternX, bowX, dir) {
+// contorno do casco (o mesmo da colisão em shared/maps.js)
+function hullPath(ctx, sternX, bowX, dir) {
   const cx = (sternX + bowX) / 2;
-  const x0 = Math.min(sternX, bowX);
-  const x1 = Math.max(sternX, bowX);
   ctx.beginPath();
   ctx.moveTo(sternX, DECK - POOP);
   ctx.lineTo(sternX - dir * 6, DECK + 30);
@@ -357,70 +355,284 @@ function hull(ctx, sh, c, sternX, bowX, dir) {
   ctx.lineTo(sternX + dir * 120, DECK);
   ctx.lineTo(sternX + dir * 120, DECK - POOP);
   ctx.closePath();
+}
+
+function barrel(ctx, x, y) {
+  const g = ctx.createLinearGradient(x - 9, 0, x + 9, 0);
+  g.addColorStop(0, '#6a3e20');
+  g.addColorStop(0.5, '#a8703e');
+  g.addColorStop(1, '#5a3218');
+  ctx.fillStyle = g;
+  ctx.beginPath();
+  ctx.moveTo(x - 8, y);
+  ctx.quadraticCurveTo(x - 11, y - 12, x - 8, y - 24);
+  ctx.lineTo(x + 8, y - 24);
+  ctx.quadraticCurveTo(x + 11, y - 12, x + 8, y);
+  ctx.closePath();
+  ctx.fill();
+  ctx.strokeStyle = '#3a2010';
+  ctx.lineWidth = 1.5;
+  ctx.stroke();
+  ctx.fillStyle = '#4a4e58';
+  ctx.fillRect(x - 10, y - 19, 20, 2.5);
+  ctx.fillRect(x - 10, y - 7, 20, 2.5);
+}
+
+function crate(ctx, x, y, s) {
+  ctx.fillStyle = '#b58350';
+  ctx.fillRect(x - s / 2, y - s, s, s);
+  ctx.strokeStyle = '#5a3420';
+  ctx.lineWidth = 1.5;
+  ctx.strokeRect(x - s / 2, y - s, s, s);
+  ctx.beginPath();
+  ctx.moveTo(x - s / 2, y - s);
+  ctx.lineTo(x + s / 2, y);
+  ctx.moveTo(x + s / 2, y - s);
+  ctx.lineTo(x - s / 2, y);
+  ctx.stroke();
+}
+
+function ropeCoil(ctx, x, y) {
+  ctx.strokeStyle = '#c9a46a';
+  ctx.lineWidth = 2;
+  for (let k = 0; k < 3; k++) {
+    ctx.beginPath();
+    ctx.ellipse(x, y - 3 - k * 2.4, 12 - k * 2, 3.5, 0, 0, Math.PI * 2);
+    ctx.stroke();
+  }
+}
+
+// carranca da proa: cabeça de fênix (fogo) ou de golfinho (água)
+function figurehead(ctx, x, y, dir, i) {
+  ctx.save();
+  ctx.translate(x, y);
+  ctx.scale(dir, 1);
+  const gold = ctx.createLinearGradient(0, -30, 0, 10);
+  gold.addColorStop(0, '#ffe28a');
+  gold.addColorStop(1, '#b8862e');
+  if (i === 0) {
+    // crista de fogo
+    ctx.fillStyle = '#ff7a2a';
+    ctx.beginPath();
+    ctx.moveTo(4, -18);
+    ctx.quadraticCurveTo(-6, -40, 6, -46);
+    ctx.quadraticCurveTo(4, -34, 14, -30);
+    ctx.quadraticCurveTo(14, -44, 26, -44);
+    ctx.quadraticCurveTo(18, -34, 22, -22);
+    ctx.closePath();
+    ctx.fill();
+    ctx.fillStyle = gold;
+    ctx.beginPath();
+    ctx.moveTo(0, 6);
+    ctx.quadraticCurveTo(2, -16, 14, -22);
+    ctx.quadraticCurveTo(28, -24, 34, -14);
+    ctx.lineTo(44, -12);
+    ctx.lineTo(32, -6);
+    ctx.quadraticCurveTo(22, -8, 16, -2);
+    ctx.quadraticCurveTo(10, 6, 8, 12);
+    ctx.closePath();
+    ctx.fill();
+  } else {
+    ctx.fillStyle = gold;
+    ctx.beginPath();
+    ctx.moveTo(0, 6);
+    ctx.quadraticCurveTo(0, -16, 16, -24);
+    ctx.quadraticCurveTo(34, -30, 40, -18);
+    ctx.quadraticCurveTo(48, -14, 50, -10);
+    ctx.lineTo(36, -8);
+    ctx.quadraticCurveTo(24, -6, 18, 0);
+    ctx.quadraticCurveTo(12, 8, 8, 12);
+    ctx.closePath();
+    ctx.fill();
+    // barbatana
+    ctx.fillStyle = '#4fb0ff';
+    ctx.beginPath();
+    ctx.moveTo(16, -22);
+    ctx.quadraticCurveTo(14, -40, 30, -42);
+    ctx.quadraticCurveTo(24, -32, 28, -26);
+    ctx.closePath();
+    ctx.fill();
+  }
+  ctx.strokeStyle = '#6a4a1a';
+  ctx.lineWidth = 1.5;
+  ctx.stroke();
+  ctx.fillStyle = '#2a160c';
+  ctx.beginPath();
+  ctx.arc(i === 0 ? 26 : 32, -16, 2.2, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.restore();
+}
+
+// casco, convés e tombadilho (sem os mastros), em coordenadas do mundo
+function hull(ctx, sh, c, sternX, bowX, dir, i) {
+  const cx = (sternX + bowX) / 2;
+  const x0 = Math.min(sternX, bowX);
+  const x1 = Math.max(sternX, bowX);
+  const rand = seeded(500 + i);
+  // gurupés (mastro deitado na proa) com corda
+  const bx = bowX + dir * 20;
+  ctx.strokeStyle = '#6a3e20';
+  ctx.lineWidth = 7;
+  ctx.lineCap = 'round';
+  ctx.beginPath();
+  ctx.moveTo(bx - dir * 30, DECK - 4);
+  ctx.lineTo(bx + dir * 18, DECK - 58);
+  ctx.stroke();
+  ctx.lineCap = 'butt';
+  // corpo do casco
+  hullPath(ctx, sternX, bowX, dir);
   const g = ctx.createLinearGradient(0, DECK - POOP, 0, DECK + 104);
-  g.addColorStop(0, '#9a5d32');
-  g.addColorStop(0.5, '#6f3f22');
-  g.addColorStop(1, '#3f2214');
+  g.addColorStop(0, '#b0703f');
+  g.addColorStop(0.45, '#7c4527');
+  g.addColorStop(1, '#4a2616');
   ctx.fillStyle = g;
   ctx.fill();
-  ctx.strokeStyle = '#2a160c';
-  ctx.lineWidth = 3;
-  ctx.stroke();
   ctx.save();
+  hullPath(ctx, sternX, bowX, dir);
   ctx.clip();
-  ctx.strokeStyle = 'rgba(30,15,8,0.45)';
-  ctx.lineWidth = 1.2;
-  for (let y = DECK + 14; y < DECK + 104; y += 14) {
+  // tábuas: faixas de tom um pouco diferente, emendas desencontradas
+  for (let y = DECK - POOP; y < DECK + 110; y += 11) {
+    ctx.fillStyle = `rgba(${rand() < 0.5 ? '255,220,180' : '40,15,5'},${0.04 + rand() * 0.06})`;
+    ctx.fillRect(x0 - 60, y, x1 - x0 + 120, 11);
+    ctx.strokeStyle = 'rgba(30,12,4,0.45)';
+    ctx.lineWidth = 1.1;
     ctx.beginPath();
     ctx.moveTo(x0 - 60, y);
     ctx.lineTo(x1 + 60, y);
     ctx.stroke();
+    ctx.strokeStyle = 'rgba(30,12,4,0.3)';
+    for (let x = x0 - 60 + rand() * 80; x < x1 + 60; x += 70 + rand() * 50) {
+      ctx.beginPath();
+      ctx.moveTo(x, y);
+      ctx.lineTo(x, y + 11);
+      ctx.stroke();
+    }
   }
-  ctx.fillStyle = c.stripe;
-  ctx.fillRect(x0 - 60, DECK + 22, x1 - x0 + 120, 8);
+  // fundo de cobre esverdeado com rebites (abaixo da linha)
+  const copper = ctx.createLinearGradient(0, DECK + 70, 0, DECK + 106);
+  copper.addColorStop(0, '#5a9a8c');
+  copper.addColorStop(1, '#2c5a54');
+  ctx.fillStyle = copper;
+  ctx.fillRect(x0 - 60, DECK + 74, x1 - x0 + 120, 40);
+  ctx.fillStyle = 'rgba(220,255,240,0.5)';
+  for (let x = x0 - 50; x < x1 + 50; x += 14) {
+    ctx.fillRect(x, DECK + 79, 1.6, 1.6);
+    ctx.fillRect(x + 7, DECK + 90, 1.6, 1.6);
+  }
   ctx.fillStyle = '#e8c068';
+  ctx.fillRect(x0 - 60, DECK + 71, x1 - x0 + 120, 3);
+  // faixa do time com frisos dourados
+  ctx.fillStyle = c.stripe;
+  ctx.fillRect(x0 - 60, DECK + 20, x1 - x0 + 120, 9);
+  ctx.fillStyle = '#e8c068';
+  ctx.fillRect(x0 - 60, DECK + 18, x1 - x0 + 120, 2);
+  ctx.fillRect(x0 - 60, DECK + 29, x1 - x0 + 120, 2);
   ctx.fillRect(x0 - 60, DECK + 6, x1 - x0 + 120, 3);
-  for (let k = 0; k < 4; k++) {
-    const wx = cx - 120 + k * 80;
-    ctx.fillStyle = '#2a160c';
-    ctx.beginPath();
-    ctx.arc(wx, DECK + 50, 7, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.strokeStyle = '#e8c068';
-    ctx.lineWidth = 2;
-    ctx.stroke();
-  }
+  // luz quente do pôr do sol batendo no lado direito
+  const rim = ctx.createLinearGradient(x0, 0, x1, 0);
+  rim.addColorStop(0, 'rgba(255,200,150,0)');
+  rim.addColorStop(1, 'rgba(255,200,150,0.18)');
+  ctx.fillStyle = rim;
+  ctx.fillRect(x0 - 60, DECK - POOP, x1 - x0 + 120, 200);
   ctx.restore();
-  // tombadilho com janelas acesas e grade
+  // portinholas dos canhões com tampa aberta
+  for (let k = 0; k < 4; k++) {
+    const wx = cx - 132 + k * 84;
+    ctx.fillStyle = '#7a4527';
+    ctx.fillRect(wx - 10, DECK + 36, 20, 4);
+    ctx.fillStyle = '#1a0c06';
+    ctx.fillRect(wx - 8, DECK + 41, 16, 14);
+    ctx.strokeStyle = '#e8c068';
+    ctx.lineWidth = 1.5;
+    ctx.strokeRect(wx - 8, DECK + 41, 16, 14);
+    ctx.fillStyle = '#2b3038';
+    ctx.beginPath();
+    ctx.arc(wx, DECK + 48, 3.5, 0, Math.PI * 2);
+    ctx.fill();
+  }
+  // contorno do casco
+  hullPath(ctx, sternX, bowX, dir);
+  ctx.strokeStyle = '#2a160c';
+  ctx.lineWidth = 3;
+  ctx.stroke();
+  figurehead(ctx, bowX + dir * 18, DECK - 6, dir, i);
+  // tombadilho: frente com janelas da cabine (molduras douradas)
   const pA = Math.min(sternX, sternX + dir * 120);
   const pB = Math.max(sternX, sternX + dir * 120);
-  plank(ctx, pA, pB, DECK - POOP, 10, '#d39a5c', '#a8703e');
-  ctx.fillStyle = '#ffd98a';
-  for (let k = 0; k < 3; k++) ctx.fillRect(pA + 18 + k * 32, DECK - 40, 14, 14);
-  ctx.strokeStyle = '#5a3420';
-  ctx.lineWidth = 2;
-  const outer = dir > 0 ? pA : pB;
-  for (let k = 0; k < 6; k++) {
-    const x = outer + dir * (4 + k * 12);
+  plank(ctx, pA, pB, DECK - POOP, 10, '#d9a568', '#a8703e');
+  for (let k = 0; k < 3; k++) {
+    const wx = pA + 16 + k * 32;
+    ctx.fillStyle = '#e8c068';
+    ctx.fillRect(wx - 2, DECK - 44, 18, 20);
+    const wg = ctx.createLinearGradient(0, DECK - 42, 0, DECK - 26);
+    wg.addColorStop(0, '#fff2c0');
+    wg.addColorStop(1, '#ffb84a');
+    ctx.fillStyle = wg;
     ctx.beginPath();
-    ctx.moveTo(x, DECK - POOP);
-    ctx.lineTo(x, DECK - POOP - 14);
+    ctx.moveTo(wx, DECK - 26);
+    ctx.lineTo(wx, DECK - 36);
+    ctx.quadraticCurveTo(wx + 7, DECK - 44, wx + 14, DECK - 36);
+    ctx.lineTo(wx + 14, DECK - 26);
+    ctx.closePath();
+    ctx.fill();
+    ctx.fillStyle = '#7a4527';
+    ctx.fillRect(wx + 6, DECK - 40, 2, 14);
+  }
+  // grade do tombadilho com balaústres
+  const outer = dir > 0 ? pA : pB;
+  ctx.fillStyle = '#5a3420';
+  ctx.fillRect(dir > 0 ? outer : outer - 72, DECK - POOP - 17, 72, 4);
+  for (let k = 0; k < 7; k++) {
+    const x = outer + dir * (4 + k * 11);
+    ctx.fillStyle = '#7a4a28';
+    ctx.beginPath();
+    ctx.ellipse(x, DECK - POOP - 7, 2.6, 6, 0, 0, Math.PI * 2);
+    ctx.fill();
+  }
+  // poste de popa com lampião (a luz pisca em front)
+  ctx.fillStyle = '#5a3420';
+  ctx.fillRect(sternX - dir * 2 - 2, DECK - POOP - 40, 4, 40);
+  ctx.fillStyle = '#2a1a10';
+  ctx.fillRect(sternX - dir * 2 - 6, DECK - POOP - 52, 12, 3);
+  ctx.fillStyle = '#ffd98a';
+  ctx.fillRect(sternX - dir * 2 - 5, DECK - POOP - 49, 10, 10);
+  ctx.strokeStyle = '#2a1a10';
+  ctx.lineWidth = 1.5;
+  ctx.strokeRect(sternX - dir * 2 - 5, DECK - POOP - 49, 10, 10);
+  // escadinha do convés para o tombadilho
+  const sx = sternX + dir * 124;
+  ctx.strokeStyle = '#6a3e20';
+  ctx.lineWidth = 3;
+  ctx.beginPath();
+  ctx.moveTo(sx, DECK);
+  ctx.lineTo(sx + dir * 18, DECK - POOP + 4);
+  ctx.moveTo(sx + dir * 12, DECK);
+  ctx.lineTo(sx + dir * 30, DECK - POOP + 4);
+  ctx.stroke();
+  ctx.lineWidth = 2;
+  for (let k = 1; k < 5; k++) {
+    const u = k / 5;
+    ctx.beginPath();
+    ctx.moveTo(sx + dir * u * 18, DECK - u * (POOP - 4));
+    ctx.lineTo(sx + dir * (12 + u * 18), DECK - u * (POOP - 4));
     ctx.stroke();
   }
-  ctx.fillStyle = '#5a3420';
-  ctx.fillRect(dir > 0 ? outer : outer - 66, DECK - POOP - 17, 66, 4);
-  // convés
+  // convés com pregos
   const dA = Math.min(sternX + dir * 120, bowX);
   const dB = Math.max(sternX + dir * 120, bowX);
-  plank(ctx, dA, dB, DECK, 10, '#d9a568', '#a8703e');
-  ctx.strokeStyle = 'rgba(80,45,20,0.35)';
-  ctx.lineWidth = 1;
-  for (let x = dA + 30; x < dB; x += 30) {
-    ctx.beginPath();
-    ctx.moveTo(x, DECK + 1);
-    ctx.lineTo(x, DECK + 9);
-    ctx.stroke();
+  plank(ctx, dA, dB, DECK, 10, '#ddb072', '#a8703e');
+  ctx.fillStyle = 'rgba(70,40,20,0.5)';
+  for (let x = dA + 15; x < dB; x += 30) {
+    ctx.fillRect(x, DECK + 2, 1.5, 1.5);
+    ctx.fillRect(x, DECK + 7, 1.5, 1.5);
   }
+  // carga no convés: barris, caixas e corda enrolada
+  const along = (u) => sternX + dir * (150 + u * (Math.abs(bowX - sternX) - 190));
+  barrel(ctx, along(0.55), DECK);
+  barrel(ctx, along(0.55) + dir * 20, DECK);
+  crate(ctx, along(0.92), DECK, 22);
+  crate(ctx, along(0.92) + dir * 4, DECK - 22, 16);
+  ropeCoil(ctx, along(0.76), DECK);
   void sh;
 }
 
@@ -428,9 +640,9 @@ function hull(ctx, sh, c, sternX, bowX, dir) {
 const HULLS = new Map();
 function hullSprite(i, sh, sternX, bowX, dir) {
   if (HULLS.has(i)) return HULLS.get(i);
-  const x0 = Math.min(sternX, bowX) - 50;
-  const x1 = Math.max(sternX, bowX) + 50;
-  const y0 = DECK - POOP - 30;
+  const x0 = Math.min(sternX, bowX) - 90;
+  const x1 = Math.max(sternX, bowX) + 90;
+  const y0 = DECK - POOP - 70;
   const y1 = DECK + 120;
   const res = 2;
   const c = document.createElement('canvas');
@@ -439,7 +651,7 @@ function hullSprite(i, sh, sternX, bowX, dir) {
   const x = c.getContext('2d');
   x.scale(res, res);
   x.translate(-x0, -y0);
-  hull(x, sh, COLORS[i], sternX, bowX, dir);
+  hull(x, sh, COLORS[i], sternX, bowX, dir, i);
   const out = { canvas: c, x0, y0, w: x1 - x0, h: y1 - y0 };
   HULLS.set(i, out);
   return out;
@@ -464,14 +676,51 @@ function rig(ctx, map, i, st, platforms, time) {
   const gx = gavea.x + gavea.w / 2;
   const topX = gx + (gx - baseX) * 0.2;
   const topY = 130 + st.bob;
-  // mastro inclinado
-  ctx.strokeStyle = '#7a4a28';
-  ctx.lineWidth = 14;
+  // escadas de corda (enfrechates) do convés até a gávea
+  ctx.strokeStyle = 'rgba(70,45,25,0.75)';
+  ctx.lineWidth = 1.3;
+  for (const side of [-1, 1]) {
+    const ax = baseX + side * 78;
+    const bx2 = gx + side * 30;
+    const by2 = gavea.y + 12;
+    ctx.beginPath();
+    ctx.moveTo(ax, baseY - 2);
+    ctx.lineTo(bx2, by2);
+    ctx.moveTo(ax - side * 16, baseY - 2);
+    ctx.lineTo(bx2 - side * 8, by2);
+    for (let k = 1; k < 12; k++) {
+      const u = k / 12;
+      const y = baseY - 2 + (by2 - baseY + 2) * u;
+      ctx.moveTo(ax + (bx2 - ax) * u, y);
+      ctx.lineTo(ax - side * 16 + (bx2 - side * 8 - ax + side * 16) * u, y);
+    }
+    ctx.stroke();
+  }
+  // mastro inclinado, com aros de ferro
   ctx.lineCap = 'butt';
+  ctx.strokeStyle = '#6a3e20';
+  ctx.lineWidth = 15;
   ctx.beginPath();
   ctx.moveTo(baseX, baseY);
   ctx.lineTo(topX, topY);
   ctx.stroke();
+  ctx.strokeStyle = 'rgba(255,215,160,0.35)';
+  ctx.lineWidth = 3;
+  ctx.beginPath();
+  ctx.moveTo(baseX + 3, baseY);
+  ctx.lineTo(topX + 3, topY);
+  ctx.stroke();
+  ctx.strokeStyle = '#3a3e48';
+  ctx.lineWidth = 3;
+  for (let k = 1; k < 7; k++) {
+    const u = k / 7;
+    const mx = baseX + (topX - baseX) * u;
+    const my = baseY + (topY - baseY) * u;
+    ctx.beginPath();
+    ctx.moveTo(mx - 8, my);
+    ctx.lineTo(mx + 8, my);
+    ctx.stroke();
+  }
   // cordas até a proa e a popa
   const { sternX, bowX, dir } = shipShape(map, i);
   ctx.strokeStyle = 'rgba(60,35,20,0.7)';
@@ -493,8 +742,33 @@ function rig(ctx, map, i, st, platforms, time) {
   ctx.quadraticCurveTo(baseX, baseY - 32 + billow, baseX - 92 + (vx - baseX) * 0.7, baseY - 32);
   ctx.quadraticCurveTo(vx - 100 - billow * 0.4, vy + 84, vx - 100, vy + 10);
   ctx.fill();
-  ctx.strokeStyle = 'rgba(90,70,50,0.5)';
-  ctx.lineWidth = 1.5;
+  ctx.save();
+  ctx.clip();
+  // sombra nas pontas e luz no meio (pano estufado)
+  const sg = ctx.createLinearGradient(vx - 100, 0, vx + 100, 0);
+  sg.addColorStop(0, 'rgba(120,90,70,0.25)');
+  sg.addColorStop(0.45, 'rgba(255,255,255,0)');
+  sg.addColorStop(1, 'rgba(255,200,150,0.18)');
+  ctx.fillStyle = sg;
+  ctx.fillRect(vx - 110, vy, 220, baseY - vy);
+  // costuras do pano e um remendo
+  ctx.strokeStyle = 'rgba(120,95,70,0.25)';
+  ctx.lineWidth = 1;
+  for (let k = -3; k <= 3; k++) {
+    ctx.beginPath();
+    ctx.moveTo(vx + k * 28, vy + 10);
+    ctx.quadraticCurveTo(vx + k * 30, vy + 90, vx + k * 26 + (baseX - vx) * 0.5, baseY - 30);
+    ctx.stroke();
+  }
+  ctx.fillStyle = 'rgba(200,170,120,0.35)';
+  ctx.fillRect(vx + 46, vy + 96, 18, 14);
+  ctx.strokeStyle = 'rgba(120,95,70,0.5)';
+  ctx.setLineDash([2, 2]);
+  ctx.strokeRect(vx + 46, vy + 96, 18, 14);
+  ctx.setLineDash([]);
+  ctx.restore();
+  ctx.strokeStyle = 'rgba(90,70,50,0.6)';
+  ctx.lineWidth = 2;
   ctx.stroke();
   // símbolo na vela
   const sx = (vx + baseX) / 2;
@@ -560,6 +834,17 @@ function rig(ctx, map, i, st, platforms, time) {
     ctx.lineTo(topX + fd * u * 60, topY + 26 - u * 6 + Math.sin(time * 6 - u * 4) * 4 * u);
   }
   ctx.closePath();
+  ctx.fill();
+  // emblema na bandeira
+  const ex = topX + fd * 30;
+  const ey = topY + 12 + Math.sin(time * 6 - 2) * 2;
+  ctx.fillStyle = 'rgba(255,255,255,0.85)';
+  ctx.beginPath();
+  ctx.arc(ex, ey, 6, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.fillStyle = c.flag;
+  ctx.beginPath();
+  ctx.arc(ex, ey, 3, 0, Math.PI * 2);
   ctx.fill();
 }
 
@@ -788,6 +1073,18 @@ export const NAVIO_ART = {
       cannonArt(ctx, sh.cannon.x, DECK + st.bob, sh.cannon.dir, recoil, fuse, time);
       const { sternX, dir } = shipShape(map, i);
       wheel(ctx, sternX + dir * 90, DECK - POOP + st.bob, st.lean * 8 + Math.sin(time * 0.7 + i) * 0.4);
+      // luz do lampião da popa
+      const lx = sternX - dir * 2;
+      const ly = DECK - POOP - 44 + st.bob;
+      const f = 0.8 + 0.15 * Math.sin(time * 8 + i * 3) + 0.05 * Math.sin(time * 21);
+      ctx.save();
+      ctx.globalCompositeOperation = 'lighter';
+      const lg = ctx.createRadialGradient(lx, ly, 1, lx, ly, 46 * f);
+      lg.addColorStop(0, `rgba(255,200,110,${0.55 * f})`);
+      lg.addColorStop(1, 'rgba(255,200,110,0)');
+      ctx.fillStyle = lg;
+      ctx.fillRect(lx - 50, ly - 50, 100, 100);
+      ctx.restore();
     });
   },
   overlay(ctx, time, game) {
