@@ -280,7 +280,7 @@ export const MAPS = {
       { x: 289, y: 196, w: 92, ship: 0 },    // gávea (esquerda)
       { x: 837, y: 326, w: 216, ship: 1 },   // verga (direita)
       { x: 899, y: 196, w: 92, ship: 1 },    // gávea (direita)
-      { x: 548, y: 497, w: 184 },            // prancha entre os navios
+      { x: 548, y: 498, w: 184, bridge: true }, // prancha entre os navios (sobe e desce junto)
     ],
     // cada navio: altura do convés, mastro, canhão e onde a bala dele cai
     ships: [

@@ -82,3 +82,24 @@ test('Navio: bots jogam uma partida inteira sem travar', () => {
   }
   assert.equal(g.phase, 'ended');
 });
+
+test('Navio: dá para atravessar a prancha andando de um navio ao outro, nos dois sentidos', () => {
+  for (const [from, to, key] of [[450, 850, 'right'], [850, 450, 'left']]) {
+    for (const start of [0, 1.3, 2.7, 4.1]) {
+      const g = newShip();
+      g.playerById(2).state = 'respawning';
+      g.playerById(2).respawnTimer = Infinity;
+      run(g, Math.round(start * 60));
+      const p = g.playerById(1);
+      place(p, from, g.solidsNow().find((s) => s.ship === (from < 640 ? 0 : 1) && s.y > 480).y);
+      run(g, 3);
+      let fell = false;
+      for (let i = 0; i < 150 && Math.abs(p.x + p.w / 2 - to) > 20; i++) {
+        g.step({ 1: { [key]: true } });
+        if (p.y + p.h > 530) fell = true;
+      }
+      assert.ok(!fell && p.state === 'alive', `caiu indo de ${from} para ${to} (começo ${start}s)`);
+      assert.ok(Math.abs(p.x + p.w / 2 - to) <= 20, `parou em ${Math.round(p.x)}`);
+    }
+  }
+});

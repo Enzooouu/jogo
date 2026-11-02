@@ -588,13 +588,23 @@ export const NAVIO_ART = {
   // prancha, canhões e timões
   front(ctx, map, time) {
     const ships = shipsOf(map);
-    const prancha = map.platforms.find((p) => p.ship == null);
+    const plats = GAME && GAME.map === map ? GAME.platforms : map.platforms;
+    const prancha = plats.find((p) => p.bridge);
     if (prancha) {
+      // corda de mão presa nas pontas dos dois navios
+      const b0 = DECK + (ships?.state[0].bob ?? 0);
+      const b1 = DECK + (ships?.state[1].bob ?? 0);
       ctx.strokeStyle = 'rgba(60,35,20,0.8)';
       ctx.lineWidth = 2;
       ctx.beginPath();
-      ctx.moveTo(prancha.x, prancha.y - 28);
-      ctx.quadraticCurveTo(prancha.x + prancha.w / 2, prancha.y - 18, prancha.x + prancha.w, prancha.y - 28);
+      ctx.moveTo(prancha.x, b0 - 30);
+      ctx.quadraticCurveTo(prancha.x + prancha.w / 2, prancha.y - 18, prancha.x + prancha.w, b1 - 30);
+      ctx.stroke();
+      ctx.beginPath();
+      for (let x = prancha.x + 20; x < prancha.x + prancha.w; x += 40) {
+        ctx.moveTo(x, prancha.y);
+        ctx.lineTo(x, prancha.y - 22);
+      }
       ctx.stroke();
       for (let x = prancha.x; x < prancha.x + prancha.w; x += 20) {
         ctx.fillStyle = (x / 20) % 2 ? '#c48a52' : '#b07a46';

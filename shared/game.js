@@ -40,6 +40,10 @@ const statsOf = (p) => ({ ...NO_STATS, ...ELEMENTS[p.element].stats });
 // Quanto cada elemento sente o vento (Ar é imune pela tabela de perigos)
 const WIND_FACTOR = { terra: 0.5 };
 
+// Degrau que dá para subir andando, sem pular (ex.: convés do navio um
+// pouco mais alto que a prancha)
+const STEP_UP = 10;
+
 // Gelo: acelera devagar, quase não freia e corre um pouco mais
 const ICE = { accel: 0.28, friction: 0.07, speed: 1.15 };
 // Arma jogada pela torcida (Coliseu) que acerta alguém no caminho
@@ -537,6 +541,7 @@ export class Game {
   moveAndCollide(p) {
     const solids = this.solidsNow();
     const platforms = this.platforms;
+    const grounded = p.onGround;
 
     const mvx = p.vx + p.windVx;
     p.x += mvx * DT;
@@ -545,6 +550,11 @@ export class Game {
       // pé só encostando no chão (diferença de arredondamento, ex.: navio
       // subindo e descendo) não é parede
       if (p.y + p.h - s.y < 0.05) continue;
+      // degrauzinho (até STEP_UP px) andando no chão: sobe em vez de bater
+      if (grounded && p.vy >= 0 && p.y + p.h - s.y <= STEP_UP) {
+        p.y = s.y - p.h;
+        continue;
+      }
       if (mvx > 0) p.x = s.x - p.w;
       else if (mvx < 0) p.x = s.x + s.w;
       p.vx = 0;
@@ -575,7 +585,9 @@ export class Game {
       for (const pl of platforms) {
         if (this.platformGone(pl)) continue;
         // compara com onde a plataforma estava (ela pode ter subido neste passo)
-        const crossing = prevBottom <= Math.max(pl.y, pl.y - pl.dy) + 0.5 && bottom >= pl.y;
+        // andando no chão, também sobe numa plataforma um pouquinho mais alta
+        const step = grounded && p.vy >= 0 ? STEP_UP : 0.5;
+        const crossing = prevBottom <= Math.max(pl.y, pl.y - pl.dy) + step && bottom >= pl.y;
         const inside = p.x + p.w > pl.x && p.x < pl.x + pl.w;
         if (crossing && inside) {
           p.y = pl.y - p.h;
