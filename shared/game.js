@@ -121,7 +121,8 @@ export class Game {
     if (new Set(this.players.map((p) => p.team)).size < 2) {
       throw new Error('A partida precisa de pelo menos 2 times');
     }
-    if (this.mode.teams) {
+    // no treino o boneco (Mortal) pode ter o mesmo elemento do jogador
+    if (this.mode.teams && !this.practice) {
       const error = teamElementsError(this.players);
       if (error) throw new Error(error);
     }
