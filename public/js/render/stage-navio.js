@@ -750,6 +750,143 @@ function shipShape(map, i) {
   return { sternX: sh.stern, bowX: sh.bow, dir: sh.stern < sh.bow ? 1 : -1 };
 }
 
+// Vela quadrada presa na verga: borda de cima reta, lados abrindo e a
+// barriga de baixo estufada pelo vento. Pano em faixas costuradas, luz no
+// meio (estufado) e sombra nas pontas, faixas de rizes com os nozinhos,
+// corda na borda, cantos com argola e cabos descendo; o emblema do elemento
+// (anel com o símbolo) no meio da vela grande.
+function drawSail(ctx, o) {
+  const { x0, x1, top, bx0, bx1, bottom, billow, color, time, phase, emblem, reefs } = o;
+  const midX = (x0 + x1 + bx0 + bx1) / 4;
+  const ripple = Math.sin(time * 2.2 + phase) * 2;
+  const path = () => {
+    ctx.beginPath();
+    ctx.moveTo(x0, top);
+    ctx.lineTo(x1, top);
+    ctx.quadraticCurveTo(x1 + billow * 0.45, (top + bottom) / 2, bx1, bottom);
+    ctx.quadraticCurveTo((bx0 + bx1) / 2 + ripple * 2, bottom + billow + ripple, bx0, bottom);
+    ctx.quadraticCurveTo(x0 - billow * 0.45, (top + bottom) / 2, x0, top);
+    ctx.closePath();
+  };
+  path();
+  ctx.fillStyle = color;
+  ctx.fill();
+  ctx.save();
+  path();
+  ctx.clip();
+  // faixas de pano (uma mais clara, outra mais escura)
+  const w = Math.max(x1, bx1) - Math.min(x0, bx0) + 40;
+  const left = Math.min(x0, bx0) - 20;
+  for (let k = 0; k * 20 < w; k++) {
+    if (k % 2) continue;
+    ctx.fillStyle = 'rgba(120,90,60,0.06)';
+    ctx.beginPath();
+    ctx.moveTo(left + k * 20, top);
+    ctx.lineTo(left + k * 20 + 20, top);
+    ctx.lineTo(left + k * 20 + 20 + (bx0 - x0) * 0.5, bottom + billow);
+    ctx.lineTo(left + k * 20 + (bx0 - x0) * 0.5, bottom + billow);
+    ctx.closePath();
+    ctx.fill();
+  }
+  // estufado: luz no meio, sombra nas pontas e embaixo
+  const r = (x1 - x0) * 0.75;
+  const cy = top + (bottom - top) * 0.55;
+  const glow = ctx.createRadialGradient(midX + 10, cy, r * 0.1, midX, cy, r);
+  glow.addColorStop(0, 'rgba(255,248,232,0.4)');
+  glow.addColorStop(0.6, 'rgba(255,255,255,0)');
+  glow.addColorStop(1, 'rgba(100,70,60,0.3)');
+  ctx.fillStyle = glow;
+  ctx.fillRect(left, top - 10, w, bottom - top + billow + 20);
+  // contraluz quente quando a vela está na frente do sol
+  const near = Math.max(0, 1 - Math.abs(midX - SUN.x) / 260);
+  if (near > 0) {
+    const sun = ctx.createRadialGradient(SUN.x, SUN.y, 10, SUN.x, SUN.y, 300);
+    sun.addColorStop(0, `rgba(255,214,150,${0.45 * near})`);
+    sun.addColorStop(1, 'rgba(255,214,150,0)');
+    ctx.fillStyle = sun;
+    ctx.fillRect(left, top - 10, w, bottom - top + billow + 20);
+  }
+  // reflexo andando devagar pelo pano (vento)
+  const band = left + ((time * 30 + phase * 50) % (w + 80)) - 40;
+  const bg = ctx.createLinearGradient(band - 30, 0, band + 30, 0);
+  bg.addColorStop(0, 'rgba(255,255,255,0)');
+  bg.addColorStop(0.5, 'rgba(255,255,255,0.12)');
+  bg.addColorStop(1, 'rgba(255,255,255,0)');
+  ctx.fillStyle = bg;
+  ctx.fillRect(band - 30, top, 60, bottom - top + billow);
+  // faixas de rizes com os nozinhos
+  for (let k = 1; k <= reefs; k++) {
+    const y = top + k * 13;
+    ctx.strokeStyle = 'rgba(140,110,80,0.45)';
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.moveTo(x0 - 4, y);
+    ctx.lineTo(x1 + 4, y);
+    ctx.stroke();
+    ctx.strokeStyle = 'rgba(110,80,50,0.7)';
+    for (let x = x0 + 8; x < x1 - 4; x += 14) {
+      ctx.beginPath();
+      ctx.moveTo(x, y - 2);
+      ctx.lineTo(x + 1, y + 4);
+      ctx.stroke();
+    }
+  }
+  ctx.restore();
+  // corda da borda
+  path();
+  ctx.strokeStyle = 'rgba(110,80,55,0.85)';
+  ctx.lineWidth = 2.2;
+  ctx.stroke();
+  // argolas nos cantos de baixo
+  ctx.fillStyle = '#c9a24a';
+  for (const cx of [bx0, bx1]) {
+    ctx.beginPath();
+    ctx.arc(cx, bottom, 2.6, 0, Math.PI * 2);
+    ctx.fill();
+  }
+  // emblema: anel na cor do time com o símbolo do elemento
+  if (emblem) {
+    const ex = midX;
+    const ey = top + (bottom - top) * 0.52 + billow * 0.3;
+    const sq = 1 + billow * 0.004;
+    ctx.save();
+    ctx.translate(ex, ey);
+    ctx.scale(1, sq);
+    ctx.globalAlpha = 0.9;
+    ctx.strokeStyle = emblem.color;
+    ctx.lineWidth = 5;
+    ctx.beginPath();
+    ctx.arc(0, 0, 40, 0, Math.PI * 2);
+    ctx.stroke();
+    ctx.lineWidth = 1.5;
+    ctx.beginPath();
+    ctx.arc(0, 0, 33, 0, Math.PI * 2);
+    ctx.stroke();
+    ctx.fillStyle = emblem.color;
+    ctx.beginPath();
+    if (emblem.kind === 0) {
+      ctx.moveTo(0, -26);
+      ctx.quadraticCurveTo(22, 0, 11, 22);
+      ctx.quadraticCurveTo(0, 32, -11, 22);
+      ctx.quadraticCurveTo(-17, 4, -5, -8);
+      ctx.quadraticCurveTo(-3, 4, 2, 8);
+      ctx.quadraticCurveTo(5, -8, 0, -26);
+    } else {
+      ctx.moveTo(0, -26);
+      ctx.quadraticCurveTo(20, 4, 13, 16);
+      ctx.arc(0, 14, 13, 0, Math.PI, false);
+      ctx.quadraticCurveTo(-20, 4, 0, -26);
+    }
+    ctx.fill();
+    // brilho dentro do símbolo
+    ctx.fillStyle = 'rgba(255,255,255,0.45)';
+    ctx.beginPath();
+    ctx.ellipse(-4, 8, 3, 6, 0.3, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.restore();
+  }
+}
+
 // mastro, velas, verga e gávea (com o balanço)
 function rig(ctx, map, i, st, platforms, time) {
   const sh = map.ships[i];
@@ -818,82 +955,24 @@ function rig(ctx, map, i, st, platforms, time) {
   ctx.moveTo(topX, topY + 10);
   ctx.lineTo(sternX + dir * 60, DECK - POOP + st.bob);
   ctx.stroke();
-  // vela grande enfunada
+  // vela grande enfunada (com o emblema do elemento) e a vela de cima
   const billow = 18 + Math.sin(time * 1.3 + i * 2) * 4;
   const vy = verga.y;
-  ctx.fillStyle = c.sail;
-  ctx.beginPath();
-  ctx.moveTo(vx - 100, vy + 10);
-  ctx.lineTo(vx + 100, vy + 10);
-  ctx.quadraticCurveTo(vx + 100 + billow * 0.4, vy + 84, vx + 92 - (vx - baseX) * 0.3, baseY - 32);
-  ctx.quadraticCurveTo(baseX, baseY - 32 + billow, baseX - 92 + (vx - baseX) * 0.7, baseY - 32);
-  ctx.quadraticCurveTo(vx - 100 - billow * 0.4, vy + 84, vx - 100, vy + 10);
-  ctx.fill();
-  ctx.save();
-  ctx.clip();
-  // sombra nas pontas e luz no meio (pano estufado)
-  const sg = ctx.createLinearGradient(vx - 100, 0, vx + 100, 0);
-  sg.addColorStop(0, 'rgba(120,90,70,0.25)');
-  sg.addColorStop(0.45, 'rgba(255,255,255,0)');
-  sg.addColorStop(1, 'rgba(255,200,150,0.18)');
-  ctx.fillStyle = sg;
-  ctx.fillRect(vx - 110, vy, 220, baseY - vy);
-  // costuras do pano e um remendo
-  ctx.strokeStyle = 'rgba(120,95,70,0.25)';
-  ctx.lineWidth = 1;
-  for (let k = -3; k <= 3; k++) {
-    ctx.beginPath();
-    ctx.moveTo(vx + k * 28, vy + 10);
-    ctx.quadraticCurveTo(vx + k * 30, vy + 90, vx + k * 26 + (baseX - vx) * 0.5, baseY - 30);
-    ctx.stroke();
-  }
-  ctx.fillStyle = 'rgba(200,170,120,0.35)';
-  ctx.fillRect(vx + 46, vy + 96, 18, 14);
-  ctx.strokeStyle = 'rgba(120,95,70,0.5)';
-  ctx.setLineDash([2, 2]);
-  ctx.strokeRect(vx + 46, vy + 96, 18, 14);
-  ctx.setLineDash([]);
-  ctx.restore();
-  ctx.strokeStyle = 'rgba(90,70,50,0.6)';
-  ctx.lineWidth = 2;
-  ctx.stroke();
-  // símbolo na vela
-  const sx = (vx + baseX) / 2;
-  const sy = vy + 70;
-  ctx.fillStyle = c.flag;
-  ctx.globalAlpha = 0.85;
-  ctx.beginPath();
-  if (i === 0) {
-    ctx.moveTo(sx, sy - 34);
-    ctx.quadraticCurveTo(sx + 28, sy, sx + 14, sy + 30);
-    ctx.quadraticCurveTo(sx, sy + 44, sx - 14, sy + 30);
-    ctx.quadraticCurveTo(sx - 22, sy + 6, sx - 6, sy - 10);
-    ctx.quadraticCurveTo(sx - 4, sy + 6, sx + 2, sy + 10);
-    ctx.quadraticCurveTo(sx + 6, sy - 10, sx, sy - 34);
-  } else {
-    ctx.moveTo(sx, sy - 34);
-    ctx.quadraticCurveTo(sx + 26, sy + 6, sx + 16, sy + 26);
-    ctx.arc(sx, sy + 24, 16, 0, Math.PI, false);
-    ctx.quadraticCurveTo(sx - 26, sy + 6, sx, sy - 34);
-  }
-  ctx.fill();
-  ctx.globalAlpha = 1;
+  drawSail(ctx, {
+    x0: vx - 100, x1: vx + 100, top: vy + 10,
+    bx0: baseX - 92 + (vx - baseX) * 0.7, bx1: vx + 92 - (vx - baseX) * 0.3, bottom: baseY - 32,
+    billow, color: c.sail, time, phase: i * 2, emblem: { color: c.flag, kind: i }, reefs: 2,
+  });
   // verga (plataforma)
   plank(ctx, verga.x - 4, verga.x + verga.w + 4, verga.y, 10, '#b07a46', '#7a4a28');
   ctx.strokeStyle = '#4a2a16';
   ctx.lineWidth = 1.5;
   ctx.strokeRect(verga.x - 4, verga.y, verga.w + 8, 10);
-  // vela de cima
-  ctx.fillStyle = c.sail;
-  ctx.beginPath();
-  ctx.moveTo(gx - 60, gavea.y + 26);
-  ctx.lineTo(gx + 60, gavea.y + 26);
-  ctx.quadraticCurveTo(gx + 66, gavea.y + 74, vx + 58, verga.y - 10);
-  ctx.quadraticCurveTo(vx, verga.y - 4 + billow * 0.5, vx - 58, verga.y - 10);
-  ctx.quadraticCurveTo(gx - 66, gavea.y + 74, gx - 60, gavea.y + 26);
-  ctx.fill();
-  ctx.strokeStyle = 'rgba(90,70,50,0.5)';
-  ctx.stroke();
+  drawSail(ctx, {
+    x0: gx - 60, x1: gx + 60, top: gavea.y + 26,
+    bx0: vx - 58, bx1: vx + 58, bottom: verga.y - 10,
+    billow: billow * 0.5, color: c.sail, time, phase: i * 2 + 1, emblem: null, reefs: 1,
+  });
   // gávea: o cesto lá no alto
   plank(ctx, gavea.x, gavea.x + gavea.w, gavea.y, 10, '#b07a46', '#7a4a28');
   ctx.fillStyle = '#8a5530';
