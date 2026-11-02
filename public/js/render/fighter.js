@@ -2,11 +2,11 @@
 // armas na mão. A pose é calculada a partir do estado do jogador; nada
 // aqui altera a simulação.
 
-import { drawHammerArt } from './hammer-art.js';
+import { drawHammerArt, drawHammerSmear } from './hammer-art.js';
 import { ELEMENTS } from '/shared/elements.js';
 import { drawSwordArt, drawStaffArt, drawSpearArt, drawSlash } from './weapons-art.js';
 import { lookOf, aura, scarf, limbStroke, torso, feet, fist, pauldron, head, shade, rgba as rgbaHex } from './look.js';
-import { drawSkin } from './mannequin.js';
+import { drawSkin, drawScarecrow } from './mannequin.js';
 import { drawUniversalSword, drawUniversalStaff, drawUniversalSpear } from './universal-art.js';
 
 const OUTLINE = '#0c0710';
@@ -20,6 +20,8 @@ function computePose(p, vis, time) {
     legF: [0.18, 0.05], legB: [-0.18, 0.05],
     armF: [0.6, 1.9], armB: [-0.25, 1.0],
     weaponAngle: null,     // ângulo da arma (se estiver atacando com ela)
+    weaponSlide: 0,        // empurra a arma ao longo dela (mão mais perto da cabeça)
+    smear: null,           // rastro do marretão { from, to, alpha }
   };
   const speed = Math.abs(p.vx);
 
@@ -101,18 +103,7 @@ function computePose(p, vis, time) {
         pose.legB = [-0.7, 0.2];
       }
     } else if (p.attack.weapon === 'marretao') {
-      // Marretão: levanta bem alto atrás da cabeça e desce com tudo na frente
-      const wind = Math.min(1, p.attack.t / Math.max(0.01, p.attack.startup));
-      const down = active ? Math.min(1, (p.attack.t - p.attack.startup) / 0.09) : 0;
-      const a = active ? 3.75 - down * 2.65 : 2.4 + wind * 1.35;
-      pose.armF = [a, a];
-      pose.armB = [a - 0.2, a - 0.1];
-      pose.weaponAngle = a;
-      pose.lean = active ? 0.38 * down : -0.2 * wind;
-      if (active) {
-        pose.legF = [0.8, 0.4];
-        pose.legB = [-0.6, 0.2];
-      }
+      hammerPose(pose, p.attack);
     } else if (p.attack.weapon === 'cajado') {
       pose.armF = [1.57, 1.57];
       pose.weaponAngle = 1.57;
@@ -131,13 +122,68 @@ function computePose(p, vis, time) {
     pose.armF = [0.75, 1.45];
     pose.armB = [0.3, 1.25];
   }
-  // Segurando o marretão: apoiado no ombro, cabeça para trás
+  // Segurando o marretão: no ombro, a cabeça atrás das costas e as mãos
+  // perto da cabeça (o cabo sai para a frente, para baixo)
   if (p.weapon?.id === 'marretao' && !p.attack) {
-    pose.armF = [1.1, 2.3];
-    pose.armB = [0.6, 2.0];
-    pose.weaponAngle = 3.3;
+    pose.armF = [0.35, 2.75];
+    pose.armB = [0.1, 2.5];
+    pose.weaponAngle = HAMMER.carry;
+    pose.weaponSlide = HAMMER.carrySlide;
   }
   return pose;
+}
+
+// Marretão em 4 tempos:
+//   1. preparo (até o startup): tira do ombro e levanta bem alto atrás da
+//      cabeça, agachando e inclinando para trás, e treme um pouco no alto
+//   2. descida (0,07 s): acelera em arco e crava a cabeça no chão à frente
+//   3. impacto: fica cravado, com um tranco de volta
+//   4. recuperação: puxa a marreta do chão
+const HAMMER = { carry: 4.0, carrySlide: 24, top: 4.3, ground: 1.3, swing: 0.07, stuck: 0.11 };
+const lerp = (a, b, k) => a + (b - a) * k;
+const easeOut = (k) => 1 - (1 - k) ** 3;
+const easeInOut = (k) => (k < 0.5 ? 2 * k * k : 1 - (-2 * k + 2) ** 2 / 2);
+
+function hammerPose(pose, atk) {
+  const S = atk.startup;
+  const t = atk.t;
+  let a;
+  if (t < S) {
+    const k = easeOut(Math.min(1, t / (S * 0.75)));
+    const hold = Math.max(0, (t - S * 0.75) / (S * 0.25));
+    a = lerp(HAMMER.carry, HAMMER.top, k) + Math.sin(t * 90) * 0.03 * hold;
+    pose.weaponSlide = lerp(HAMMER.carrySlide, 0, k);
+    pose.lean = -0.28 * k;
+    pose.bob = -3 * k;
+    pose.legF = [lerp(0, 0.55, k), lerp(0, -0.35, k)];
+    pose.legB = [lerp(0, -0.45, k), lerp(0, 0.05, k)];
+    pose.armF = [a - 0.55, a - 0.1];
+    pose.armB = [a - 0.75, a - 0.2];
+  } else {
+    const since = t - S;
+    const s = Math.min(1, since / HAMMER.swing);
+    const rec = Math.max(0, (since - HAMMER.swing - HAMMER.stuck) / Math.max(0.01, atk.duration - S - HAMMER.swing - HAMMER.stuck));
+    // acelera (começa devagar e termina rápido, como um peso caindo)
+    a = lerp(HAMMER.top, HAMMER.ground, s * s);
+    if (s >= 1) {
+      // tranco no impacto e depois puxa de volta
+      const bounce = Math.exp(-(since - HAMMER.swing) * 40) * Math.sin((since - HAMMER.swing) * 70) * 0.1;
+      a = HAMMER.ground + bounce + easeInOut(Math.min(1, rec)) * 0.25;
+    }
+    const k = Math.min(1, s * 1.4) * (1 - 0.6 * easeInOut(Math.min(1, rec)));
+    pose.lean = lerp(-0.28, 0.55, Math.min(1, s * 1.4)) - 0.3 * easeInOut(Math.min(1, rec));
+    pose.bob = -3 - 5 * k;
+    pose.legF = [lerp(0.55, 1.05, k), lerp(-0.35, 0.15, k)];
+    pose.legB = [lerp(-0.45, -1.0, k), lerp(0.05, 0.25, k)];
+    pose.armF = [a - 0.12, a];
+    pose.armB = [a - 0.3, a - 0.05];
+    pose.weaponSlide = 0;
+    // rastro da descida
+    if (since < HAMMER.swing + 0.08) {
+      pose.smear = { from: HAMMER.top, to: a, alpha: since < HAMMER.swing ? 1 : 1 - (since - HAMMER.swing) / 0.08 };
+    }
+  }
+  pose.weaponAngle = a;
 }
 
 export function drawFighter(ctx, p, x, y, vis, time, { teamColor, isLocal, showName = true }) {
@@ -152,6 +198,12 @@ export function drawFighter(ctx, p, x, y, vis, time, { teamColor, isLocal, showN
 
   ctx.translate(cx, footY);
   ctx.scale(dir, 1);
+  if (p.skin === 'espantalho') {
+    drawScarecrow(ctx, p, time);
+    ctx.restore();
+    if (showName) drawTag(ctx, cx, y - 16, p, teamColor, isLocal);
+    return;
+  }
   if (p.hitstun > 0) ctx.rotate(-0.25 * Math.sign(p.vx || 1) * dir);
 
   const hip = { x: 0, y: -24 - pose.bob };
@@ -173,11 +225,12 @@ export function drawFighter(ctx, p, x, y, vis, time, { teamColor, isLocal, showN
         const u = (p.attack.t - p.attack.startup) / (p.attack.duration - p.attack.startup);
         drawSlash(ctx, 'rgba(235,238,255,0.9)', shoulder, pose.weaponAngle, 2.9, Math.max(0, 1 - u * 1.2));
       }
+      if (pose.smear) drawHammerSmear(ctx, 'rgba(235,238,255,0.85)', shoulder, pose.smear);
       const weaponId = p.attack?.weapon ?? p.weapon?.id;
       if (!weaponId) return;
       const angle = pose.weaponAngle ?? (weaponId === 'cajado' ? 2.9 : weaponId === 'lanca' ? 1.78 : pose.armF[1] + 0.6);
       const hand = pose.thrust ? { x: armF.end.x + pose.thrust, y: armF.end.y } : armF.end;
-      drawHeldWeapon(ctx, weaponId, p.element, hand, angle, time, weaponId === 'lanca' ? 16 : 0);
+      drawHeldWeapon(ctx, weaponId, p.element, hand, angle, time, weaponId === 'lanca' ? 16 : pose.weaponSlide);
     };
     drawSkin(ctx, skin, { hip, neck, headPos, shoulder, legF, legB, armF, armB }, time, weapon);
     ctx.restore();
@@ -203,13 +256,15 @@ export function drawFighter(ctx, p, x, y, vis, time, { teamColor, isLocal, showN
     drawSlash(ctx, rgbaHex(k.glow2, 0.9), shoulder, pose.weaponAngle, 2.9, Math.max(0, 1 - u * 1.2));
   }
 
+  if (pose.smear) drawHammerSmear(ctx, rgbaHex(k.glow2, 0.85), shoulder, pose.smear);
+
   // Arma (atrás do braço da frente)
   if (p.weapon || (p.attack && p.attack.weapon)) {
     const weaponId = p.attack?.weapon ?? p.weapon?.id;
     // lança: quase na horizontal, um pouco para cima, segurada mais no meio
     const angle = pose.weaponAngle ?? (weaponId === 'cajado' ? 2.9 : weaponId === 'lanca' ? 1.78 : pose.armF[1] + 0.6);
     const hand = pose.thrust ? { x: armF.end.x + pose.thrust, y: armF.end.y } : armF.end;
-    drawHeldWeapon(ctx, weaponId, p.element, hand, angle, time, weaponId === 'lanca' ? 16 : 0);
+    drawHeldWeapon(ctx, weaponId, p.element, hand, angle, time, weaponId === 'lanca' ? 16 : pose.weaponSlide);
   }
   limbStroke(ctx, [shoulder, armF.mid, armF.end], 6 * k.thick, k.body, k.bodyHi);
   fist(ctx, p.element, k, armF.end, time);

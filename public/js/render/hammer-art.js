@@ -177,3 +177,39 @@ export function drawHammerArt(ctx, element, t) {
   ctx.stroke();
   ctx.restore();
 }
+
+// Rastro da descida do marretão: uma faixa grossa em arco em volta do ombro,
+// na altura da cabeça da marreta (mesma convenção de ângulo das poses:
+// 0 = para baixo, PI/2 = para a frente, PI = para cima)
+export function drawHammerSmear(ctx, color, shoulder, { from, to, alpha }) {
+  if (alpha <= 0 || Math.abs(from - to) < 0.05) return;
+  const toCanvas = (a) => Math.atan2(Math.cos(a), Math.sin(a));
+  const r0 = 58;
+  const r1 = 98;
+  const a0 = toCanvas(from);
+  const a1 = toCanvas(to);
+  // de trás-em-cima para a frente-embaixo é sentido horário na tela
+  const ccw = false;
+  ctx.save();
+  ctx.globalAlpha = Math.min(1, alpha);
+  const g = ctx.createRadialGradient(shoulder.x, shoulder.y, r0, shoulder.x, shoulder.y, r1);
+  g.addColorStop(0, 'rgba(255,255,255,0)');
+  g.addColorStop(0.55, color);
+  g.addColorStop(0.9, 'rgba(255,255,255,0.95)');
+  g.addColorStop(1, 'rgba(255,255,255,0)');
+  ctx.fillStyle = g;
+  ctx.beginPath();
+  ctx.arc(shoulder.x, shoulder.y, r1, a0, a1, ccw);
+  ctx.arc(shoulder.x, shoulder.y, r0, a1, a0, !ccw);
+  ctx.closePath();
+  ctx.fill();
+  // linhas de velocidade dentro do rastro
+  ctx.strokeStyle = 'rgba(255,255,255,0.7)';
+  ctx.lineWidth = 1.5;
+  for (const r of [70, 84]) {
+    ctx.beginPath();
+    ctx.arc(shoulder.x, shoulder.y, r, a0 + (a1 - a0) * 0.3, a1, ccw);
+    ctx.stroke();
+  }
+  ctx.restore();
+}

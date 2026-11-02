@@ -26,7 +26,7 @@ export class MatchRunner {
     this.game = new Game({
       players: setup.players, mode: setup.mode, seed: setup.seed, mapId: setup.mapId,
       // treino livre: ninguém perde vida, sem tempo e contagem curta
-      ...(setup.practice ? { practice: true, timeLimit: 0, countdown: 1 } : {}),
+      ...(setup.practice ? { practice: true, timeLimit: 0, countdown: 1, items: false } : {}),
     });
     this.localId = setup.localPlayerId;
 

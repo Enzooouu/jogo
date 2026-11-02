@@ -97,6 +97,21 @@ export const TUTORIAL_MAPS = {
     blast: { left: -700, right: 1980, top: -700, bottom: 1000 },
     decor: [{ type: 'arvore', x: 490, y: 520 }, { type: 'flores', x: 720, y: 520 }, { type: 'pedras', x: 800, y: 520 }],
   }),
+  // Treino livre: campo largo, com o espantalho no meio-direita e
+  // plataformas de madeira para testar golpes no ar
+  'treino-livre': arena('treino-livre', {
+    solids: [floor(120, 1040)],
+    platforms: [{ x: 210, y: 420, w: 220 }, { x: 850, y: 420, w: 220 }, { x: 530, y: 300, w: 220 }],
+    spawns: [{ x: 440, y: GROUND }, { x: 820, y: GROUND }],
+    respawns: [{ x: 440, y: 150 }],
+    decor: [
+      { type: 'estandarte', x: 150, el: 'fogo' }, { type: 'suporte', x: 250 }, { type: 'feno', x: 340 },
+      { type: 'flores', x: 540 }, { type: 'placa', x: 640 }, { type: 'pedras', x: 720 },
+      { type: 'alvo', x: 960 }, { type: 'feno', x: 1040 }, { type: 'estandarte', x: 1130, el: 'agua' },
+      { type: 'arvore', x: 1190 }, { type: 'arvore', x: 95 },
+      { type: 'cogumelos', x: 300, y: 420 }, { type: 'flores', x: 960, y: 420 },
+    ],
+  }),
   'treino-final': arena('treino-final', {
     solids: [{ x: 200, y: 540, w: 880, h: 180 }],
     platforms: [{ x: 300, y: 420, w: 200 }, { x: 780, y: 420, w: 200 }, { x: 540, y: 310, w: 200 }],

@@ -223,7 +223,23 @@ export class Game {
     this.updateProjectiles();
     this.updateItems();
     this.spawnItems();
+    for (const p of this.players) if (p.anchored) this.holdAnchored(p);
     this.checkEnd();
+  }
+
+  // Espantalho do treino: preso ao chão no ponto `checkpoint`. O empurrão dos
+  // golpes não tira ele do lugar, só faz ele balançar na estaca (p.sway).
+  holdAnchored(p) {
+    if (p.state !== 'alive' || !p.checkpoint) return;
+    const speed = Math.hypot(p.vx, p.vy);
+    if (speed > 1) p.swayV += Math.sign(p.vx || p.facing) * Math.min(7, 1.5 + speed / 160);
+    p.swayV += (-p.sway * 140 - p.swayV * 7) * DT;
+    p.sway = Math.max(-0.7, Math.min(0.7, p.sway + p.swayV * DT));
+    p.x = p.checkpoint.x - p.w / 2;
+    p.y = p.checkpoint.y - p.h;
+    p.vx = 0;
+    p.vy = 0;
+    p.onGround = true;
   }
 
   // ---------------------------------------------------------------- plataformas
@@ -1418,6 +1434,8 @@ function createPlayer(cfg, index, lives) {
     admin: Boolean(cfg.admin), // modo ADM (testes): cada golpe dá PLAYER.adminDamage
     skin: cfg.skin ?? null,    // visual especial do tutorial ('manequim', 'boneco')
     dummy: !!cfg.dummy,        // boneco de treino: não pega armas
+    anchored: !!cfg.anchored,  // espantalho do treino: preso ao chão
+    sway: 0, swayV: 0,         // balanço do espantalho na estaca
     checkpoint: null,          // treino: onde reaparece depois de cair
     slot: index,
     x: 0, y: 0, px: 0, py: 0,

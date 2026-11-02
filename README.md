@@ -66,7 +66,7 @@ Dá para trocar todas essas teclas (menos o `Esc`) em **Controles**, no menu ini
 
 - **Time vs Time**: 1×1, 2×2 ou 3×3 contra bots.
 - **Todos contra todos**: 4 jogadores, um de cada elemento.
-- **Treino livre**: você contra um boneco parado, sem tempo e sem perder vida. Um painel mostra o dano do último golpe, o combo, o maior combo, o dano total e a % do boneco. **R** zera o boneco e **1 2 3 4** fazem cair uma espada, cajado, lança ou marretão do seu lado. Não conta nas estatísticas.
+- **Treino livre**: tem um mapa só dele, o Campo de Treino (depois da carta já vai direto para a luta). Você treina num **espantalho preso ao chão** (não sai do lugar, só balança na estaca) e pode virar ele num **boneco solto** (que voa longe) com **T** ou com o botão do painel. Sem tempo e sem perder vida. O painel mostra o dano do último golpe, o combo, o maior combo, o dano total e a % do alvo. **R** zera o alvo e **1 2 3 4** fazem cair uma espada, cajado, lança ou marretão do seu lado. Não conta nas estatísticas.
 - Cada time é de um elemento só, e dois times nunca têm o mesmo elemento.
 - Cada jogador tem 3 vidas. Perde uma vida quem **cai do mapa** ou **toca num perigo mortal**.
 - Cada golpe aumenta o dano (%) do alvo; quanto mais dano, mais longe ele voa.

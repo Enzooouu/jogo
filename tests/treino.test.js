@@ -33,3 +33,29 @@ test('o boneco de treino não pega armas', () => {
   assert.equal(d.weapon, null);
   assert.equal(g.items.length, 1);
 });
+
+test('o espantalho fica preso no chão e só balança quando apanha', () => {
+  const g = new Game({
+    players: [
+      { id: 1, element: 'fogo', team: 'A' },
+      { id: 2, element: 'mortal', skin: 'espantalho', team: 'B', dummy: true, anchored: true },
+    ],
+    mode: 'times', seed: 3, mapId: 'treino-livre', practice: true, timeLimit: 0, countdown: 1, items: false,
+  });
+  while (g.phase === 'countdown') g.step({});
+  const me = g.playerById(1);
+  const d = g.playerById(2);
+  d.checkpoint = { x: d.x + d.w / 2, y: d.y + d.h };
+  const x0 = d.x;
+  me.x = d.x - 50;
+  me.facing = 1;
+  me.weapon = { id: 'marretao', uses: 1 };
+  let maxSway = 0;
+  for (let i = 0; i < 90; i++) {
+    g.step({ 1: { attack: i < 2 } });
+    maxSway = Math.max(maxSway, Math.abs(d.sway));
+  }
+  assert.ok(d.damage >= 30, `dano ${d.damage}`);
+  assert.equal(d.x, x0);
+  assert.ok(maxSway > 0.1, `balanço ${maxSway}`);
+});

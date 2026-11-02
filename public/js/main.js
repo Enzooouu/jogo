@@ -48,8 +48,7 @@ const mapPicker = new MapPicker($('#screen-maps'), {
   onContinue(id) {
     state.mapChoice = id;
     savePref('mapa', id);
-    if (state.mode === 'treino') startMatch(newSetup());
-    else goVersus();
+    goVersus();
   },
 });
 
@@ -166,7 +165,7 @@ function drawModeTiles() {
       if (tile.dataset.mode === 'treino') {
         const s = Math.min(1.5, h / 95);
         drawPortrait(ctx, state.element === RANDOM_ELEMENT ? 'fogo' : state.element, w * 0.32, h - 12, s, { facing: 1 });
-        drawPortrait(ctx, 'mortal', w * 0.68, h - 12, s, { facing: -1, extra: { skin: 'boneco' } });
+        drawPortrait(ctx, 'mortal', w * 0.68, h - 12, s, { facing: -1, extra: { skin: 'espantalho' } });
         continue;
       }
       const ffa = tile.dataset.mode === 'ffa';
@@ -458,12 +457,13 @@ function newSetup() {
   });
   setup.mapId = state.mapChoice === RANDOM_MAP ? pickRandomMap() : MAPS[state.mapChoice] ? state.mapChoice : 'caldeira';
   if (state.mode === 'treino') {
-    // você contra um boneco parado que não perde vida
+    // você contra um espantalho preso ao chão (dá para virar boneco solto)
     setup.mode = 'times';
     setup.practice = true;
+    setup.mapId = 'treino-livre';
     setup.players = [
       { id: 1, name: playerName(), element, team: 'A', isBot: false, admin: state.admin },
-      { id: 2, name: 'Boneco', element: 'mortal', skin: 'boneco', team: 'B', isBot: false, dummy: true },
+      { id: 2, name: 'Espantalho', element: 'mortal', skin: 'espantalho', team: 'B', isBot: false, dummy: true, anchored: true },
     ];
   }
   return setup;
@@ -528,6 +528,7 @@ function startTraining(runner) {
   $('#quit-btn').textContent = 'Sair do treino';
   $('#quit-hint').textContent = 'O treino não conta nas estatísticas.';
   updateTrainingHud();
+  updateDummyButton();
   runner.onEvents = (events) => {
     for (const e of events) {
       if (e.type !== 'hit' || e.target !== 2) continue;
@@ -578,6 +579,25 @@ function updateTrainingHud(pop = false) {
   $('#th-dummy').textContent = `${Math.round(dummy?.damage ?? 0)}%`;
 }
 
+// troca entre o espantalho preso ao chão e o boneco solto (que voa longe)
+function toggleDummy() {
+  const d = training?.runner.game.playerById(2);
+  if (!d) return;
+  d.anchored = !d.anchored;
+  d.skin = d.anchored ? 'espantalho' : 'boneco';
+  d.name = d.anchored ? 'Espantalho' : 'Boneco';
+  d.sway = 0;
+  d.swayV = 0;
+  resetDummy();
+  updateDummyButton();
+}
+
+function updateDummyButton() {
+  const d = training?.runner.game.playerById(2);
+  $('#th-toggle').textContent = d?.anchored ? 'Virar boneco solto' : 'Virar espantalho';
+  $('#th-dummy-label').textContent = d?.anchored ? 'Espantalho' : 'Boneco';
+}
+
 function resetDummy() {
   const g = training?.runner.game;
   const d = g?.playerById(2);
@@ -601,6 +621,9 @@ window.addEventListener('keydown', (e) => {
   if (e.code === 'KeyR') {
     e.preventDefault();
     resetDummy();
+  } else if (e.code === 'KeyT') {
+    e.preventDefault();
+    toggleDummy();
   } else if (TRAINING_WEAPONS[e.code]) {
     e.preventDefault();
     const g = training.runner.game;
@@ -895,7 +918,8 @@ function init() {
   }
   $('.mode-tile[data-mode="ffa"]').addEventListener('click', () => chooseMode(1, 'ffa'));
   $('.mode-tile[data-mode="treino"]').addEventListener('click', () => chooseMode(1, 'treino'));
-  $('#cards-next').addEventListener('click', () => show('maps'));
+  // treino livre tem o mapa dele: pula a escolha de mapa
+  $('#cards-next').addEventListener('click', () => (state.mode === 'treino' ? startMatch(newSetup()) : show('maps')));
   $('#maps-next').addEventListener('click', () => mapPicker.onContinue(mapPicker.current()));
   $('#diff-seg').addEventListener('click', (e) => {
     const btn = e.target.closest('button');
@@ -911,6 +935,10 @@ function init() {
   });
   $('#resume-btn').addEventListener('click', () => setPaused(false));
   $('#quit-btn').addEventListener('click', quitMatch);
+  $('#th-toggle').addEventListener('click', (e) => {
+    toggleDummy();
+    e.currentTarget.blur();
+  });
   $('#again-btn').addEventListener('click', () => startMatch(newSetup()));
   $('#menu-btn').addEventListener('click', () => show('home'));
   window.addEventListener('resize', () => {
