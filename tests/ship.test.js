@@ -83,23 +83,35 @@ test('Navio: bots jogam uma partida inteira sem travar', () => {
   assert.equal(g.phase, 'ended');
 });
 
-test('Navio: dá para atravessar a prancha andando de um navio ao outro, nos dois sentidos', () => {
-  for (const [from, to, key] of [[450, 850, 'right'], [850, 450, 'left']]) {
-    for (const start of [0, 1.3, 2.7, 4.1]) {
-      const g = newShip();
-      g.playerById(2).state = 'respawning';
-      g.playerById(2).respawnTimer = Infinity;
-      run(g, Math.round(start * 60));
-      const p = g.playerById(1);
-      place(p, from, g.solidsNow().find((s) => s.ship === (from < 640 ? 0 : 1) && s.y > 480).y);
-      run(g, 3);
-      let fell = false;
-      for (let i = 0; i < 150 && Math.abs(p.x + p.w / 2 - to) > 20; i++) {
-        g.step({ 1: { [key]: true } });
-        if (p.y + p.h > 530) fell = true;
-      }
-      assert.ok(!fell && p.state === 'alive', `caiu indo de ${from} para ${to} (começo ${start}s)`);
-      assert.ok(Math.abs(p.x + p.w / 2 - to) <= 20, `parou em ${Math.round(p.x)}`);
-    }
+test('Navio: quem fica com o pé dentro da ponta do convés não é jogado para trás do navio', () => {
+  for (const [x, key] of [[555, 'right'], [205, 'left'], [735, 'left'], [1075, 'right']]) {
+    const g = newShip();
+    g.playerById(2).state = 'respawning';
+    g.playerById(2).respawnTimer = Infinity;
+    const p = g.playerById(1);
+    const deck = g.solidsNow().find((s) => s.y > 480 && x > s.x && x < s.x + s.w);
+    // no ar, com o pé 14 px dentro da ponta do convés, dando dash
+    place(p, x, deck.y + 14);
+    p.onGround = false;
+    run(g, 1, { 1: { dash: true, [key]: true } });
+    const cx = p.x + p.w / 2;
+    assert.ok(Math.abs(cx - x) < 60, `de ${x} foi parar em ${Math.round(cx)}`);
+  }
+});
+
+test('Navio: dash rente ao convés com o navio subindo não joga o jogador para a ponta', () => {
+  for (const start of [0, 0.7, 1.5, 2.2, 3.1, 4.4]) {
+    const g = newShip();
+    g.playerById(2).state = 'respawning';
+    g.playerById(2).respawnTimer = Infinity;
+    run(g, Math.round(start * 60));
+    const p = g.playerById(1);
+    const deck = g.solidsNow().find((s) => s.ship === 0 && s.y > 480);
+    // no ar, com o pé 2 px acima do convés, dando dash para a direita
+    place(p, 400, deck.y - 2);
+    p.onGround = false;
+    run(g, 1, { 1: { dash: true, right: true } });
+    run(g, 12, { 1: { right: true } });
+    assert.ok(p.x > 380 && p.x < 620, `foi parar em x ${Math.round(p.x)} (começo ${start}s)`);
   }
 });

@@ -25,8 +25,8 @@ export const SHIP = {
     flight: 1.1,       // tempo da bala no ar
     gravity: 900,
     r: 13,
-    hit: { damage: 12, kbBase: 420, kbScale: 3.0, angle: 0.5 },
-    boom: { radius: 95, damage: 10, kbBase: 380, kbScale: 2.8, angle: 0.8 },
+    hit: { damage: 18, kbBase: 420, kbScale: 3.0, angle: 0.5 },
+    boom: { radius: 95, damage: 15, kbBase: 380, kbScale: 2.8, angle: 0.8 },
   },
 };
 
@@ -84,13 +84,6 @@ export class Airships {
   // Chamado dentro de updatePlatforms: move a verga e a gávea com o navio
   movePlatforms() {
     for (const pl of this.game.platforms) {
-      if (pl.bridge) {
-        // a prancha fica na média da altura dos dois conveses
-        const y = pl.baseY + (this.state[0].bob + this.state[1].bob) / 2;
-        pl.dy = y - pl.y;
-        pl.y = y;
-        continue;
-      }
       if (pl.ship == null) continue;
       const st = this.state[pl.ship];
       const x = pl.baseX + Math.sin(st.lean) * pl.mastHeight;

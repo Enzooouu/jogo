@@ -550,13 +550,31 @@ export class Game {
       // pé só encostando no chão (diferença de arredondamento, ex.: navio
       // subindo e descendo) não é parede
       if (p.y + p.h - s.y < 0.05) continue;
-      // degrauzinho (até STEP_UP px) andando no chão: sobe em vez de bater
-      if (grounded && p.vy >= 0 && p.y + p.h - s.y <= STEP_UP) {
+      // pé só um pouquinho abaixo do topo (degrau, ou o chão do navio subiu
+      // embaixo de quem estava no ar, num dash por exemplo): fica em cima
+      // em vez de ser empurrado para a ponta do bloco
+      if (p.vy >= 0 && p.y + p.h - s.y <= STEP_UP) {
         p.y = s.y - p.h;
         continue;
       }
-      if (mvx > 0) p.x = s.x - p.w;
-      else if (mvx < 0) p.x = s.x + s.w;
+      // bateu de lado: volta para o lado de onde veio. Se já estava dentro
+      // do bloco (o chão subiu embaixo dele), sai pelo lado mais perto, em
+      // vez de ir parar na outra ponta do bloco
+      const prevX = p.x - mvx * DT;
+      const cameLeft = prevX + p.w <= s.x + 0.5;
+      const cameRight = prevX >= s.x + s.w - 0.5;
+      if (mvx > 0 && cameLeft) p.x = s.x - p.w;
+      else if (mvx < 0 && cameRight) p.x = s.x + s.w;
+      else {
+        const left = p.x + p.w - s.x;
+        const right = s.x + s.w - p.x;
+        const up = p.y + p.h - s.y;
+        if (up <= left && up <= right) {
+          p.y = s.y - p.h;
+          continue;
+        }
+        p.x = left < right ? s.x - p.w : s.x + s.w;
+      }
       p.vx = 0;
       p.windVx = 0;
     }
