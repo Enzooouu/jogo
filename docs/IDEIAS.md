@@ -4,9 +4,7 @@ Ideias aprovadas pelo Enzo que ainda não foram feitas.
 
 ## Mapas
 
-- **Navio Voador** 🏴‍☠️: dois navios piratas no céu, um ao lado do outro. O
-  convés balança e um canhão dispara de tempos em tempos, arremessando quem
-  estiver na frente. Elemento favorecido: Ar.
+(nenhum por enquanto: o Navio Voador já entrou no jogo)
 
 ## Outras ideias de mapa (ainda não escolhidas)
 

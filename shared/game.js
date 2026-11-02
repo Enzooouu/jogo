@@ -15,6 +15,7 @@ import { EMPTY_INPUT } from './input.js';
 import { createRng } from './rng.js';
 import { rectsOverlap, circleRectOverlap, approach } from './geometry.js';
 import { FrozenLake, LAKE } from './lake.js';
+import { Airships } from './ship.js';
 
 // Combinação de disparos: quem continua (o primeiro da lista ganha), o nome
 // de cada par e o efeito extra que o elemento absorvido dá ao acertar
@@ -100,6 +101,8 @@ export class Game {
     this.platforms = this.map.platforms.map((pl) => ({ ...pl, baseX: pl.x, baseY: pl.y, px: pl.x, py: pl.y, dx: 0, dy: 0 }));
     // Lago Congelado: gelo que racha, plataformas que derretem, nevasca...
     this.lake = this.map.lake ? new FrozenLake(this) : null;
+    // Navio Voador: navios balançando e canhões
+    this.ships = this.map.ships ? new Airships(this) : null;
 
     const seen = new Set();
     this.players = players.map((cfg, index) => {
@@ -210,6 +213,7 @@ export class Game {
     this.updateWinds();
     this.updateSuddenDeath();
     this.lake?.update();
+    this.ships?.update();
     for (const p of this.players) this.updatePlayer(p, inputs[p.id] ?? EMPTY_INPUT);
     this.updateProjectiles();
     this.updateItems();
@@ -250,6 +254,7 @@ export class Game {
       pl.x = x;
       pl.y = y;
     }
+    this.ships?.movePlatforms();
     // quem está em cima vai junto
     for (const p of this.players) {
       if (p.state !== 'alive' || !p.onGround || p.standingOn !== 'platform') continue;
@@ -272,6 +277,7 @@ export class Game {
   // sobram só os pedaços de `keep`
   solidsNow() {
     if (this.lake) return this.lake.solids();
+    if (this.ships) return this.ships.solids();
     if (!this.suddenDeath) return this.map.solids;
     const out = [];
     for (const s of this.map.solids) {
@@ -536,6 +542,9 @@ export class Game {
     p.x += mvx * DT;
     for (const s of solids) {
       if (!rectsOverlap(p, s)) continue;
+      // pé só encostando no chão (diferença de arredondamento, ex.: navio
+      // subindo e descendo) não é parede
+      if (p.y + p.h - s.y < 0.05) continue;
       if (mvx > 0) p.x = s.x - p.w;
       else if (mvx < 0) p.x = s.x + s.w;
       p.vx = 0;
@@ -690,6 +699,8 @@ export class Game {
     if (this.lake && !p.admin && hazardReaction(p.element, 'vento') !== 'imune') {
       target += this.lake.blizzardPush(p, WIND_FACTOR[p.element] ?? 1);
     }
+    // convés do Navio Voador inclinando: escorrega um pouco
+    if (this.ships && !p.admin) target += this.ships.slidePush(p);
     p.windVx = approach(p.windVx, target, 1800 * DT);
   }
 

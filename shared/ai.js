@@ -110,6 +110,10 @@ export class BotController {
     if (!offStage && this.rng.chance(this.cfg.reflex)) {
       const gust = game.winds.find((w) => w.state === 'ativo' && rectsOverlap(me, w));
       if (gust && hazardReaction(me.element, 'vento') !== 'imune') dir = -gust.dir;
+      // Navio Voador: sai de onde a bala do canhão vai cair
+      const boom = game.ships?.danger();
+      // (sempre para o lado do convés: o tombadilho fica na ponta do navio)
+      if (boom && Math.abs(cx - boom.x) < boom.r && Math.abs(feet - boom.y) < 90) dir = boom.x < 640 ? 1 : -1;
       // nevasca do Lago Congelado: anda contra ela
       const bz = game.lake?.blizzard;
       if (bz?.state === 'ativo' && hazardReaction(me.element, 'vento') !== 'imune') dir = -bz.dir;
@@ -321,7 +325,7 @@ export class BotController {
 
 // O mapa com o chão de agora (na morte súbita do Coliseu parte do palco cai)
 function currentMap(game) {
-  return game.suddenDeath || game.lake ? { ...game.map, solids: game.solidsNow(), hazards: game.hazardsNow() } : game.map;
+  return game.suddenDeath || game.lake || game.ships ? { ...game.map, solids: game.solidsNow(), hazards: game.hazardsNow() } : game.map;
 }
 
 function dist(a, b) {

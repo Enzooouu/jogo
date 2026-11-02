@@ -242,6 +242,18 @@ export function playEvents(events, localId) {
       case 'start':
         tone({ freq: 880, dur: 0.35, type: 'square', vol: 0.18 });
         break;
+      // ---- Navio Voador
+      case 'cannonFuse':
+        noise({ dur: 1.4, vol: 0.12, freq: 5000 });
+        break;
+      case 'cannonFire':
+        noise({ dur: 0.6, vol: 0.55, freq: 500 });
+        tone({ freq: 90, to: 35, dur: 0.5, type: 'sawtooth', vol: 0.35 });
+        break;
+      case 'cannonBoom':
+        noise({ dur: 0.7, vol: 0.5, freq: 700 });
+        tone({ freq: 120, to: 40, dur: 0.45, type: 'sine', vol: 0.4 });
+        break;
       // ---- Lago Congelado
       case 'iceCrack':
         noise({ dur: 0.12, vol: 0.3, freq: 4200 });

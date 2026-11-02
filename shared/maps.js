@@ -256,6 +256,49 @@ export const MAPS = {
     decor: [],
     theme: { skyTop: '#3a2a6a', skyBottom: '#ffb070', haze: '#ffcf9a' },
   },
+
+  // Navio Voador: dois navios piratas voando lado a lado acima das nuvens,
+  // com um vão no meio (e uma prancha ligando os dois). Os navios sobem e
+  // descem e os mastros balançam (shared/ship.js). Perto do tombadilho de
+  // cada navio fica um canhão que atira em arco por cima do vão: a bala cai
+  // no tombadilho do outro navio e explode.
+  navio: {
+    id: 'navio',
+    name: 'Navio Voador',
+    art: 'navio',
+    width: 1280,
+    height: 720,
+    blast: { left: -260, right: 1540, top: -560, bottom: 1000 },
+    solids: [
+      { x: 70, y: 436, w: 120, h: 170, ship: 0 },    // tombadilho (esquerda)
+      { x: 190, y: 500, w: 370, h: 106, ship: 0 },   // convés (esquerda)
+      { x: 720, y: 500, w: 370, h: 106, ship: 1 },   // convés (direita)
+      { x: 1090, y: 436, w: 120, h: 170, ship: 1 },  // tombadilho (direita)
+    ],
+    platforms: [
+      { x: 227, y: 326, w: 216, ship: 0 },   // verga (esquerda)
+      { x: 289, y: 196, w: 92, ship: 0 },    // gávea (esquerda)
+      { x: 837, y: 326, w: 216, ship: 1 },   // verga (direita)
+      { x: 899, y: 196, w: 92, ship: 1 },    // gávea (direita)
+      { x: 548, y: 497, w: 184 },            // prancha entre os navios
+    ],
+    // cada navio: altura do convés, mastro, canhão e onde a bala dele cai
+    ships: [
+      { deckY: 500, poopY: 436, mast: 335, cannon: { x: 228, dir: 1 }, target: { x: 1150, y: 436 } },
+      { deckY: 500, poopY: 436, mast: 945, cannon: { x: 1052, dir: -1 }, target: { x: 130, y: 436 } },
+    ],
+    hazards: [],
+    spawns: [
+      { x: 300, y: 500 }, { x: 980, y: 500 }, { x: 420, y: 500 }, { x: 860, y: 500 },
+      { x: 130, y: 436 }, { x: 1150, y: 436 }, { x: 500, y: 500 }, { x: 780, y: 500 },
+    ],
+    respawns: [
+      { x: 400, y: 150 }, { x: 880, y: 150 }, { x: 300, y: 150 }, { x: 980, y: 150 },
+    ],
+    itemSpawn: { minX: 120, maxX: 1160, y: -40 },
+    decor: [],
+    theme: { skyTop: '#24366e', skyBottom: '#ffcf8f', haze: '#ffd9b0' },
+  },
 };
 
 export const DEFAULT_MAP = 'caldeira';
