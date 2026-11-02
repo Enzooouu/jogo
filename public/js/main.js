@@ -48,7 +48,8 @@ const mapPicker = new MapPicker($('#screen-maps'), {
   onContinue(id) {
     state.mapChoice = id;
     savePref('mapa', id);
-    goVersus();
+    if (state.mode === 'treino') startMatch(newSetup());
+    else goVersus();
   },
 });
 
@@ -72,6 +73,7 @@ export function show(name) {
   if (name === 'mode') drawModeTiles();
   if (name === 'maps') mapPicker.open(state.mapChoice);
   else mapPicker.stop();
+  if (name !== 'game') $('#training-hud').hidden = true;
   closePanels();
 }
 
@@ -161,6 +163,12 @@ function drawModeTiles() {
   requestAnimationFrame(() => {
     for (const tile of document.querySelectorAll('.mode-tile')) {
       const { ctx, w, h } = fitCanvas(tile.querySelector('canvas'));
+      if (tile.dataset.mode === 'treino') {
+        const s = Math.min(1.5, h / 95);
+        drawPortrait(ctx, state.element === RANDOM_ELEMENT ? 'fogo' : state.element, w * 0.32, h - 12, s, { facing: 1 });
+        drawPortrait(ctx, 'mortal', w * 0.68, h - 12, s, { facing: -1, extra: { skin: 'boneco' } });
+        continue;
+      }
       const ffa = tile.dataset.mode === 'ffa';
       const n = ffa ? 2 : Number(tile.dataset.size);
       const scale = Math.min(1.5, h / 95) * (n === 3 ? 0.78 : n === 2 ? 0.9 : 1);
@@ -193,7 +201,9 @@ function chooseMode(teamSize, mode = 'times') {
   show('cards');
   $('#cards-mode').textContent = mode === 'ffa'
     ? 'Todos contra todos · cada jogador tem um elemento diferente'
-    : `Modo ${teamSize} × ${teamSize} · o time inteiro usa o elemento da carta`;
+    : mode === 'treino'
+      ? 'Treino livre · teste golpes e combos num boneco parado'
+      : `Modo ${teamSize} × ${teamSize} · o time inteiro usa o elemento da carta`;
   $(`.el-card[data-element="${state.element}"]`)?.focus();
 }
 
@@ -447,6 +457,15 @@ function newSetup() {
     admin: state.admin,
   });
   setup.mapId = state.mapChoice === RANDOM_MAP ? pickRandomMap() : MAPS[state.mapChoice] ? state.mapChoice : 'caldeira';
+  if (state.mode === 'treino') {
+    // você contra um boneco parado que não perde vida
+    setup.mode = 'times';
+    setup.practice = true;
+    setup.players = [
+      { id: 1, name: playerName(), element, team: 'A', isBot: false, admin: state.admin },
+      { id: 2, name: 'Boneco', element: 'mortal', skin: 'boneco', team: 'B', isBot: false, dummy: true },
+    ];
+  }
   return setup;
 }
 
@@ -466,6 +485,13 @@ async function startMatch(setup) {
   });
   state.runner = runner;
   runner.start();
+  $('#quit-btn').textContent = 'Desistir';
+  $('#quit-hint').textContent = 'Desistir conta como derrota.';
+  if (setup.practice) {
+    startTraining(runner);
+    if (DEBUG) window.__brawl = { runner, state, training };
+    return;
+  }
 
   // Avisa o servidor que a partida começou (só para quem está logado).
   const teamSize = setup.mode === 'ffa'
@@ -487,9 +513,113 @@ function setPaused(paused) {
   if (paused) $('#resume-btn').focus();
 }
 
+// ------------------------------------------------------------ treino livre
+
+const TRAINING_WEAPONS = { Digit1: 'espada', Digit2: 'cajado', Digit3: 'lanca', Digit4: 'marretao' };
+const COMBO_GAP = 1;  // segundos sem acertar que encerram o combo
+let training = null;
+
+function startTraining(runner) {
+  const g = runner.game;
+  // cada um reaparece onde começou
+  for (const p of g.players) p.checkpoint = { x: p.x + p.w / 2, y: p.y + p.h };
+  training = { runner, combo: 0, comboDmg: 0, best: 0, total: 0, last: null, lastHitAt: -9 };
+  $('#training-hud').hidden = false;
+  $('#quit-btn').textContent = 'Sair do treino';
+  $('#quit-hint').textContent = 'O treino não conta nas estatísticas.';
+  updateTrainingHud();
+  runner.onEvents = (events) => {
+    for (const e of events) {
+      if (e.type !== 'hit' || e.target !== 2) continue;
+      const t = g.time;
+      if (t - training.lastHitAt > COMBO_GAP) {
+        training.combo = 0;
+        training.comboDmg = 0;
+      }
+      training.lastHitAt = t;
+      training.combo++;
+      training.comboDmg += e.damage;
+      training.total += e.damage;
+      training.best = Math.max(training.best, training.combo);
+      training.last = { damage: e.damage, weapon: e.weapon };
+      updateTrainingHud(true);
+    }
+  };
+  const tick = () => {
+    if (state.runner !== runner) return;
+    updateTrainingHud();
+    requestAnimationFrame(tick);
+  };
+  requestAnimationFrame(tick);
+}
+
+function weaponLabel(id) {
+  return WEAPONS[id]?.name ?? 'Soco';
+}
+
+function updateTrainingHud(pop = false) {
+  if (!training) return;
+  const g = training.runner.game;
+  const dummy = g.playerById(2);
+  // o combo fica apagado depois de um tempo sem acertar (o próximo golpe começa outro)
+  const combo = $('#th-combo');
+  combo.parentElement.classList.toggle('old', g.time - training.lastHitAt > COMBO_GAP);
+  combo.textContent = training.combo;
+  if (pop) {
+    combo.classList.remove('pop');
+    void combo.offsetWidth;
+    combo.classList.add('pop');
+  }
+  const last = training.last;
+  $('#th-last').textContent = last ? `${Math.round(last.damage)} · ${weaponLabel(last.weapon)}` : '—';
+  $('#th-combo-dmg').textContent = Math.round(training.comboDmg);
+  $('#th-best').textContent = training.best;
+  $('#th-total').textContent = Math.round(training.total);
+  $('#th-dummy').textContent = `${Math.round(dummy?.damage ?? 0)}%`;
+}
+
+function resetDummy() {
+  const g = training?.runner.game;
+  const d = g?.playerById(2);
+  if (!d) return;
+  d.damage = 0;
+  d.vx = 0;
+  d.vy = 0;
+  for (const k of Object.keys(d.status)) d.status[k] = null;
+  if (d.state !== 'respawning' && d.state !== 'out') {
+    d.x = d.checkpoint.x - d.w / 2;
+    d.y = d.checkpoint.y - d.h;
+  }
+  training.combo = 0;
+  training.comboDmg = 0;
+  updateTrainingHud();
+}
+
+window.addEventListener('keydown', (e) => {
+  if (state.screen !== 'game' || !training || state.runner !== training.runner || state.runner.paused) return;
+  if (e.repeat || actionOf(currentBindings(), e.code)) return;
+  if (e.code === 'KeyR') {
+    e.preventDefault();
+    resetDummy();
+  } else if (TRAINING_WEAPONS[e.code]) {
+    e.preventDefault();
+    const g = training.runner.game;
+    const me = g.playerById(1);
+    if (!me || me.state === 'respawning') return;
+    g.spawnWeaponAt(TRAINING_WEAPONS[e.code], me.x + me.w / 2 + me.facing * 50, me.y - 40);
+  }
+});
+
 function quitMatch() {
   const runner = state.runner;
   if (!runner) return;
+  if (runner.game.practice) {
+    runner.stop();
+    state.runner = null;
+    $('#pause-overlay').hidden = true;
+    show('mode');
+    return;
+  }
   runner.game.forfeit(state.lastSetup.localPlayerId);
   // onEnd é chamado pelo próprio laço no próximo quadro
   runner.setPaused(false);
@@ -764,6 +894,7 @@ function init() {
     tile.addEventListener('click', () => chooseMode(Number(tile.dataset.size)));
   }
   $('.mode-tile[data-mode="ffa"]').addEventListener('click', () => chooseMode(1, 'ffa'));
+  $('.mode-tile[data-mode="treino"]').addEventListener('click', () => chooseMode(1, 'treino'));
   $('#cards-next').addEventListener('click', () => show('maps'));
   $('#maps-next').addEventListener('click', () => mapPicker.onContinue(mapPicker.current()));
   $('#diff-seg').addEventListener('click', (e) => {

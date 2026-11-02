@@ -10,7 +10,7 @@
 import { DT, PHYS, PLAYER, MATCH, ITEMS, MODES } from './constants.js';
 import { getMap } from './maps.js';
 import { ELEMENTS, HAZARDS, hazardReaction, teamElementsError } from './elements.js';
-import { WEAPONS, WEAPON_IDS, weaponProfile } from './weapons.js';
+import { WEAPONS, weaponProfile, pickWeapon } from './weapons.js';
 import { EMPTY_INPUT } from './input.js';
 import { createRng } from './rng.js';
 import { rectsOverlap, circleRectOverlap, approach } from './geometry.js';
@@ -788,7 +788,7 @@ export class Game {
   }
 
   checkPickup(p) {
-    if (p.weapon || p.pickupCooldown > 0) return;
+    if (p.weapon || p.pickupCooldown > 0 || p.dummy) return;
     for (let i = 0; i < this.items.length; i++) {
       const item = this.items[i];
       if (!rectsOverlap(p, item)) continue;
@@ -934,6 +934,8 @@ export class Game {
       for (const t of this.players) {
         if (this.canHit(p, t) && rectsOverlap(box, t)) this.applyHit(p, t, profile, p.facing);
       }
+      // marretão: a pancada faz uma onda de choque no chão à frente
+      if (profile.slam) this.emit('hammerSlam', { id: p.id, element: p.element, x: p.x + p.w / 2 + p.facing * profile.reach * 0.7, y: p.y + p.h, dir: p.facing });
     } else {
       const pr = profile.projectile;
       this.projectiles.push({
@@ -1156,6 +1158,19 @@ export class Game {
     this.projectiles = keep;
   }
 
+  // Treino livre: cria uma arma caindo em (x, y), pronta para pegar
+  spawnWeaponAt(weapon, x, y) {
+    const item = {
+      id: this.nextEntityId++, weapon, uses: WEAPONS[weapon].uses,
+      dropped: true, thrown: true, dir: 1,
+      x: Math.round(x - 17), y: Math.round(y - 15), w: 34, h: 30,
+      landed: false, life: 999,
+    };
+    this.items.push(item);
+    this.emit('weaponDrop', { itemId: item.id, weapon, x, y });
+    return item;
+  }
+
   // Arma caída (sem ser de time nenhum): cai rápido até o chão
   dropWeapon(pr) {
     let x = pr.x;
@@ -1210,10 +1225,10 @@ export class Game {
     if (this.map.itemThrow) {
       // a torcida joga a arma: mira num pedaço de chão que existe agora
       const floor = this.rng.pick(this.solidsNow());
-      this.throwItem(Math.round(this.rng.range(floor.x + 20, floor.x + floor.w - 54)), floor.y, this.rng.pick(WEAPON_IDS));
+      this.throwItem(Math.round(this.rng.range(floor.x + 20, floor.x + floor.w - 54)), floor.y, pickWeapon(() => this.rng.next()));
       return;
     }
-    this.dropCrate(Math.round(this.rng.range(minX, maxX)), this.rng.pick(WEAPON_IDS));
+    this.dropCrate(Math.round(this.rng.range(minX, maxX)), pickWeapon(() => this.rng.next()));
   }
 
   hitByCrowd(p, item) {
@@ -1401,6 +1416,7 @@ function createPlayer(cfg, index, lives) {
     isBot: Boolean(cfg.isBot),
     admin: Boolean(cfg.admin), // modo ADM (testes): cada golpe dá PLAYER.adminDamage
     skin: cfg.skin ?? null,    // visual especial do tutorial ('manequim', 'boneco')
+    dummy: !!cfg.dummy,        // boneco de treino: não pega armas
     checkpoint: null,          // treino: onde reaparece depois de cair
     slot: index,
     x: 0, y: 0, px: 0, py: 0,

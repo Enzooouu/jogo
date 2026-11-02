@@ -196,7 +196,12 @@ export function playEvents(events, localId) {
         tone({ freq: 260, to: 720, dur: 0.14, type: 'triangle', vol: 0.1 });
         break;
       case 'attack':
-        noise({ dur: 0.07, vol: 0.12, freq: 3000 });
+        if (e.weapon === 'marretao') noise({ dur: 0.3, vol: 0.18, freq: 500 });
+        else noise({ dur: 0.07, vol: 0.12, freq: 3000 });
+        break;
+      case 'hammerSlam':
+        noise({ dur: 0.5, vol: 0.55, freq: 400 });
+        tone({ freq: 110, to: 35, dur: 0.45, type: 'sine', vol: 0.5 });
         break;
       case 'hit':
         noise({ dur: 0.12, vol: e.kb > 650 ? 0.45 : 0.3, freq: 1800 });

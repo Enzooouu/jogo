@@ -2,6 +2,7 @@
 // armas na mão. A pose é calculada a partir do estado do jogador; nada
 // aqui altera a simulação.
 
+import { drawHammerArt } from './hammer-art.js';
 import { ELEMENTS } from '/shared/elements.js';
 import { drawSwordArt, drawStaffArt, drawSpearArt, drawSlash } from './weapons-art.js';
 import { lookOf, aura, scarf, limbStroke, torso, feet, fist, pauldron, head, shade, rgba as rgbaHex } from './look.js';
@@ -99,6 +100,19 @@ function computePose(p, vis, time) {
         pose.legF = [0.9, 0.3];
         pose.legB = [-0.7, 0.2];
       }
+    } else if (p.attack.weapon === 'marretao') {
+      // Marretão: levanta bem alto atrás da cabeça e desce com tudo na frente
+      const wind = Math.min(1, p.attack.t / Math.max(0.01, p.attack.startup));
+      const down = active ? Math.min(1, (p.attack.t - p.attack.startup) / 0.09) : 0;
+      const a = active ? 3.75 - down * 2.65 : 2.4 + wind * 1.35;
+      pose.armF = [a, a];
+      pose.armB = [a - 0.2, a - 0.1];
+      pose.weaponAngle = a;
+      pose.lean = active ? 0.38 * down : -0.2 * wind;
+      if (active) {
+        pose.legF = [0.8, 0.4];
+        pose.legB = [-0.6, 0.2];
+      }
     } else if (p.attack.weapon === 'cajado') {
       pose.armF = [1.57, 1.57];
       pose.weaponAngle = 1.57;
@@ -116,6 +130,12 @@ function computePose(p, vis, time) {
   if (p.weapon?.id === 'lanca' && !p.attack) {
     pose.armF = [0.75, 1.45];
     pose.armB = [0.3, 1.25];
+  }
+  // Segurando o marretão: apoiado no ombro, cabeça para trás
+  if (p.weapon?.id === 'marretao' && !p.attack) {
+    pose.armF = [1.1, 2.3];
+    pose.armB = [0.6, 2.0];
+    pose.weaponAngle = 3.3;
   }
   return pose;
 }
@@ -216,7 +236,8 @@ export function drawHeldWeapon(ctx, weaponId, elementId, hand, angle, time, slid
   ctx.rotate(-angle + Math.PI);
   ctx.translate(0, slide);
   // Mortal (sem elemento): armas padrão, as universais
-  if (elementId === 'mortal') {
+  if (weaponId === 'marretao') drawHammerArt(ctx, elementId, time);
+  else if (elementId === 'mortal') {
     if (weaponId === 'espada') drawUniversalSword(ctx, time);
     else if (weaponId === 'cajado') drawUniversalStaff(ctx, time);
     else if (weaponId === 'lanca') drawUniversalSpear(ctx, time);

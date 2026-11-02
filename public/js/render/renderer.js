@@ -1,6 +1,7 @@
 // Desenha a partida no canvas a partir do estado da simulação.
 // Também transforma os eventos da partida (golpes, K.O....) em efeitos.
 
+import { drawHammerArt } from './hammer-art.js';
 import { ELEMENTS } from '/shared/elements.js';
 import { weaponProfile } from '/shared/weapons.js';
 import { StageRenderer, roundRect } from './stage.js';
@@ -200,6 +201,18 @@ export class Renderer {
             P.add({ type: 'ring', x: e.x, y: e.y, size: 10, grow: 180, life: 0.3, color: 'rgba(200,255,245,0.8)' });
             P.burst(e.x, e.y, { type: 'spark', count: 8, speed: 260, life: 0.35, size: 1.8, color: '#e8fffb', drag: 3 });
           }
+          break;
+        }
+        case 'hammerSlam': {
+          // marretão batendo: onda de choque no chão, poeira, pedrinhas e tremor
+          const el = ELEMENTS[e.element];
+          P.add({ type: 'ring', x: e.x, y: e.y - 4, size: 10, grow: 360, life: 0.35, color: el.light });
+          P.burst(e.x, e.y - 4, { count: 16, speed: 420, angle: -Math.PI / 2, spread: 1.6, life: 0.7, size: 3, color: '#8a6a48', gravity: 1500 });
+          for (const d of [-1, 1]) {
+            P.burst(e.x, e.y - 6, { count: 6, speed: 380, angle: d > 0 ? 0 : Math.PI, spread: 0.3, life: 0.6, size: 9, grow: 26, drag: 2, color: 'rgba(190,170,140,0.35)' });
+          }
+          P.burst(e.x, e.y - 10, { type: 'spark', count: 14, speed: 360, angle: -Math.PI / 2, spread: 2.2, life: 0.35, size: 2.5, color: el.light, drag: 3 });
+          this.shake(10, 0.3);
           break;
         }
         case 'explosion': {
@@ -840,7 +853,22 @@ export class Renderer {
         }
       }
       // deitada: a arma aponta para -y, gira 90° para ficar na horizontal
-      if (item.weapon === 'lanca') {
+      if (item.weapon === 'marretao') {
+        // marretão (raro): brilho dourado subindo do chão para chamar atenção
+        ctx.save();
+        ctx.globalCompositeOperation = 'lighter';
+        const beam = ctx.createLinearGradient(0, ground - 90, 0, ground);
+        beam.addColorStop(0, 'rgba(255,210,90,0)');
+        beam.addColorStop(1, `rgba(255,210,90,${0.35 + Math.sin(t * 4) * 0.12})`);
+        ctx.fillStyle = beam;
+        ctx.fillRect(cx - 26, ground - 90, 52, 90);
+        ctx.restore();
+        ctx.fillStyle = 'rgba(10,20,5,0.3)';
+        ctx.beginPath();
+        ctx.ellipse(cx, ground - 1, 40, 4, 0, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.translate(cx - dir * 28, ground - 12);
+      } else if (item.weapon === 'lanca') {
         // lança é comprida: centraliza no lugar do item, com sombra e um
         // brilho no chão para chamar atenção
         ctx.fillStyle = 'rgba(10,20,5,0.3)';
@@ -868,6 +896,7 @@ export class Renderer {
     }
     if (item.weapon === 'espada') drawUniversalSword(ctx, t);
     else if (item.weapon === 'lanca') drawUniversalSpear(ctx, t);
+    else if (item.weapon === 'marretao') drawHammerArt(ctx, 'mortal', t);
     else drawUniversalStaff(ctx, t);
     ctx.restore();
   }
@@ -910,7 +939,8 @@ export class Renderer {
         ctx.rotate(this.time * 22 * Math.sign(pr.vx || 1));
         ctx.translate(0, 18);
         // Mortal arremessa as armas padrão (universais)
-        if (pr.element === 'mortal') (pr.weapon === 'espada' ? drawUniversalSword : drawUniversalStaff)(ctx, this.time);
+        if (pr.weapon === 'marretao') drawHammerArt(ctx, pr.element, this.time);
+        else if (pr.element === 'mortal') (pr.weapon === 'espada' ? drawUniversalSword : drawUniversalStaff)(ctx, this.time);
         else if (pr.weapon === 'espada') drawSwordArt(ctx, pr.element, this.time);
         else drawStaffArt(ctx, pr.element, this.time);
       } else if (pr.kind === 'neve') {

@@ -7,7 +7,7 @@ Ideias aprovadas pelo Enzo que ainda não foram feitas.
 ### Jogabilidade
 
 - **Itens novos**: bomba (explode depois de uns segundos), bumerangue (vai e
-  volta), martelo gigante (lento e muito forte) e coração (tira 30% do dano).
+  volta) e coração (tira 30% do dano).
 
 ### Modos de jogo
 
@@ -15,8 +15,6 @@ Ideias aprovadas pelo Enzo que ainda não foram feitas.
   quem tiver mais pontos no fim vence.
 - **Sobrevivência**: você contra ondas de bots cada vez mais fortes, com
   recorde de quantas ondas aguentou.
-- **Treino livre**: um boneco parado para testar golpes e combos, mostrando o
-  dano de cada golpe na tela.
 
 ### Progressão
 
@@ -32,6 +30,11 @@ Ideias aprovadas pelo Enzo que ainda não foram feitas.
 ### Controles
 
 - **Controle (gamepad)**: jogar com controle de Xbox ou PlayStation.
+
+## Já feitas
+
+- **Treino livre** (boneco parado com painel de dano e combo).
+- **Marretão** (arma rara de 1 uso, muito forte).
 
 ## Outras ideias (ainda não escolhidas)
 

@@ -118,7 +118,38 @@ WEAPONS.lanca = {
   },
 };
 
+// Marretão: arma rara de um uso só. Demora para descer (dá para ver vindo),
+// mas a pancada é enorme e faz uma onda de choque no chão.
+WEAPONS.marretao = {
+  id: 'marretao', name: 'Marretão', kind: 'melee', uses: 1,
+  cooldown: 0.9, startup: 0.34, duration: 0.56,
+  reach: 96, height: 72,
+  damage: 30, kbBase: 460, kbScale: 5.0, angle: 0.7,
+  throwDamage: 22,
+  slam: true,
+  byElement: {
+    fogo: { name: 'Marretão Vulcânico', status: { type: 'queimadura', duration: 3, dps: 4 } },
+    agua: { name: 'Marretão da Ressaca', kbBase: 500, status: { type: 'encharcado', duration: 2.5, slow: 0.4 } },
+    terra: { name: 'Marretão de Pedra', damage: 34, startup: 0.4, status: { type: 'atordoado', duration: 0.9 } },
+    ar: { name: 'Marretão do Furacão', damage: 26, startup: 0.26, kbBase: 510 },
+  },
+};
+
 export const WEAPON_IDS = Object.keys(WEAPONS);
+
+// Chance de cada arma cair (o marretão é raro)
+export const WEAPON_WEIGHTS = { espada: 1, cajado: 1, lanca: 1, marretao: 0.22 };
+
+// Sorteia uma arma respeitando a raridade. `rng` devolve um número de 0 a 1.
+export function pickWeapon(rng) {
+  const total = WEAPON_IDS.reduce((sum, id) => sum + (WEAPON_WEIGHTS[id] ?? 1), 0);
+  let r = rng() * total;
+  for (const id of WEAPON_IDS) {
+    r -= WEAPON_WEIGHTS[id] ?? 1;
+    if (r < 0) return id;
+  }
+  return WEAPON_IDS[0];
+}
 
 // Junta os atributos base da arma com as mudanças do elemento.
 export function weaponProfile(weaponId, elementId) {

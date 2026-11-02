@@ -23,7 +23,11 @@ export class MatchRunner {
   constructor({ canvas, setup, onEnd, debug = false }) {
     this.setup = setup;
     this.onEnd = onEnd;
-    this.game = new Game({ players: setup.players, mode: setup.mode, seed: setup.seed, mapId: setup.mapId });
+    this.game = new Game({
+      players: setup.players, mode: setup.mode, seed: setup.seed, mapId: setup.mapId,
+      // treino livre: ninguém perde vida, sem tempo e contagem curta
+      ...(setup.practice ? { practice: true, timeLimit: 0, countdown: 1 } : {}),
+    });
     this.localId = setup.localPlayerId;
 
     // Cada jogador tem uma "fonte de comandos". No online, jogadores remotos
@@ -129,6 +133,7 @@ export class MatchRunner {
     }
     const events = g.drainEvents();
     if (events.length) {
+      this.onEvents?.(events);
       this.renderer.handleEvents(events);
       playEvents(events, this.localId);
     }
