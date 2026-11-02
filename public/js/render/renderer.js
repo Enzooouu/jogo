@@ -1234,111 +1234,238 @@ export class Renderer {
   }
 
   // Placar completo (segurando a tecla do placar, Tab no padrão)
+  // Placar (segurando Tab): painel no estilo da tela inicial. Cada time é um
+  // bloco com a barra da cor do time; vidas como bolinhas; a sua linha tem a
+  // faixa laranja; quem mais causou dano ganha a etiqueta MVP.
   drawScoreboard(ctx) {
     const g = this.game;
     const cols = [
-      ['Jogador', 250, 'left'], ['Vidas', 70], ['Kills', 70], ['Mortes', 75],
-      ['Dano causado', 125], ['Dano recebido', 130], ['Golpes', 80], ['Armas', 75],
+      ['Jogador', 268, 'left'], ['Vidas', 92, 'center'], ['Kills', 64], ['Mortes', 72],
+      ['Dano causado', 122], ['Dano recebido', 128], ['Golpes', 74], ['Armas', 70],
     ];
-    const tableW = cols.reduce((s, c) => s + c[1], 0);
-    const rowH = 34;
+    const tableW = cols.reduce((sum, c) => sum + c[1], 0);
+    const rowH = 40;
     const teams = g.teams();
-    const rows = teams.length + g.players.length;
-    const w = tableW + 48;
-    const h = 120 + rows * rowH;
+    const teamHead = g.mode.teams ? 34 : 0;
+    const w = tableW + 56;
+    const h = 132 + teams.length * (teamHead + 10) + g.players.length * rowH;
     const x0 = (VIEW_W - w) / 2;
-    const y0 = Math.max(20, (VIEW_H - 80 - h) / 2);
+    const y0 = Math.max(16, (VIEW_H - 60 - h) / 2);
+    const mvp = [...g.players].sort((a, b) => b.stats.damageDealt - a.stats.damageDealt)[0];
 
     ctx.save();
-    ctx.fillStyle = 'rgba(8,4,14,0.55)';
+    // fundo escurecido com vinheta
+    const dim = ctx.createRadialGradient(VIEW_W / 2, VIEW_H / 2, 100, VIEW_W / 2, VIEW_H / 2, 800);
+    dim.addColorStop(0, 'rgba(8,5,16,0.55)');
+    dim.addColorStop(1, 'rgba(8,5,16,0.85)');
+    ctx.fillStyle = dim;
     ctx.fillRect(0, 0, VIEW_W, VIEW_H);
-    ctx.fillStyle = 'rgba(20,12,28,0.94)';
-    roundRect(ctx, x0, y0, w, h, 16);
+    // painel
+    const bg = ctx.createLinearGradient(0, y0, 0, y0 + h);
+    bg.addColorStop(0, 'rgba(34,24,52,0.97)');
+    bg.addColorStop(1, 'rgba(16,11,26,0.97)');
+    ctx.fillStyle = bg;
+    roundRect(ctx, x0, y0, w, h, 18);
     ctx.fill();
-    ctx.strokeStyle = 'rgba(255,255,255,0.12)';
+    ctx.strokeStyle = 'rgba(255,255,255,0.1)';
     ctx.lineWidth = 1.5;
     ctx.stroke();
+    // filete de cima com o degradê do título
+    const line = ctx.createLinearGradient(x0, 0, x0 + w, 0);
+    line.addColorStop(0, '#ffd25a');
+    line.addColorStop(0.45, '#ff6a1f');
+    line.addColorStop(0.62, '#c77dff');
+    line.addColorStop(1, '#4fb0ff');
+    ctx.fillStyle = line;
+    roundRect(ctx, x0 + 18, y0, w - 36, 3, 2);
+    ctx.fill();
 
+    // título em itálico com degradê, e o tempo de luta numa pílula
     ctx.textBaseline = 'middle';
-    ctx.font = '900 22px system-ui, sans-serif';
     ctx.textAlign = 'left';
-    ctx.fillStyle = '#ffffff';
-    ctx.fillText('PLACAR', x0 + 24, y0 + 32);
-    ctx.font = '600 13px system-ui, sans-serif';
-    ctx.textAlign = 'right';
-    ctx.fillStyle = 'rgba(255,255,255,0.55)';
+    ctx.font = 'italic 900 30px system-ui, sans-serif';
+    const tg = ctx.createLinearGradient(x0 + 28, 0, x0 + 190, 0);
+    tg.addColorStop(0, '#ffd25a');
+    tg.addColorStop(1, '#ff6a1f');
+    ctx.fillStyle = tg;
+    ctx.fillText('PLACAR', x0 + 28, y0 + 40);
+    ctx.font = '600 12px system-ui, sans-serif';
+    ctx.fillStyle = 'rgba(255,255,255,0.45)';
+    const mapName = g.map.name ?? '';
+    ctx.fillText(`${g.mode.teams ? 'Times' : 'Todos contra todos'} · ${mapName}`.toUpperCase(), x0 + 182, y0 + 42);
     const t = Math.floor(g.time);
-    ctx.fillText(`Tempo de luta ${Math.floor(t / 60)}:${String(t % 60).padStart(2, '0')}`, x0 + w - 24, y0 + 32);
-
-    // Cabeçalho
-    let y = y0 + 70;
-    let x = x0 + 24;
-    ctx.font = '700 11px system-ui, sans-serif';
+    const clock = `${Math.floor(t / 60)}:${String(t % 60).padStart(2, '0')}`;
+    ctx.font = '700 13px system-ui, sans-serif';
+    const pillW = ctx.measureText(`TEMPO DE LUTA  ${clock}`).width + 26;
+    ctx.fillStyle = 'rgba(255,255,255,0.07)';
+    roundRect(ctx, x0 + w - 28 - pillW, y0 + 26, pillW, 28, 14);
+    ctx.fill();
+    ctx.textAlign = 'right';
+    ctx.fillStyle = '#ffffff';
+    ctx.fillText(clock, x0 + w - 41, y0 + 40);
     ctx.fillStyle = 'rgba(255,255,255,0.5)';
+    ctx.fillText('TEMPO DE LUTA', x0 + w - 49 - ctx.measureText(clock).width, y0 + 40);
+
+    // cabeçalho das colunas
+    let y = y0 + 82;
+    let x = x0 + 28;
+    ctx.font = '800 10.5px system-ui, sans-serif';
+    ctx.fillStyle = 'rgba(255,255,255,0.42)';
+    const colX = [];
     for (const [label, cw, align] of cols) {
-      ctx.textAlign = align ?? 'right';
-      ctx.fillText(label.toUpperCase(), align === 'left' ? x : x + cw - 8, y);
+      colX.push([x, cw, align]);
+      ctx.textAlign = align === 'left' ? 'left' : align === 'center' ? 'center' : 'right';
+      const tx = align === 'left' ? x + 44 : align === 'center' ? x + cw / 2 : x + cw - 8;
+      ctx.fillText(label.toUpperCase(), tx, y);
       x += cw;
     }
+    y += 16;
 
-    y += 22;
     teams.forEach((team, ti) => {
       const color = this.teamColor.get(team);
       const members = g.players.filter((p) => p.team === team)
         .sort((a, b) => b.stats.kills - a.stats.kills || b.stats.damageDealt - a.stats.damageDealt);
-      ctx.textAlign = 'left';
-      ctx.font = '800 13px system-ui, sans-serif';
+      const blockH = teamHead + members.length * rowH + 6;
+      // bloco do time: fundo leve e barra da cor do time
+      ctx.fillStyle = 'rgba(255,255,255,0.035)';
+      roundRect(ctx, x0 + 16, y, w - 32, blockH, 12);
+      ctx.fill();
       ctx.fillStyle = color;
-      const el = ELEMENTS[members[0].element];
-      const teamLabel = g.mode.teams ? `${Renderer.teamName(ti)} · ${el.name}` : '';
-      if (teamLabel) ctx.fillText(teamLabel.toUpperCase(), x0 + 24, y + rowH / 2);
-      y += teamLabel ? rowH : 0;
+      roundRect(ctx, x0 + 16, y + 6, 4, blockH - 12, 2);
+      ctx.fill();
+      let ry = y + 3;
+      if (teamHead) {
+        const el = ELEMENTS[members[0].element];
+        ctx.textAlign = 'left';
+        ctx.font = 'italic 900 14px system-ui, sans-serif';
+        ctx.fillStyle = color;
+        ctx.fillText(`${Renderer.teamName(ti)}`.toUpperCase(), x0 + 34, ry + teamHead / 2);
+        const tw = ctx.measureText(`${Renderer.teamName(ti)}`.toUpperCase()).width;
+        ctx.font = '700 11px system-ui, sans-serif';
+        ctx.fillStyle = el.light ?? el.color;
+        ctx.fillText(`· ${el.name.toUpperCase()}`, x0 + 42 + tw, ry + teamHead / 2 + 1);
+        const totalKills = members.reduce((sum, p) => sum + p.stats.kills, 0);
+        ctx.textAlign = 'right';
+        ctx.fillStyle = 'rgba(255,255,255,0.45)';
+        ctx.fillText(`${totalKills} ${totalKills === 1 ? 'KILL' : 'KILLS'} NO TIME`, x0 + w - 36, ry + teamHead / 2 + 1);
+        ry += teamHead;
+      }
 
       for (const p of members) {
-        const s = p.stats;
-        if (p.id === this.localId) {
-          ctx.fillStyle = 'rgba(255,255,255,0.08)';
-          roundRect(ctx, x0 + 14, y + 2, w - 28, rowH - 4, 8);
+        const st = p.stats;
+        const cy = ry + rowH / 2;
+        const me = p.id === this.localId;
+        const out = p.state === 'out';
+        if (me) {
+          // a sua linha: faixa laranja que some para a direita
+          const band = ctx.createLinearGradient(x0 + 24, 0, x0 + w - 24, 0);
+          band.addColorStop(0, 'rgba(255,112,34,0.42)');
+          band.addColorStop(0.5, 'rgba(255,106,31,0.14)');
+          band.addColorStop(1, 'rgba(255,106,31,0)');
+          ctx.fillStyle = band;
+          roundRect(ctx, x0 + 24, ry + 3, w - 48, rowH - 6, 8);
+          ctx.fill();
+          ctx.fillStyle = '#ffd25a';
+          roundRect(ctx, x0 + 24, ry + 3, 3, rowH - 6, 2);
           ctx.fill();
         }
-        ctx.globalAlpha = p.state === 'out' ? 0.5 : 1;
-        const cy = y + rowH / 2;
-        // nome com bolinha do elemento
-        ctx.fillStyle = ELEMENTS[p.element].color;
+        ctx.globalAlpha = out ? 0.45 : 1;
+        // retrato: círculo na cor do elemento com a inicial
+        const el = ELEMENTS[p.element];
+        const ax = x0 + 46;
+        const ag = ctx.createRadialGradient(ax - 4, cy - 4, 2, ax, cy, 15);
+        ag.addColorStop(0, el.light ?? el.color);
+        ag.addColorStop(1, el.color);
+        ctx.fillStyle = ag;
         ctx.beginPath();
-        ctx.arc(x0 + 32, cy, 6, 0, Math.PI * 2);
+        ctx.arc(ax, cy, 14, 0, Math.PI * 2);
         ctx.fill();
+        ctx.strokeStyle = 'rgba(0,0,0,0.35)';
+        ctx.lineWidth = 2;
+        ctx.stroke();
+        ctx.textAlign = 'center';
+        ctx.font = '900 13px system-ui, sans-serif';
+        ctx.fillStyle = '#1a1020';
+        ctx.fillText(p.name.charAt(0).toUpperCase(), ax, cy + 1);
+        // nome e etiquetas
         ctx.textAlign = 'left';
-        ctx.font = `${p.id === this.localId ? 800 : 600} 15px system-ui, sans-serif`;
+        ctx.font = `${me ? 'italic 900' : '700'} 16px system-ui, sans-serif`;
         ctx.fillStyle = '#ffffff';
-        let name = p.id === this.localId ? `${p.name} (você)` : p.name;
-        if (p.isBot) name += '  BOT';
-        ctx.fillText(name, x0 + 46, cy);
+        const name = me ? `${p.name} (você)` : p.name;
+        ctx.fillText(name, x0 + 70, cy);
+        let tagX = x0 + 78 + ctx.measureText(name).width;
+        const tag = (text, fill, ink) => {
+          ctx.font = '800 9.5px system-ui, sans-serif';
+          const tw = ctx.measureText(text).width + 12;
+          ctx.fillStyle = fill;
+          roundRect(ctx, tagX, cy - 9, tw, 18, 9);
+          ctx.fill();
+          ctx.fillStyle = ink;
+          ctx.fillText(text, tagX + 6, cy + 0.5);
+          tagX += tw + 6;
+        };
+        if (p.isBot) tag('BOT', 'rgba(255,255,255,0.12)', 'rgba(255,255,255,0.75)');
+        if (out) tag('ELIMINADO', 'rgba(255,90,95,0.25)', '#ff9a9a');
+        else if (p === mvp && mvp.stats.damageDealt > 0) tag('MVP', 'rgba(255,210,90,0.22)', '#ffd25a');
 
-        const values = [
-          p.state === 'out' ? '—' : String(p.lives), String(s.kills), String(s.deaths),
-          String(Math.round(s.damageDealt)), String(Math.round(s.damageTaken)), String(s.hits), String(s.pickups),
-        ];
-        ctx.font = '700 15px system-ui, sans-serif';
+        // vidas como bolinhas
+        const [lx, lw] = colX[1];
+        const total = g.lives;
+        const gap = 13;
+        const startX = lx + lw / 2 - ((total - 1) * gap) / 2;
+        for (let k = 0; k < total; k++) {
+          const full = !out && k < p.lives;
+          ctx.beginPath();
+          ctx.arc(startX + k * gap, cy, 4.5, 0, Math.PI * 2);
+          if (full) {
+            ctx.fillStyle = el.color;
+            ctx.fill();
+          } else {
+            ctx.strokeStyle = 'rgba(255,255,255,0.25)';
+            ctx.lineWidth = 1.5;
+            ctx.stroke();
+          }
+        }
+        // números
+        const values = [String(st.kills), String(st.deaths), String(Math.round(st.damageDealt)), String(Math.round(st.damageTaken)), String(st.hits), String(st.pickups)];
         ctx.textAlign = 'right';
-        let cx = x0 + 24 + cols[0][1];
-        values.forEach((v, i) => {
-          const cw = cols[i + 1][1];
-          ctx.fillStyle = i === 3 ? '#ffd27a' : i === 4 ? '#ff9a9a' : '#ffffff';
-          ctx.fillText(v, cx + cw - 8, cy);
-          cx += cw;
+        values.forEach((v, k) => {
+          const [cx, cw] = colX[k + 2];
+          const zero = v === '0';
+          ctx.font = k === 0 ? 'italic 900 18px system-ui, sans-serif' : '700 15px system-ui, sans-serif';
+          ctx.fillStyle = zero ? 'rgba(255,255,255,0.3)' : k === 2 ? '#ffd27a' : k === 3 ? '#ff9a9a' : '#ffffff';
+          ctx.fillText(v, cx + cw - 8, cy + 0.5);
         });
         ctx.globalAlpha = 1;
-        y += rowH;
+        ry += rowH;
       }
+      y += blockH + 10;
     });
 
+    // dica embaixo, com a tecla desenhada
+    const key = keyLabel(currentBindings().scores[0]);
+    ctx.font = '800 11px system-ui, sans-serif';
+    const kw = ctx.measureText(key).width + 14;
+    const text = 'solte para voltar à luta';
+    ctx.font = '600 12px system-ui, sans-serif';
+    const tw2 = ctx.measureText(text).width;
+    const hx = VIEW_W / 2 - (kw + 8 + tw2) / 2;
+    const hy = y0 + h - 22;
+    ctx.strokeStyle = 'rgba(255,255,255,0.3)';
+    ctx.lineWidth = 1.2;
+    roundRect(ctx, hx, hy - 10, kw, 20, 5);
+    ctx.stroke();
     ctx.textAlign = 'center';
+    ctx.font = '800 11px system-ui, sans-serif';
+    ctx.fillStyle = 'rgba(255,255,255,0.75)';
+    ctx.fillText(key, hx + kw / 2, hy + 0.5);
+    ctx.textAlign = 'left';
     ctx.font = '600 12px system-ui, sans-serif';
     ctx.fillStyle = 'rgba(255,255,255,0.45)';
-    ctx.fillText(`Solte ${keyLabel(currentBindings().scores[0])} para voltar`, VIEW_W / 2, y0 + h - 18);
+    ctx.fillText(text, hx + kw + 8, hy + 0.5);
     ctx.restore();
   }
+
 
   drawBigText(ctx, text, scale, color, alpha) {
     ctx.save();

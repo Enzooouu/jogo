@@ -2,7 +2,8 @@
 //   fogo  -> chuva de meteoros e um meteoro gigante explodindo atrás da ilha
 //   agua  -> tsunami atravessando a tela
 //   ar    -> tornado gigante
-//   terra -> terremoto: rachaduras, pilares subindo e espinhos rasgando o chão
+//   terra -> terremoto: pilares subindo, pedregulhos caindo e pedras que
+//            levitam do chão e se juntam num emblema de montanha no céu
 //   mortal -> soco final: um punho gigante de manequim soca a tela, que racha
 //             como vidro e os cacos caem
 //
@@ -122,7 +123,7 @@ export function updateCelebration(cel, dt, renderer) {
     }
     // poeira subindo na base
     if (Math.random() < dt * 30) {
-      P.add({ x: cx + (Math.random() - 0.5) * 160, y: 560, vx: (Math.random() - 0.5) * 120, vy: -200 - Math.random() * 150, life: 0.9, size: 6, grow: 18, color: 'rgba(200,190,180,0.25)' });
+      P.add({ x: cx + (Math.random() - 0.5) * 160, y: STAGE ? STAGE.main.top : 560, vx: (Math.random() - 0.5) * 120, vy: -200 - Math.random() * 150, life: 0.9, size: 6, grow: 18, color: 'rgba(200,190,180,0.25)' });
     }
     // relâmpago: clarão na tela
     if (lightningAt(t) && !cel.flashed?.[lightningIndex(t)]) {
@@ -670,7 +671,8 @@ function islandWash(ctx, t) {
 // Tornado: nuvem de tempestade girando, funil que desce dela, faixas em
 // espiral, destroços orbitando (na frente e atrás do funil) e relâmpagos.
 const CLOUD_Y = 10;
-const GROUND_Y = 600;
+// a base do funil vai até bem embaixo, abaixo da borda da tela
+const GROUND_Y = 1250;
 const LIGHTNINGS = [0.9, 1.9, 2.7];
 
 function lightningIndex(t) {
@@ -697,7 +699,7 @@ function funnelAt(t, u) {
   const cx = tornadoX(t);
   const y = GROUND_Y + (CLOUD_Y - GROUND_Y) * u;
   const bend = Math.sin(u * 3.2 + t * 2.2) * 45 * (1 - u) + Math.sin(t * 1.1) * 30 * u;
-  const r = 22 + Math.pow(u, 1.6) * 260;
+  const r = 30 + Math.pow(u, 1.8) * 260;
   return { x: cx + bend, y, r };
 }
 
@@ -859,16 +861,18 @@ function tornado(ctx, t) {
     ctx.stroke();
   }
 
-  // poeira girando na base
-  if (reach > 0.9) {
-    const base = funnelAt(t, 0);
+  // poeira girando onde o funil cruza o chão do mapa
+  const groundY = STAGE ? STAGE.main.top : 560;
+  const uGround = (groundY - GROUND_Y) / (CLOUD_Y - GROUND_Y);
+  if (reach > 1 - uGround) {
+    const base = funnelAt(t, uGround);
     for (let i = 0; i < 3; i++) {
-      const g2 = ctx.createRadialGradient(base.x, GROUND_Y, 10, base.x, GROUND_Y, 130 + i * 40);
+      const g2 = ctx.createRadialGradient(base.x, groundY, 10, base.x, groundY, 130 + i * 40);
       g2.addColorStop(0, 'rgba(190,180,170,0.4)');
       g2.addColorStop(1, 'rgba(190,180,170,0)');
       ctx.fillStyle = g2;
       ctx.save();
-      ctx.translate(base.x, GROUND_Y - 20);
+      ctx.translate(base.x, groundY - 20);
       ctx.scale(1, 0.4);
       ctx.beginPath();
       ctx.arc(0, 0, 130 + i * 40 + Math.sin(t * 6 + i) * 10, 0, Math.PI * 2);
@@ -882,9 +886,10 @@ function tornado(ctx, t) {
 
 // ---------------------------------------------------------------- terra
 
-// Terremoto: o chão treme e racha, pilares de basalto sobem do abismo atrás
-// da ilha, e no golpe final uma fileira de espinhos de pedra rasga o chão
-// enquanto pedregulhos caem do céu e se quebram.
+// Terremoto: o chão treme, pilares de basalto sobem do abismo atrás da
+// ilha e pedregulhos caem do céu e se quebram. Pedras se soltam do chão e
+// ficam levitando; no golpe final elas voam e se juntam no ar formando o
+// emblema da Terra (uma montanha), com veios de brasa acendendo entre elas.
 let GROUND = 540;
 const RISE_TIME = 0.55;
 const SLAM = 2.3;
@@ -895,23 +900,37 @@ const PILLARS = [
   [880, 90, 260, 1.45], [120, 70, 300, 1.65], [1160, 80, 320, 1.85],
 ].map(([x, w, top, at]) => ({ x, w, top, at }));
 
-// Espinhos, pedregulhos e rachaduras saem do chão do mapa (buildQuake)
-let SPIKES = [];
+// Pedras levitando e pedregulhos (montados a partir do chão do mapa)
+let ROCKS = [];
 let BOULDERS = [];
-let QUAKE_CRACKS = [];
+let EMBLEM = { x: 640, y: 300 };
+const ASSEMBLE = 0.45; // tempo das pedras voando até o emblema
 
 function buildQuake() {
-  const { main, surfaces, islands, pools } = STAGE;
+  const { main } = STAGE;
   GROUND = main.top;
-  // espinhos rasgando o chão: a cada ~65 px em cada trecho de chão
-  SPIKES = [];
-  let n = 0;
-  for (const sf of surfaces) {
-    for (let x = sf.x0 + 26; x <= sf.x1 - 22; x += 62 + rand(n, 3) * 14) {
-      SPIKES.push({ x, y: sf.y, h: 55 + rand(n, 7) * 35, at: SLAM + Math.abs(x - main.cx) * 0.0004 });
-      n++;
-    }
+  // no meio do mapa todo (não só da maior ilha), bem acima do chão
+  const left = Math.min(...STAGE.islands.map((isl) => isl.x0));
+  const right = Math.max(...STAGE.islands.map((isl) => isl.x1));
+  EMBLEM = { x: (left + right) / 2, y: GROUND - 330 };
+  // lugares no emblema: os cantos e os lados de um triângulo (montanha) e
+  // uma pedra grande no meio
+  const tri = [[0, -112], [122, 84], [-122, 84]];
+  const spots = [];
+  for (let k = 0; k < 3; k++) {
+    const [ax, ay] = tri[k];
+    const [bx, by] = tri[(k + 1) % 3];
+    for (let m = 0; m < 3; m++) spots.push([ax + ((bx - ax) * m) / 3, ay + ((by - ay) * m) / 3]);
   }
+  spots.push([0, 18]);
+  ROCKS = spots.map(([dx, dy], i) => {
+    const g = groundPoint((i + 0.5) / spots.length);
+    return {
+      x: g.x, ground: g.y, at: 0.5 + i * 0.13,
+      hover: 80 + rand(i, 41) * 130, s: i === spots.length - 1 ? 30 : 13 + rand(i, 42) * 9,
+      tx: dx, ty: dy, spin: (rand(i, 43) - 0.5) * 3, order: i,
+    };
+  });
   // pedregulhos caindo do céu (batem no chão, ou passam direto se não tem chão)
   BOULDERS = Array.from({ length: 16 }, (_, i) => {
     const at = 0.4 + i * 0.17;
@@ -921,37 +940,10 @@ function buildQuake() {
     const fall = Math.sqrt((2 * (gy - s * 0.6 + 80)) / 1600);
     return { at, x, s, gy, land: at + fall, spin: 4 + rand(i, 10) * 4 };
   });
-  // rachaduras descendo pela parede das ilhas, em zigue-zague e com galhos
-  QUAKE_CRACKS = [];
-  let i = 0;
-  for (const isl of islands) {
-    const step = 110;
-    for (let x0 = isl.x0 + 30; x0 <= isl.x1 - 30; x0 += step) {
-      if (pools.some((h) => x0 > h.x - 6 && x0 < h.x + h.w + 6)) continue;
-      const top = groundAt(x0) ?? isl.top;
-      const pts = [[x0, top + 1]];
-      let x = x0;
-      let y = top + 1;
-      const bottom = top + Math.min(160, isl.bottom - top) * (0.45 + rand(i, 50) * 0.5);
-      while (y < bottom) {
-        y += 9 + rand(i, y) * 12;
-        x += (rand(i, y + 1) - 0.5) * 26;
-        pts.push([x, Math.min(y, bottom)]);
-      }
-      const b = Math.floor(pts.length / 2);
-      const branch = [pts[b]];
-      for (let k = 1; k <= 3; k++) {
-        const [px, py] = branch[k - 1];
-        branch.push([px + (rand(i, k + 70) < 0.5 ? -1 : 1) * (10 + rand(i, k + 80) * 14), py + 12 + rand(i, k + 90) * 10]);
-      }
-      QUAKE_CRACKS.push({ pts, branch, at: 0.35 + rand(i, 60) * 0.9 });
-      i++;
-    }
-  }
 }
 
 // Momentos das pancadas (o som usa)
-export const QUAKE_HITS = { pillars: PILLARS.map((p) => p.at), slam: SLAM };
+export const QUAKE_HITS = { pillars: PILLARS.map((p) => p.at), slam: SLAM + ASSEMBLE };
 
 function easeOutBack(k) {
   const c = k - 1;
@@ -987,14 +979,18 @@ function updateQuake(cel, dt, renderer) {
       P.burst(p.x, gy - 6, { count: 5, speed: 160, angle: -Math.PI / 2, spread: 2.6, size: 8, grow: 28, color: 'rgba(160,130,95,0.25)', life: 1 });
     }
   });
-  // golpe final: espinhos rasgando o chão
-  SPIKES.forEach((s, i) => {
-    if (t < s.at || !once(`s${i}`)) return;
-    P.burst(s.x, s.y - 4, { count: 10, speed: 420, angle: -Math.PI / 2, spread: 1.8, size: 2.5, color: '#6e5236', gravity: 1500, life: 0.8 });
-    P.burst(s.x, s.y - 8, { count: 3, speed: 120, angle: -Math.PI / 2, spread: 2.6, size: 6, grow: 24, color: 'rgba(170,140,100,0.25)', life: 0.9 });
+  // pedras se soltando do chão (poeira e pedrinhas onde estavam)
+  ROCKS.forEach((r, i) => {
+    if (t < r.at || !once(`r${i}`)) return;
+    P.burst(r.x, r.ground - 4, { count: 8, speed: 240, angle: -Math.PI / 2, spread: 1.6, size: 2.4, color: '#6e5236', gravity: 1400, life: 0.7 });
+    P.burst(r.x, r.ground - 6, { count: 3, speed: 90, angle: -Math.PI / 2, spread: 2.4, size: 7, grow: 22, color: 'rgba(170,140,100,0.25)', life: 0.9 });
   });
-  if (t >= SLAM && once('slam')) {
+  // golpe final: as pedras se juntam no emblema
+  if (t >= SLAM + ASSEMBLE && once('slam')) {
     renderer.shake(15, 0.6);
+    P.add({ type: 'ring', x: EMBLEM.x, y: EMBLEM.y, size: 20, grow: 900, life: 0.5, color: 'rgba(255,190,90,0.9)' });
+    P.burst(EMBLEM.x, EMBLEM.y, { type: 'spark', count: 40, speed: 620, life: 0.7, size: 3, color: '#ffb347', drag: 2 });
+    P.burst(EMBLEM.x, EMBLEM.y, { count: 18, speed: 260, life: 1.2, size: 10, grow: 26, color: 'rgba(180,150,110,0.3)', drag: 2 });
     // poeira rolando pelo chão para os dois lados
     for (let i = 0; i < 24; i++) {
       const dir = i % 2 ? 1 : -1;
@@ -1106,89 +1102,75 @@ function drawPillar(ctx, p, t) {
   ctx.stroke();
 }
 
-// Na frente da ilha: rachaduras brilhando, espinhos e a onda do golpe
+// Posição de uma pedra levitando: sobe do chão, fica flutuando e depois
+// voa para o lugar dela no emblema
+function rockPos(r, t) {
+  const e = t - r.at;
+  if (e < 0) return null;
+  const rise = Math.min(1, e / 0.6);
+  const hoverY = r.ground - r.hover * easeOutBack(rise) + Math.sin(t * 2.4 + r.order) * 6;
+  const hx = r.x + Math.sin(t * 1.3 + r.order * 2) * 8;
+  const k = Math.min(1, Math.max(0, (t - SLAM) / ASSEMBLE));
+  const ease = 1 - Math.pow(1 - k, 3);
+  const tx = EMBLEM.x + r.tx;
+  const ty = EMBLEM.y + r.ty + (k >= 1 ? Math.sin(t * 2) * 3 : 0);
+  return { x: hx + (tx - hx) * ease, y: hoverY + (ty - hoverY) * ease, rot: (1 - ease) * e * r.spin, k };
+}
+
+// Na frente da ilha: pedras levitando e o emblema da montanha
 function quakeMid(ctx, t) {
-  const pulse = 0.75 + 0.25 * Math.sin(t * 9);
-  ctx.lineJoin = 'round';
-  ctx.lineCap = 'round';
-  for (const c of QUAKE_CRACKS) {
-    const grow = Math.min(1, Math.max(0, (t - c.at) / 0.6));
-    if (grow <= 0) continue;
-    const n = Math.max(2, Math.ceil(c.pts.length * grow));
-    const lines = [c.pts.slice(0, n)];
-    if (n > c.pts.length / 2 + 1) lines.push(c.branch);
-    for (const [width, color, blur] of [[8, 'rgba(25,12,4,0.9)', 0], [2.2, `rgba(255,170,60,${pulse})`, 12]]) {
+  const pos = ROCKS.map((r) => rockPos(r, t));
+  const assembled = t >= SLAM + ASSEMBLE;
+  if (assembled) {
+    // brilho atrás do emblema e veios de brasa ligando as pedras
+    const glow = Math.min(1, (t - SLAM - ASSEMBLE) / 0.4);
+    const pulse = 0.75 + 0.25 * Math.sin(t * 8);
+    const halo = ctx.createRadialGradient(EMBLEM.x, EMBLEM.y, 20, EMBLEM.x, EMBLEM.y, 230);
+    halo.addColorStop(0, `rgba(255,170,70,${0.35 * glow * pulse})`);
+    halo.addColorStop(1, 'rgba(255,170,70,0)');
+    ctx.fillStyle = halo;
+    ctx.fillRect(EMBLEM.x - 240, EMBLEM.y - 240, 480, 480);
+    const ring = pos.slice(0, 9);
+    ctx.lineJoin = 'round';
+    for (const [width, color, blur] of [[7, `rgba(120,40,0,${0.45 * glow})`, 0], [3.5, `rgba(255,190,90,${glow * pulse})`, 18], [1.4, `rgba(255,245,210,${glow * pulse})`, 0]]) {
       ctx.strokeStyle = color;
       ctx.lineWidth = width;
       ctx.shadowColor = '#ff8a1a';
       ctx.shadowBlur = blur;
       ctx.beginPath();
-      for (const pts of lines) pts.forEach(([x, y], i) => (i ? ctx.lineTo(x, y) : ctx.moveTo(x, y)));
+      ring.forEach((p, i) => (i ? ctx.lineTo(p.x, p.y) : ctx.moveTo(p.x, p.y)));
+      ctx.closePath();
+      const c = pos[9];
+      for (const v of [0, 3, 6]) {
+        ctx.moveTo(c.x, c.y);
+        ctx.lineTo(pos[v].x, pos[v].y);
+      }
       ctx.stroke();
     }
+    ctx.shadowBlur = 0;
   }
-  ctx.shadowBlur = 0;
-
-  // espinhos saindo do chão (cortados na linha do chão de cada um)
-  for (const s of SPIKES) {
-    const e = t - s.at;
-    if (e < 0) continue;
-    const k = Math.min(1, e / 0.22);
-    ctx.save();
-    ctx.beginPath();
-    ctx.rect(s.x - 200, -2000, 400, 2000 + s.y + 4);
-    ctx.clip();
-    drawSpike(ctx, s.x, s.y + 4, s.h * easeOutBack(k), Math.sign(s.x - STAGE.main.cx));
-    ctx.restore();
-  }
-
-  const e = t - SLAM;
-  if (e >= 0 && e < 0.7) {
-    const k = e / 0.7;
-    const rx = 30 + e * 1300;
-    ctx.strokeStyle = `rgba(216,178,122,${0.9 * (1 - k)})`;
-    ctx.lineWidth = 10 * (1 - k) + 2;
-    ctx.beginPath();
-    ctx.ellipse(STAGE.main.cx, GROUND - 4, rx, rx * 0.1, 0, Math.PI, Math.PI * 2);
-    ctx.stroke();
-  }
-}
-
-function drawSpike(ctx, x, base, h, lean) {
-  if (h <= 1) return;
-  const w = h * 0.32;
-  const tipX = x + lean * h * 0.18;
-  const tipY = base - h;
-  ctx.fillStyle = '#8a6844';
-  ctx.beginPath();
-  ctx.moveTo(x - w, base);
-  ctx.lineTo(tipX, tipY);
-  ctx.lineTo(x + w * 0.1, base);
-  ctx.closePath();
-  ctx.fill();
-  ctx.fillStyle = '#4f3a27';
-  ctx.beginPath();
-  ctx.moveTo(x + w * 0.1, base);
-  ctx.lineTo(tipX, tipY);
-  ctx.lineTo(x + w, base);
-  ctx.closePath();
-  ctx.fill();
-  ctx.strokeStyle = '#1e130b';
-  ctx.lineWidth = 2.5;
-  ctx.lineJoin = 'round';
-  ctx.beginPath();
-  ctx.moveTo(x - w, base);
-  ctx.lineTo(tipX, tipY);
-  ctx.lineTo(x + w, base);
-  ctx.stroke();
-  // veio brilhante como o do lutador de Terra
-  ctx.strokeStyle = 'rgba(255,179,71,0.85)';
-  ctx.lineWidth = 1.5;
-  ctx.beginPath();
-  ctx.moveTo(x - w * 0.3, base - h * 0.1);
-  ctx.lineTo(x - w * 0.15, base - h * 0.35);
-  ctx.lineTo(x - w * 0.3 + (tipX - x) * 0.5, base - h * 0.55);
-  ctx.stroke();
+  ROCKS.forEach((r, i) => {
+    const p = pos[i];
+    if (!p) return;
+    // sombrinha no chão enquanto flutua perto
+    if (p.k <= 0) {
+      ctx.fillStyle = 'rgba(40,25,10,0.25)';
+      ctx.beginPath();
+      ctx.ellipse(r.x, r.ground - 2, r.s * 0.9, 3, 0, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    drawBoulder(ctx, p.x, p.y, r.s, p.rot);
+    if (assembled) {
+      // veio brilhando dentro de cada pedra
+      ctx.strokeStyle = `rgba(255,179,71,${0.6 + 0.3 * Math.sin(t * 8 + i)})`;
+      ctx.lineWidth = 1.6;
+      ctx.beginPath();
+      ctx.moveTo(p.x - r.s * 0.4, p.y - r.s * 0.1);
+      ctx.lineTo(p.x, p.y + r.s * 0.1);
+      ctx.lineTo(p.x + r.s * 0.3, p.y - r.s * 0.3);
+      ctx.stroke();
+    }
+  });
 }
 
 // Na frente de tudo: poeira no ar e pedregulhos caindo
