@@ -10,7 +10,7 @@
 //
 // A física fica em shared/ship.js (o navio só manda a posição de agora).
 
-import { seeded, ridgeLine } from './stage-util.js';
+import { seeded, ridgeLine, shadeHex } from './stage-util.js';
 import { cloudSprite } from './stage-treino.js';
 import { SHIP } from '/shared/ship.js';
 
@@ -350,8 +350,12 @@ function hullPath(ctx, sternX, bowX, dir) {
   ctx.moveTo(sternX, DECK - POOP);
   ctx.lineTo(sternX - dir * 6, DECK + 30);
   ctx.quadraticCurveTo(sternX + dir * 40, DECK + 100, cx, DECK + 104);
-  ctx.quadraticCurveTo(bowX - dir * 70, DECK + 100, bowX + dir * 26, DECK - 14);
-  ctx.lineTo(bowX, DECK);
+  ctx.quadraticCurveTo(bowX - dir * 70, DECK + 100, bowX + dir * 22, DECK - 2);
+  // roda de proa: sobe curvada e volta pela amurada até o convés
+  ctx.quadraticCurveTo(bowX + dir * 34, DECK - 14, bowX + dir * 30, DECK - 34);
+  ctx.lineTo(bowX + dir * 23, DECK - 36);
+  ctx.quadraticCurveTo(bowX + dir * 20, DECK - 14, bowX - dir * 8, DECK - 10);
+  ctx.lineTo(bowX - dir * 8, DECK);
   ctx.lineTo(sternX + dir * 120, DECK);
   ctx.lineTo(sternX + dir * 120, DECK - POOP);
   ctx.closePath();
@@ -402,64 +406,131 @@ function ropeCoil(ctx, x, y) {
   }
 }
 
-// carranca da proa: cabeça de fênix (fogo) ou de golfinho (água)
+// carranca da proa, presa na roda de proa: fênix (fogo) com a asa
+// varrendo o casco, ou golfinho (água) com o corpo em arco e a cauda
 function figurehead(ctx, x, y, dir, i) {
   ctx.save();
   ctx.translate(x, y);
   ctx.scale(dir, 1);
-  const gold = ctx.createLinearGradient(0, -30, 0, 10);
-  gold.addColorStop(0, '#ffe28a');
-  gold.addColorStop(1, '#b8862e');
+  const gold = ctx.createLinearGradient(0, -34, 0, 30);
+  gold.addColorStop(0, '#fff0b0');
+  gold.addColorStop(0.5, '#e8b84a');
+  gold.addColorStop(1, '#9a6a22');
+  const ink = '#5a3a12';
   if (i === 0) {
-    // crista de fogo
-    ctx.fillStyle = '#ff7a2a';
+    // asa: penas douradas com ponta laranja, deitadas no casco
+    for (let k = 0; k < 4; k++) {
+      const fx = -4 - k * 10;
+      const fy = 10 + k * 3;
+      ctx.fillStyle = gold;
+      ctx.beginPath();
+      ctx.moveTo(fx + 8, fy - 6);
+      ctx.quadraticCurveTo(fx - 4, fy - 2, fx - 16, fy + 10);
+      ctx.quadraticCurveTo(fx - 2, fy + 8, fx + 8, fy + 4);
+      ctx.closePath();
+      ctx.fill();
+      ctx.strokeStyle = ink;
+      ctx.lineWidth = 1;
+      ctx.stroke();
+      ctx.fillStyle = '#ff7a2a';
+      ctx.beginPath();
+      ctx.moveTo(fx - 9, fy + 5);
+      ctx.quadraticCurveTo(fx - 13, fy + 8, fx - 16, fy + 10);
+      ctx.quadraticCurveTo(fx - 11, fy + 9, fx - 7, fy + 7);
+      ctx.fill();
+    }
+    // crista de fogo (três línguas)
+    const fire = ctx.createLinearGradient(0, -48, 0, -14);
+    fire.addColorStop(0, '#ffd25a');
+    fire.addColorStop(1, '#ff5a1f');
+    ctx.fillStyle = fire;
     ctx.beginPath();
-    ctx.moveTo(4, -18);
-    ctx.quadraticCurveTo(-6, -40, 6, -46);
-    ctx.quadraticCurveTo(4, -34, 14, -30);
-    ctx.quadraticCurveTo(14, -44, 26, -44);
-    ctx.quadraticCurveTo(18, -34, 22, -22);
+    ctx.moveTo(-2, -16);
+    ctx.quadraticCurveTo(-12, -34, -4, -48);
+    ctx.quadraticCurveTo(-2, -36, 6, -32);
+    ctx.quadraticCurveTo(4, -46, 14, -50);
+    ctx.quadraticCurveTo(10, -38, 18, -32);
+    ctx.quadraticCurveTo(22, -42, 30, -40);
+    ctx.quadraticCurveTo(22, -30, 20, -20);
     ctx.closePath();
     ctx.fill();
+    // pescoço e cabeça com bico
     ctx.fillStyle = gold;
     ctx.beginPath();
-    ctx.moveTo(0, 6);
-    ctx.quadraticCurveTo(2, -16, 14, -22);
-    ctx.quadraticCurveTo(28, -24, 34, -14);
-    ctx.lineTo(44, -12);
-    ctx.lineTo(32, -6);
-    ctx.quadraticCurveTo(22, -8, 16, -2);
-    ctx.quadraticCurveTo(10, 6, 8, 12);
+    ctx.moveTo(-6, 14);
+    ctx.quadraticCurveTo(-8, -10, 8, -22);
+    ctx.quadraticCurveTo(22, -30, 30, -20);
+    ctx.lineTo(44, -15);
+    ctx.lineTo(30, -10);
+    ctx.quadraticCurveTo(18, -8, 12, 0);
+    ctx.quadraticCurveTo(6, 8, 6, 16);
     ctx.closePath();
+    ctx.fill();
+    ctx.strokeStyle = ink;
+    ctx.lineWidth = 1.5;
+    ctx.stroke();
+    ctx.strokeStyle = 'rgba(90,58,18,0.5)';
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.moveTo(30, -15);
+    ctx.lineTo(40, -15);
+    ctx.stroke();
+    ctx.fillStyle = '#2a160c';
+    ctx.beginPath();
+    ctx.arc(24, -19, 2.2, 0, Math.PI * 2);
     ctx.fill();
   } else {
+    // corpo do golfinho em arco, descendo pelo casco até a cauda
     ctx.fillStyle = gold;
     ctx.beginPath();
-    ctx.moveTo(0, 6);
-    ctx.quadraticCurveTo(0, -16, 16, -24);
-    ctx.quadraticCurveTo(34, -30, 40, -18);
-    ctx.quadraticCurveTo(48, -14, 50, -10);
-    ctx.lineTo(36, -8);
-    ctx.quadraticCurveTo(24, -6, 18, 0);
-    ctx.quadraticCurveTo(12, 8, 8, 12);
+    ctx.moveTo(6, 14);
+    ctx.quadraticCurveTo(4, -14, 20, -24);
+    ctx.quadraticCurveTo(36, -32, 44, -20);
+    ctx.quadraticCurveTo(52, -16, 54, -12);
+    ctx.lineTo(42, -10);
+    ctx.quadraticCurveTo(26, -10, 18, 0);
+    ctx.quadraticCurveTo(10, 14, -6, 20);
+    ctx.quadraticCurveTo(-20, 24, -32, 22);
+    ctx.quadraticCurveTo(-18, 16, -10, 8);
+    ctx.quadraticCurveTo(-2, 2, 6, 14);
     ctx.closePath();
     ctx.fill();
-    // barbatana
+    ctx.strokeStyle = ink;
+    ctx.lineWidth = 1.5;
+    ctx.stroke();
+    // cauda
+    ctx.fillStyle = gold;
+    ctx.beginPath();
+    ctx.moveTo(-30, 22);
+    ctx.quadraticCurveTo(-40, 12, -46, 14);
+    ctx.quadraticCurveTo(-40, 20, -37, 24);
+    ctx.quadraticCurveTo(-42, 30, -48, 32);
+    ctx.quadraticCurveTo(-38, 33, -29, 25);
+    ctx.closePath();
+    ctx.fill();
+    ctx.stroke();
+    // barbatanas azuis
     ctx.fillStyle = '#4fb0ff';
     ctx.beginPath();
-    ctx.moveTo(16, -22);
-    ctx.quadraticCurveTo(14, -40, 30, -42);
-    ctx.quadraticCurveTo(24, -32, 28, -26);
+    ctx.moveTo(22, -24);
+    ctx.quadraticCurveTo(18, -44, 34, -46);
+    ctx.quadraticCurveTo(28, -36, 32, -28);
     ctx.closePath();
     ctx.fill();
+    ctx.strokeStyle = '#1f5a8a';
+    ctx.stroke();
+    ctx.beginPath();
+    ctx.moveTo(8, 4);
+    ctx.quadraticCurveTo(0, 14, 2, 20);
+    ctx.quadraticCurveTo(8, 12, 14, 8);
+    ctx.closePath();
+    ctx.fillStyle = '#4fb0ff';
+    ctx.fill();
+    ctx.fillStyle = '#2a160c';
+    ctx.beginPath();
+    ctx.arc(36, -19, 2.2, 0, Math.PI * 2);
+    ctx.fill();
   }
-  ctx.strokeStyle = '#6a4a1a';
-  ctx.lineWidth = 1.5;
-  ctx.stroke();
-  ctx.fillStyle = '#2a160c';
-  ctx.beginPath();
-  ctx.arc(i === 0 ? 26 : 32, -16, 2.2, 0, Math.PI * 2);
-  ctx.fill();
   ctx.restore();
 }
 
@@ -555,7 +626,23 @@ function hull(ctx, sh, c, sternX, bowX, dir, i) {
   ctx.strokeStyle = '#2a160c';
   ctx.lineWidth = 3;
   ctx.stroke();
-  figurehead(ctx, bowX + dir * 18, DECK - 6, dir, i);
+  // friso dourado na roda de proa, com uma voluta no alto
+  ctx.strokeStyle = '#e8c068';
+  ctx.lineWidth = 2.5;
+  ctx.beginPath();
+  ctx.moveTo(bowX + dir * 22, DECK - 2);
+  ctx.quadraticCurveTo(bowX + dir * 34, DECK - 14, bowX + dir * 30, DECK - 34);
+  ctx.stroke();
+  ctx.beginPath();
+  ctx.arc(bowX + dir * 26, DECK - 38, 4.5, 0, Math.PI * 1.6, dir < 0);
+  ctx.stroke();
+  ctx.strokeStyle = '#2a160c';
+  ctx.lineWidth = 2;
+  ctx.beginPath();
+  ctx.moveTo(bowX + dir * 23, DECK - 36);
+  ctx.quadraticCurveTo(bowX + dir * 20, DECK - 14, bowX - dir * 8, DECK - 10);
+  ctx.stroke();
+  figurehead(ctx, bowX + dir * 28, DECK - 12, dir, i);
   // tombadilho: frente com janelas da cabine (molduras douradas)
   const pA = Math.min(sternX, sternX + dir * 120);
   const pB = Math.max(sternX, sternX + dir * 120);
@@ -820,31 +907,90 @@ function rig(ctx, map, i, st, platforms, time) {
   ctx.strokeStyle = '#4a2a16';
   ctx.lineWidth = 1.5;
   ctx.stroke();
-  // bandeira tremulando no topo
-  ctx.fillStyle = c.flag;
-  const fd = -dir;
-  ctx.beginPath();
-  ctx.moveTo(topX, topY);
-  for (let k = 0; k <= 8; k++) {
-    const u = k / 8;
-    ctx.lineTo(topX + fd * u * 60, topY + Math.sin(time * 6 - u * 4) * 4 * u);
+  drawFlag(ctx, topX, topY, -dir, time, c.flag, i);
+}
+
+// Bandeira de rabo de andorinha ondulando: faixas verticais mais claras e
+// mais escuras seguindo a onda (dobras do pano), barra dourada no mastro e o
+// símbolo do elemento no meio; bolinha dourada no topo do mastro
+function drawFlag(ctx, x, y, fd, time, color, i) {
+  const L = 74;
+  const H = 30;
+  const N = 12;
+  const wave = (u) => Math.sin(time * 6 - u * 5) * 5 * u;
+  const top = (u) => [x + fd * u * L, y + wave(u)];
+  const bot = (u) => {
+    return [x + fd * u * L, y + H - u * 4 + wave(u)];
+  };
+  // contorno com o corte em V na ponta (rabo de andorinha)
+  const [tx, ty] = top(1);
+  const [qx, qy] = bot(1);
+  const vx = x + fd * L * 0.8;
+  const vy = (ty + qy) / 2;
+  const outline = () => {
+    ctx.beginPath();
+    ctx.moveTo(x, y);
+    for (let k = 1; k <= N; k++) ctx.lineTo(...top(k / N));
+    ctx.lineTo(vx, vy);
+    ctx.lineTo(qx, qy);
+    for (let k = N - 1; k >= 0; k--) ctx.lineTo(...bot(k / N));
+    ctx.closePath();
+  };
+  // faixas mais claras e mais escuras seguindo a onda (dobras do pano)
+  ctx.save();
+  outline();
+  ctx.clip();
+  for (let k = 0; k < N; k++) {
+    const u0 = k / N;
+    const u1 = (k + 1) / N;
+    const slope = Math.cos(time * 6 - ((u0 + u1) / 2) * 5);
+    ctx.fillStyle = shadeHex(color, slope * 0.18);
+    const [ax, ay] = top(u0);
+    const [bx, by] = top(u1);
+    const [cx, cy] = bot(u1);
+    const [dx, dy] = bot(u0);
+    ctx.beginPath();
+    ctx.moveTo(ax, ay - 2);
+    ctx.lineTo(bx + fd * 0.8, by - 2);
+    ctx.lineTo(cx + fd * 0.8, cy + 2);
+    ctx.lineTo(dx, dy + 2);
+    ctx.closePath();
+    ctx.fill();
   }
-  for (let k = 8; k >= 0; k--) {
-    const u = k / 8;
-    ctx.lineTo(topX + fd * u * 60, topY + 26 - u * 6 + Math.sin(time * 6 - u * 4) * 4 * u);
+  ctx.restore();
+  ctx.strokeStyle = shadeHex(color, -0.35);
+  ctx.lineWidth = 1.2;
+  outline();
+  ctx.stroke();
+  // barra dourada junto do mastro
+  ctx.fillStyle = '#e8c068';
+  ctx.fillRect(fd > 0 ? x : x - 5, y, 5, H);
+  // símbolo do elemento
+  const sx = x + fd * L * 0.42;
+  const sy = y + H / 2 + wave(0.42) - 1;
+  ctx.fillStyle = 'rgba(255,255,255,0.95)';
+  ctx.beginPath();
+  if (i === 0) {
+    ctx.moveTo(sx, sy - 10);
+    ctx.quadraticCurveTo(sx + 9, sy - 1, sx + 5, sy + 7);
+    ctx.quadraticCurveTo(sx, sy + 11, sx - 5, sy + 7);
+    ctx.quadraticCurveTo(sx - 8, sy, sx - 2, sy - 4);
+    ctx.quadraticCurveTo(sx - 1, sy + 1, sx + 1, sy + 2);
+    ctx.quadraticCurveTo(sx + 3, sy - 4, sx, sy - 10);
+  } else {
+    ctx.moveTo(sx, sy - 10);
+    ctx.quadraticCurveTo(sx + 8, sy, sx + 6, sy + 5);
+    ctx.arc(sx, sy + 4, 6, 0, Math.PI, false);
+    ctx.quadraticCurveTo(sx - 8, sy, sx, sy - 10);
   }
-  ctx.closePath();
   ctx.fill();
-  // emblema na bandeira
-  const ex = topX + fd * 30;
-  const ey = topY + 12 + Math.sin(time * 6 - 2) * 2;
-  ctx.fillStyle = 'rgba(255,255,255,0.85)';
+  // ponta do mastro
+  const g = ctx.createRadialGradient(x - 1.5, y - 7, 0.5, x, y - 5, 5);
+  g.addColorStop(0, '#fff3c0');
+  g.addColorStop(1, '#b8862e');
+  ctx.fillStyle = g;
   ctx.beginPath();
-  ctx.arc(ex, ey, 6, 0, Math.PI * 2);
-  ctx.fill();
-  ctx.fillStyle = c.flag;
-  ctx.beginPath();
-  ctx.arc(ex, ey, 3, 0, Math.PI * 2);
+  ctx.arc(x, y - 5, 5, 0, Math.PI * 2);
   ctx.fill();
 }
 
