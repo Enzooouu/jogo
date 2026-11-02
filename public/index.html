@@ -192,22 +192,17 @@
     </section>
 
     <!-- ===================== RESULTADO ===================== -->
-    <section id="screen-result" class="screen" hidden>
+    <section id="screen-result" class="screen menu-screen" hidden>
+      <div class="result-shade"></div>
       <div class="result-wrap">
+        <p id="result-eyebrow" class="result-eyebrow"></p>
         <h1 id="result-title" class="result-title">VITÓRIA!</h1>
         <p id="result-sub" class="result-sub"></p>
-        <div class="panel">
-          <table class="score">
-            <thead>
-              <tr><th>Jogador</th><th>Time</th><th>Elemento</th><th>Kills</th><th>Mortes</th><th>Dano causado</th><th>Dano recebido</th></tr>
-            </thead>
-            <tbody id="result-rows"></tbody>
-          </table>
-        </div>
+        <div id="result-cards" class="result-cards"></div>
         <p id="result-save" class="hint"></p>
-        <div class="row">
-          <button id="again-btn" type="button" class="btn">Jogar de novo</button>
-          <button id="menu-btn" type="button" class="btn ghost">Menu</button>
+        <div class="result-actions">
+          <button id="again-btn" type="button" class="result-btn primary">JOGAR DE NOVO</button>
+          <button id="menu-btn" type="button" class="result-btn">MENU</button>
         </div>
       </div>
     </section>

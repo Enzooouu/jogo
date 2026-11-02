@@ -1,7 +1,7 @@
 // Comemoração de vitória: cada elemento tem a sua, tocada no fim da partida.
 //   fogo  -> chuva de meteoros e um meteoro gigante explodindo atrás da ilha
 //   agua  -> tsunami atravessando a tela
-//   ar    -> tornado gigante
+//   ar    -> tornado de vento: redemoinho de nuvens e funil de fios de vento
 //   terra -> terremoto: pilares subindo, pedregulhos caindo e pedras que
 //            levitam do chão e se juntam num emblema de montanha no céu
 //   mortal -> soco final: um punho gigante de manequim soca a tela, que racha
@@ -125,11 +125,10 @@ export function updateCelebration(cel, dt, renderer) {
     if (Math.random() < dt * 30) {
       P.add({ x: cx + (Math.random() - 0.5) * 160, y: STAGE ? STAGE.main.top : 560, vx: (Math.random() - 0.5) * 120, vy: -200 - Math.random() * 150, life: 0.9, size: 6, grow: 18, color: 'rgba(200,190,180,0.25)' });
     }
-    // relâmpago: clarão na tela
-    if (lightningAt(t) && !cel.flashed?.[lightningIndex(t)]) {
-      cel.flashed = cel.flashed ?? {};
-      cel.flashed[lightningIndex(t)] = true;
-      renderer.shake(4, 0.15);
+    // brilhos subindo pelo funil
+    if (Math.random() < dt * 25 * tornadoReach(t)) {
+      const f = funnelAt(t, Math.random() * 0.8);
+      P.add({ type: 'spark', x: f.x + (Math.random() - 0.5) * f.r * 2, y: f.y, vx: (Math.random() - 0.5) * 60, vy: -120 - Math.random() * 100, life: 0.6, size: 2, color: '#e8fffb', drag: 1 });
     }
   }
 }
@@ -668,220 +667,216 @@ function islandWash(ctx, t) {
 
 // ---------------------------------------------------------------- ar
 
-// Tornado: nuvem de tempestade girando, funil que desce dela, faixas em
-// espiral, destroços orbitando (na frente e atrás do funil) e relâmpagos.
-const CLOUD_Y = 10;
+// Tornado de vento: o céu clareia num tom verde-água, um redemoinho de
+// nuvens em braços espirais gira lá no alto, e dele desce um funil feito de
+// fios de vento translúcidos girando em hélice (os da frente claros, os de
+// trás apagados), até abaixo da borda da tela. Folhas e pétalas orbitam o
+// funil, fitas de vento são puxadas dos lados e a poeira gira no chão.
+const CLOUD_Y = 30;
 // a base do funil vai até bem embaixo, abaixo da borda da tela
 const GROUND_Y = 1250;
-const LIGHTNINGS = [0.9, 1.9, 2.7];
-
-function lightningIndex(t) {
-  return LIGHTNINGS.findIndex((l) => t >= l && t < l + 0.18);
-}
-
-function lightningAt(t) {
-  return lightningIndex(t) !== -1;
-}
+const STRANDS = 22;
 
 function tornadoX(t) {
-  return 820 - t * 85 + Math.sin(t * 1.3) * 60;
+  return 700 - t * 40 + Math.sin(t * 1.1) * 50;
 }
 
-// Quanto o funil já desceu (0 = só a nuvem, 1 = encostou no chão)
+// Quanto o funil já desceu (0 = só o redemoinho, 1 = chegou embaixo)
 function tornadoReach(t) {
-  const down = Math.min(1, Math.max(0, (t - 0.3) / 0.9));
+  const down = Math.min(1, Math.max(0, (t - 0.35) / 1.1));
   const up = Math.min(1, Math.max(0, (t - 3.3) / 0.6));
-  return down * (1 - up);
+  return (1 - Math.pow(1 - down, 2)) * (1 - up);
 }
 
-// Centro e raio do funil numa altura u (0 = chão, 1 = nuvem)
+// Centro e raio do funil numa altura u (0 = embaixo, 1 = no redemoinho)
 function funnelAt(t, u) {
   const cx = tornadoX(t);
   const y = GROUND_Y + (CLOUD_Y - GROUND_Y) * u;
-  const bend = Math.sin(u * 3.2 + t * 2.2) * 45 * (1 - u) + Math.sin(t * 1.1) * 30 * u;
-  const r = 30 + Math.pow(u, 1.8) * 260;
+  const bend = Math.sin(u * 3 + t * 1.8) * 40 * (1 - u) + Math.sin(t * 0.9) * 25 * u;
+  const r = 26 + Math.pow(u, 1.7) * 250;
   return { x: cx + bend, y, r };
 }
 
-function stormCloud(ctx, t) {
+// redemoinho de nuvens no alto: braços em espiral girando
+function vortex(ctx, t) {
   const cx = tornadoX(t);
-  // escurece o céu
-  ctx.fillStyle = 'rgba(20,30,45,0.35)';
-  ctx.fillRect(-1200, -900, 3700, 2400);
-  // camadas da nuvem girando
-  for (let i = 0; i < 4; i++) {
-    const a = t * (0.6 + i * 0.25);
-    ctx.save();
-    ctx.translate(cx + Math.sin(a) * 20, CLOUD_Y - 10 - i * 18);
-    const g = ctx.createRadialGradient(0, 0, 20, 0, 0, 520 - i * 80);
-    g.addColorStop(0, `rgba(${60 + i * 15},${70 + i * 15},${90 + i * 15},0.9)`);
-    g.addColorStop(0.6, `rgba(${40 + i * 10},${48 + i * 10},${64 + i * 10},0.6)`);
-    g.addColorStop(1, 'rgba(30,36,50,0)');
-    ctx.fillStyle = g;
-    ctx.scale(1, 0.28);
-    ctx.beginPath();
-    ctx.arc(0, 0, 520 - i * 80, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.restore();
-  }
-  // espiral na barriga da nuvem
-  ctx.strokeStyle = 'rgba(200,230,230,0.25)';
-  ctx.lineWidth = 3;
-  for (let i = 0; i < 5; i++) {
-    const a0 = t * 2 + i * 1.25;
-    ctx.beginPath();
-    ctx.ellipse(cx, CLOUD_Y, 120 + i * 70, 22 + i * 12, 0, a0, a0 + 1.6);
-    ctx.stroke();
-  }
-}
-
-function lightning(ctx, t) {
-  const idx = lightningIndex(t);
-  if (idx === -1) return;
-  const k = 1 - (t - LIGHTNINGS[idx]) / 0.18;
-  // clarão no céu
-  ctx.fillStyle = `rgba(220,240,255,${0.25 * k})`;
-  ctx.fillRect(-1200, -900, 3700, 2400);
-  // raio em zigue-zague da nuvem até o chão ao fundo
-  let x = tornadoX(t) + (rand(idx, 20) - 0.5) * 700;
-  let y = CLOUD_Y + 20;
-  ctx.strokeStyle = `rgba(240,250,255,${k})`;
-  ctx.shadowColor = '#bfe9ff';
-  ctx.shadowBlur = 18;
-  ctx.lineWidth = 4;
+  const grow = Math.min(1, t / 0.8);
+  const fadeOut = 1 - Math.min(1, Math.max(0, (t - 3.3) / 0.7));
+  ctx.save();
+  ctx.translate(cx, CLOUD_Y + 10);
+  ctx.scale(1, 0.32);
+  // brilho no olho do redemoinho
+  const eye = ctx.createRadialGradient(0, 0, 10, 0, 0, 260 * grow);
+  eye.addColorStop(0, `rgba(235,255,250,${0.55 * fadeOut})`);
+  eye.addColorStop(1, 'rgba(235,255,250,0)');
+  ctx.fillStyle = eye;
   ctx.beginPath();
-  ctx.moveTo(x, y);
-  for (let i = 0; i < 9; i++) {
-    x += (rand(idx, 30 + i) - 0.5) * 90;
-    y += 70;
-    ctx.lineTo(x, y);
+  ctx.arc(0, 0, 260 * grow + 1, 0, Math.PI * 2);
+  ctx.fill();
+  for (let arm = 0; arm < 4; arm++) {
+    for (let k = 0; k < 16; k++) {
+      const d = k / 15;
+      const a = arm * (Math.PI / 2) + d * 4.2 - t * 1.6;
+      const rr = (60 + d * 560) * grow;
+      const x = Math.cos(a) * rr;
+      const y = Math.sin(a) * rr;
+      const size = (30 + d * 70) * grow;
+      const g = ctx.createRadialGradient(x, y, 0, x, y, size);
+      const alpha = (0.38 - d * 0.22) * fadeOut;
+      g.addColorStop(0, `rgba(240,252,255,${alpha})`);
+      g.addColorStop(1, 'rgba(200,235,235,0)');
+      ctx.fillStyle = g;
+      ctx.beginPath();
+      ctx.arc(x, y, size, 0, Math.PI * 2);
+      ctx.fill();
+    }
   }
-  ctx.stroke();
-  ctx.shadowBlur = 0;
+  ctx.restore();
 }
 
-function debris(ctx, t, reach, front) {
-  for (let i = 0; i < 22; i++) {
-    const u = 0.05 + rand(i, 5) * 0.8;
-    if (u > reach + 0.05 && reach < 1) continue;
+// fitas de vento puxadas dos lados para o funil (afinam nas pontas)
+function windRibbons(ctx, t) {
+  const cx = tornadoX(t);
+  ctx.lineCap = 'round';
+  for (let i = 0; i < 16; i++) {
+    const side = i % 2 ? 1 : -1;
+    const k = (t * 0.8 + i / 16) % 1;
+    const y = 140 + ((i * 53) % 420);
+    const x = cx + side * (950 - k * 820);
+    const a = Math.sin(k * Math.PI);
+    for (let s = 0; s < 3; s++) {
+      ctx.strokeStyle = `rgba(225,255,248,${a * (0.5 - s * 0.14)})`;
+      ctx.lineWidth = 3.2 - s;
+      ctx.beginPath();
+      ctx.moveTo(x + side * s * 40, y + s * 2);
+      ctx.quadraticCurveTo(x - side * (60 - s * 10), y - 16, x - side * (150 - s * 30), y - 2);
+      ctx.stroke();
+    }
+  }
+}
+
+// folhas e pétalas girando em volta do funil (frente ou trás)
+function orbitBits(ctx, t, reach, front) {
+  for (let i = 0; i < 34; i++) {
+    const u = 0.04 + ((i * 0.618) % 1) * 0.9;
+    if (u > reach + 0.02 && reach < 1) continue;
     const f = funnelAt(t, u);
-    const a = t * (2.5 + rand(i, 6) * 2.5) + i * 2.1;
-    const depth = Math.sin(a);              // > 0: na frente do funil
+    const a = t * (2.2 + rand(i, 6) * 2) + i * 2.4;
+    const depth = Math.sin(a);
     if ((depth > 0) !== front) continue;
-    const orbit = f.r * (1.15 + rand(i, 11) * 0.5);
+    const orbit = f.r * (1.05 + rand(i, 11) * 0.35);
     const x = f.x + Math.cos(a) * orbit;
-    const y = f.y + depth * f.r * 0.22 - Math.sin(t * 3 + i) * 6;
-    const size = (5 + rand(i, 7) * 10) * (0.75 + depth * 0.35);
+    const y = f.y + depth * f.r * 0.2 + Math.sin(t * 3 + i) * 5;
     ctx.save();
     ctx.translate(x, y);
-    ctx.rotate(a * 3);
-    ctx.globalAlpha *= front ? 1 : 0.55;
-    if (i % 3 === 0) {
-      // tábua
-      ctx.fillStyle = '#7a5532';
-      ctx.fillRect(-size * 1.4, -size * 0.25, size * 2.8, size * 0.5);
-    } else {
-      // pedra
-      ctx.fillStyle = i % 2 ? '#6b5560' : '#4a3a50';
+    ctx.rotate(a * 2 + i);
+    ctx.globalAlpha *= front ? 0.95 : 0.45;
+    const leaf = i % 3 !== 0;
+    ctx.fillStyle = leaf ? (i % 2 ? '#8fd468' : '#5fae55') : '#ffc0d8';
+    ctx.beginPath();
+    ctx.ellipse(0, 0, leaf ? 7 : 4.5, leaf ? 3 : 3.5, 0, 0, Math.PI * 2);
+    ctx.fill();
+    if (leaf) {
+      ctx.strokeStyle = 'rgba(40,80,30,0.5)';
+      ctx.lineWidth = 0.8;
       ctx.beginPath();
-      ctx.moveTo(-size * 0.6, -size * 0.3);
-      ctx.lineTo(size * 0.2, -size * 0.6);
-      ctx.lineTo(size * 0.6, size * 0.1);
-      ctx.lineTo(-size * 0.1, size * 0.5);
-      ctx.closePath();
-      ctx.fill();
+      ctx.moveTo(-6, 0);
+      ctx.lineTo(6, 0);
+      ctx.stroke();
     }
     ctx.restore();
   }
 }
 
+// fios de vento em hélice formando o funil
+function strands(ctx, t, reach, front) {
+  const segs = 46;
+  for (let k = 0; k < STRANDS; k++) {
+    const phase = (k / STRANDS) * Math.PI * 2;
+    const turns = 3.2 + (k % 3) * 0.5;
+    let prev = null;
+    for (let n = 0; n <= segs; n++) {
+      const u = 1 - (n / segs) * reach;
+      const f = funnelAt(t, u);
+      const a = phase + u * turns * Math.PI * 2 - t * (5 - u * 2.2);
+      const depth = Math.sin(a);
+      const x = f.x + Math.cos(a) * f.r;
+      const y = f.y + depth * f.r * 0.16;
+      if (prev && (depth > 0) === front) {
+        // some nas pontas do fio (fica leve, como vento)
+        const ends = Math.min(1, n / 6, (segs - n) / 6 + 0.3);
+        const shine = (front ? 0.25 + 0.45 * depth : 0.08 + 0.1 * (1 + depth)) * ends;
+        ctx.strokeStyle = k % 4 === 0 ? `rgba(127,255,224,${shine})` : `rgba(240,255,252,${shine})`;
+        ctx.lineWidth = (front ? 1.4 : 1) + u * 2.2;
+        ctx.beginPath();
+        ctx.moveTo(prev[0], prev[1]);
+        ctx.lineTo(x, y);
+        ctx.stroke();
+      }
+      prev = [x, y];
+    }
+  }
+}
+
 function tornado(ctx, t) {
   const reach = tornadoReach(t);
-  stormCloud(ctx, t);
-  lightning(ctx, t);
-
-  // linhas de vento sendo sugadas para o funil
-  const cx = tornadoX(t);
-  ctx.strokeStyle = 'rgba(220,255,248,0.35)';
-  ctx.lineWidth = 2;
-  ctx.lineCap = 'round';
-  for (let i = 0; i < 14; i++) {
-    const side = i % 2 ? 1 : -1;
-    const k = (t * 0.9 + i / 14) % 1;
-    const y = 120 + (i * 37) % 420;
-    const x = cx + side * (900 - k * 760);
-    ctx.globalAlpha = Math.sin(k * Math.PI) * 0.8;
-    ctx.beginPath();
-    ctx.moveTo(x, y);
-    ctx.quadraticCurveTo(x - side * 60, y - 12, x - side * 130, y - 4);
-    ctx.stroke();
-  }
-  ctx.globalAlpha = 1;
-
+  // céu clareando num tom verde-água
+  const tint = Math.min(1, t / 0.6) * (1 - Math.min(1, Math.max(0, (t - 3.4) / 0.6)));
+  const sky = ctx.createLinearGradient(0, -400, 0, 900);
+  sky.addColorStop(0, `rgba(60,140,150,${0.35 * tint})`);
+  sky.addColorStop(1, `rgba(60,140,150,0)`);
+  ctx.fillStyle = sky;
+  ctx.fillRect(-1200, -900, 3700, 2400);
+  vortex(ctx, t);
+  windRibbons(ctx, t);
   if (reach <= 0.01) return;
-  debris(ctx, t, reach, false);
-
-  // corpo do funil (de cima para baixo até onde já desceu)
-  const steps = 30;
+  ctx.lineCap = 'round';
+  orbitBits(ctx, t, reach, false);
+  strands(ctx, t, reach, false);
+  // volume do funil: véu claro no meio
+  const steps = 26;
   const left = [];
   const right = [];
   for (let i = 0; i <= steps; i++) {
     const u = 1 - (i / steps) * reach;
     const f = funnelAt(t, u);
-    const jitter = Math.sin(u * 20 - t * 12) * 4;
-    left.push([f.x - f.r - jitter, f.y]);
-    right.push([f.x + f.r + jitter, f.y]);
+    left.push([f.x - f.r * 0.92, f.y]);
+    right.push([f.x + f.r * 0.92, f.y]);
   }
   ctx.beginPath();
   left.forEach(([x, y], i) => (i ? ctx.lineTo(x, y) : ctx.moveTo(x, y)));
   for (let i = right.length - 1; i >= 0; i--) ctx.lineTo(right[i][0], right[i][1]);
   ctx.closePath();
-  const g = ctx.createLinearGradient(cx - 260, 0, cx + 260, 0);
-  g.addColorStop(0, 'rgba(120,150,150,0.25)');
-  g.addColorStop(0.35, 'rgba(210,240,235,0.55)');
-  g.addColorStop(0.6, 'rgba(240,255,250,0.65)');
-  g.addColorStop(1, 'rgba(110,140,140,0.3)');
-  ctx.fillStyle = g;
+  const cx = tornadoX(t);
+  const veil = ctx.createLinearGradient(cx - 280, 0, cx + 280, 0);
+  veil.addColorStop(0, 'rgba(160,215,210,0.05)');
+  veil.addColorStop(0.45, 'rgba(235,255,250,0.28)');
+  veil.addColorStop(0.55, 'rgba(235,255,250,0.32)');
+  veil.addColorStop(1, 'rgba(160,215,210,0.05)');
+  ctx.fillStyle = veil;
   ctx.fill();
-
-  // faixas em espiral: metade de trás escura, metade da frente clara
-  for (let i = 0; i < 34; i++) {
-    const u = 1 - (i / 33) * reach;
-    const f = funnelAt(t, u);
-    const spin = t * (7 - u * 3) + i * 0.55;
-    ctx.lineWidth = 2 + u * 5;
-    ctx.strokeStyle = 'rgba(70,100,105,0.35)';
-    ctx.beginPath();
-    ctx.ellipse(f.x, f.y, f.r, 6 + f.r * 0.12, 0, Math.PI + spin % 1, Math.PI * 2);
-    ctx.stroke();
-    ctx.strokeStyle = i % 3 ? 'rgba(245,255,252,0.75)' : 'rgba(127,255,224,0.7)';
-    ctx.beginPath();
-    const a0 = (spin % (Math.PI * 2));
-    ctx.ellipse(f.x, f.y, f.r, 6 + f.r * 0.12, 0, Math.max(0.05, a0 % Math.PI), Math.PI - 0.1);
-    ctx.stroke();
-  }
-
+  strands(ctx, t, reach, true);
   // poeira girando onde o funil cruza o chão do mapa
   const groundY = STAGE ? STAGE.main.top : 560;
   const uGround = (groundY - GROUND_Y) / (CLOUD_Y - GROUND_Y);
   if (reach > 1 - uGround) {
     const base = funnelAt(t, uGround);
     for (let i = 0; i < 3; i++) {
-      const g2 = ctx.createRadialGradient(base.x, groundY, 10, base.x, groundY, 130 + i * 40);
-      g2.addColorStop(0, 'rgba(190,180,170,0.4)');
-      g2.addColorStop(1, 'rgba(190,180,170,0)');
+      const rr = base.r * 2.2 + 60 + i * 40 + Math.sin(t * 6 + i) * 10;
+      const g2 = ctx.createRadialGradient(base.x, groundY, 10, base.x, groundY, rr);
+      g2.addColorStop(0, 'rgba(225,215,195,0.35)');
+      g2.addColorStop(1, 'rgba(225,215,195,0)');
       ctx.fillStyle = g2;
       ctx.save();
-      ctx.translate(base.x, groundY - 20);
-      ctx.scale(1, 0.4);
+      ctx.translate(base.x, groundY - 14);
+      ctx.scale(1, 0.32);
       ctx.beginPath();
-      ctx.arc(0, 0, 130 + i * 40 + Math.sin(t * 6 + i) * 10, 0, Math.PI * 2);
+      ctx.arc(0, 0, rr, 0, Math.PI * 2);
       ctx.fill();
       ctx.restore();
     }
   }
-
-  debris(ctx, t, reach, true);
+  orbitBits(ctx, t, reach, true);
 }
 
 // ---------------------------------------------------------------- terra

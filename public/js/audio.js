@@ -311,8 +311,12 @@ export function playEvents(events, localId) {
         } else if (e.winnerElement === 'agua') {
           noise({ dur: 2.5, vol: 0.3, freq: 900, delay: 0.2 });
         } else if (e.winnerElement === 'ar') {
-          tone({ freq: 200, to: 600, dur: 2.5, type: 'sawtooth', vol: 0.05, delay: 0.1 });
-          noise({ dur: 2.5, vol: 0.2, freq: 1500, delay: 0.1 });
+          // vento rodando (grave e agudo) e um sininho no fim
+          noise({ dur: 3.2, vol: 0.22, freq: 700, delay: 0.1 });
+          noise({ dur: 2.6, vol: 0.12, freq: 2400, delay: 0.5 });
+          tone({ freq: 180, to: 420, dur: 3, type: 'sine', vol: 0.06, delay: 0.2 });
+          tone({ freq: 1320, dur: 0.6, type: 'triangle', vol: 0.06, delay: 3.2 });
+          tone({ freq: 1760, dur: 0.8, type: 'triangle', vol: 0.05, delay: 3.35 });
         } else if (e.winnerElement === 'terra') {
           tone({ freq: 50, to: 30, dur: 3, type: 'sawtooth', vol: 0.35 });
           noise({ dur: 3, vol: 0.3, freq: 200 });

@@ -3,7 +3,7 @@
 
 import { ELEMENTS, HAZARDS, HAZARD_REACTION } from '/shared/elements.js';
 import { WEAPONS, weaponProfile } from '/shared/weapons.js';
-import { MAPS } from '/shared/maps.js';
+import { MAPS, getMap } from '/shared/maps.js';
 import { MatchRunner } from './match.js';
 import { unlockAudio, toggleMute, isMuted } from './audio.js';
 import { Renderer, TEAM_COLORS } from './render/renderer.js';
@@ -46,7 +46,7 @@ let homeMenu = null;
 // ------------------------------------------------------------ telas
 
 const SCREENS = ['home', 'mode', 'cards', 'versus', 'game', 'tutorial', 'result', 'auth', 'profile'];
-const WITH_DEMO = new Set(['home', 'mode', 'cards', 'auth', 'profile']);
+const WITH_DEMO = new Set(['home', 'mode', 'cards', 'auth', 'profile', 'result']);
 
 export function show(name) {
   for (const s of SCREENS) $(`#screen-${s}`).hidden = s !== name;
@@ -482,29 +482,56 @@ function showResult(setup, result) {
     tempo: winner ? `Tempo esgotado — ${winner} tinha mais vidas.` : 'Tempo esgotado e tudo empatado.',
     desistencia: 'Você desistiu da partida.',
   };
-  $('#result-sub').textContent = `${subs[result.reason] ?? ''} Duração: ${formatTime(result.duration)}.`;
+  $('#result-sub').textContent = subs[result.reason] ?? '';
 
-  const rows = $('#result-rows');
-  rows.innerHTML = '';
+  // cartões dos jogadores: vencedores primeiro, depois por kills
+  const cards = $('#result-cards');
+  cards.innerHTML = '';
   const teams = [...new Set(result.players.map((p) => p.team))];
-  // sem time (todos contra todos): esconde a coluna de time e ordena por kills
-  $('#result-rows').closest('table').classList.toggle('ffa', ffa);
-  const sorted = ffa
-    ? [...result.players].sort((a, b) => (b.team === result.winnerTeam) - (a.team === result.winnerTeam) || b.kills - a.kills || a.deaths - b.deaths)
-    : [...result.players].sort((a, b) => teams.indexOf(a.team) - teams.indexOf(b.team) || b.kills - a.kills);
-  for (const p of sorted) {
-    const tr = document.createElement('tr');
-    if (p.id === setup.localPlayerId) tr.className = 'me';
+  const won = (p) => result.winnerTeam !== null && p.team === result.winnerTeam;
+  const sorted = [...result.players].sort((a, b) => won(b) - won(a) || teams.indexOf(a.team) - teams.indexOf(b.team) || b.kills - a.kills || a.deaths - b.deaths);
+  const mvp = [...result.players].sort((a, b) => b.damageDealt - a.damageDealt)[0];
+  sorted.forEach((p, i) => {
     const el = ELEMENTS[p.element];
-    tr.innerHTML = `
-      <td><span class="pname"></span>${p.isBot ? '<span class="tag">BOT</span>' : ''}</td>
-      <td><span class="dot" style="background:${teamColor(result, p.team)}"></span><span class="tname"></span></td>
-      <td><span class="dot" style="background:${el.color}"></span>${el.name}</td>
-      <td>${p.kills}</td><td>${p.deaths}</td><td>${p.damageDealt}</td><td>${p.damageTaken}</td>`;
-    tr.querySelector('.pname').textContent = p.name;
-    tr.querySelector('.tname').textContent = teamLabel(result, p.team);
-    rows.appendChild(tr);
-  }
+    const card = document.createElement('div');
+    card.className = 'pcard';
+    if (won(p)) card.classList.add('winner');
+    if (p.id === setup.localPlayerId) card.classList.add('me');
+    card.style.setProperty('--team', teamColor(result, p.team));
+    card.style.setProperty('--el', el.color);
+    card.style.setProperty('--el-light', el.light ?? el.color);
+    card.style.animationDelay = `${0.15 + i * 0.08}s`;
+    const stat = (cls, value, label) => `<div class="pstat ${cls}${value === 0 ? ' zero' : ''}"><b>${value}</b><span>${label}</span></div>`;
+    card.innerHTML = `
+      <div class="pcard-head">
+        <div class="pavatar"></div>
+        <div class="pname-wrap"><span class="pname"></span><span class="pmeta"></span></div>
+      </div>
+      <div class="ptags"></div>
+      <div class="pstats">
+        ${stat('', p.kills, 'Kills')}${stat('', p.deaths, 'Mortes')}${stat('', p.hits ?? 0, 'Golpes')}
+        ${stat('dealt', p.damageDealt, 'Dano feito')}${stat('taken', p.damageTaken, 'Dano levado')}${stat('', p.pickups ?? 0, 'Armas')}
+      </div>`;
+    card.querySelector('.pavatar').textContent = p.name.charAt(0).toUpperCase();
+    card.querySelector('.pname').textContent = p.name;
+    card.querySelector('.pmeta').textContent = ffa ? el.name : `${teamLabel(result, p.team)} · ${el.name}`;
+    const tags = card.querySelector('.ptags');
+    const addTag = (text, cls) => {
+      const t = document.createElement('span');
+      t.className = `ptag ${cls}`;
+      t.textContent = text;
+      tags.appendChild(t);
+    };
+    if (p.id === setup.localPlayerId) addTag('VOCÊ', 'you');
+    if (won(p)) addTag(ffa ? 'CAMPEÃO' : 'VENCEDOR', 'win');
+    if (p === mvp && p.damageDealt > 0) addTag('MVP', 'mvp');
+    if (p.isBot) addTag('BOT', '');
+    cards.appendChild(card);
+  });
+  // linha de cima: mapa e duração
+  const mapName = getMap(setup.mapId ?? 'caldeira').name;
+  $('#result-eyebrow').textContent = `FIM DE PARTIDA · ${mapName.toUpperCase()} · ${formatTime(result.duration)}`;
+  $('#screen-result').classList.toggle('lose', outcome === 'derrota');
   $('#result-save').textContent = '';
   show('result');
   $('#again-btn').focus();
