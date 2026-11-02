@@ -17,6 +17,40 @@ import { TUTORIAL_MAPS } from './maps-treino.js';
 // Plataforma pendurada em balão (Pico dos Ventos)
 const SWING = { length: 130, push: 3.2, wind: 0.9, gravity: 620, damping: 0.6, maxAngle: 1.15 };
 
+// Sólidos de um navio do Navio Voador (0 = esquerda; o 1 é o espelho): o
+// tombadilho, o convés e fatias do casco seguindo a curva de baixo (a mesma
+// curva do desenho em public/js/render/stage-navio.js)
+function shipSolids(ship) {
+  const quad = (a, c, b, t) => (1 - t) * (1 - t) * a + 2 * (1 - t) * t * c + t * t * b;
+  // curva da popa: (64,530) -> (315,604), controle (110,600)
+  // curva da proa: (315,604) -> (586,486), controle (490,600)
+  const along = (p0, c, p1, y) => {
+    let best = p0[0];
+    let bestD = Infinity;
+    for (let t = 0; t <= 1; t += 0.005) {
+      const d = Math.abs(quad(p0[1], c[1], p1[1], t) - y);
+      if (d < bestD) {
+        bestD = d;
+        best = quad(p0[0], c[0], p1[0], t);
+      }
+    }
+    return best;
+  };
+  const left = (y) => (y <= 530 ? 64 + ((530 - y) / 94) * 6 : along([64, 530], [110, 600], [315, 604], y));
+  const right = (y) => along([315, 604], [490, 600], [586, 486], y);
+  const out = [
+    { x: 70, y: 436, w: 120, h: 64 },    // tombadilho
+    { x: 70, y: 500, w: 490, h: 12 },    // convés
+  ];
+  for (const [y0, y1] of [[512, 528], [528, 544], [544, 560], [560, 576], [576, 590], [590, 600]]) {
+    const mid = (y0 + y1) / 2;
+    const l = Math.round(left(mid));
+    const r = Math.round(Math.min(560, right(mid)));
+    out.push({ x: l, y: y0, w: r - l, h: y1 - y0, under: true });
+  }
+  return out.map((s) => ({ ...s, ship, x: ship === 0 ? s.x : 1280 - s.x - s.w }));
+}
+
 export const MAPS = {
   caldeira: {
     id: 'caldeira',
@@ -269,12 +303,9 @@ export const MAPS = {
     width: 1280,
     height: 720,
     blast: { left: -260, right: 1540, top: -560, bottom: 1000 },
-    solids: [
-      { x: 70, y: 436, w: 120, h: 170, ship: 0 },    // tombadilho (esquerda)
-      { x: 190, y: 500, w: 370, h: 106, ship: 0 },   // convés (esquerda)
-      { x: 720, y: 500, w: 370, h: 106, ship: 1 },   // convés (direita)
-      { x: 1090, y: 436, w: 120, h: 170, ship: 1 },  // tombadilho (direita)
-    ],
+    // o casco é redondo embaixo: o sólido segue a curva em fatias (sem
+    // parede invisível do lado de fora da curva)
+    solids: [...shipSolids(0), ...shipSolids(1)],
     platforms: [
       { x: 227, y: 326, w: 216, ship: 0 },   // verga (esquerda)
       { x: 289, y: 196, w: 92, ship: 0 },    // gávea (esquerda)
@@ -283,8 +314,8 @@ export const MAPS = {
     ],
     // cada navio: altura do convés, mastro, canhão e onde a bala dele cai
     ships: [
-      { deckY: 500, poopY: 436, mast: 335, cannon: { x: 228, dir: 1 }, target: { x: 1150, y: 436 } },
-      { deckY: 500, poopY: 436, mast: 945, cannon: { x: 1052, dir: -1 }, target: { x: 130, y: 436 } },
+      { deckY: 500, poopY: 436, stern: 70, bow: 560, mast: 335, cannon: { x: 228, dir: 1 }, target: { x: 1150, y: 436 } },
+      { deckY: 500, poopY: 436, stern: 1210, bow: 720, mast: 945, cannon: { x: 1052, dir: -1 }, target: { x: 130, y: 436 } },
     ],
     hazards: [],
     spawns: [

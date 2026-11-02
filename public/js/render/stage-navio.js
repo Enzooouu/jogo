@@ -10,7 +10,8 @@
 //
 // A física fica em shared/ship.js (o navio só manda a posição de agora).
 
-import { seeded } from './stage-util.js';
+import { seeded, ridgeLine } from './stage-util.js';
+import { cloudSprite } from './stage-treino.js';
 import { SHIP } from '/shared/ship.js';
 
 const VIEW_W = 1280;
@@ -28,39 +29,77 @@ const shipsOf = (map) => (GAME && GAME.map === map ? GAME.ships : null);
 
 function paintSky(ctx) {
   const g = ctx.createLinearGradient(0, 0, 0, VIEW_H);
-  g.addColorStop(0, '#24366e');
-  g.addColorStop(0.35, '#4f74b8');
-  g.addColorStop(0.62, '#e7a58f');
-  g.addColorStop(0.8, '#ffcf8f');
-  g.addColorStop(1, '#ffe2b0');
+  g.addColorStop(0, '#1d2b5c');
+  g.addColorStop(0.3, '#43609f');
+  g.addColorStop(0.55, '#b98aa6');
+  g.addColorStop(0.72, '#f2a58a');
+  g.addColorStop(0.86, '#ffcf8f');
+  g.addColorStop(1, '#ffe7b8');
   ctx.fillStyle = g;
   ctx.fillRect(0, 0, VIEW_W, VIEW_H);
   const rand = seeded(41);
-  for (let i = 0; i < 60; i++) {
-    ctx.fillStyle = `rgba(255,255,255,${0.2 + rand() * 0.5})`;
-    ctx.fillRect(rand() * VIEW_W, rand() * 170, 1.4, 1.4);
+  // estrelas aparecendo no alto (está anoitecendo)
+  for (let i = 0; i < 90; i++) {
+    const y = rand() * 210;
+    ctx.fillStyle = `rgba(255,255,255,${(0.2 + rand() * 0.6) * (1 - y / 260)})`;
+    ctx.fillRect(rand() * VIEW_W, y, 1.4, 1.4);
   }
-  const glow = ctx.createRadialGradient(SUN.x, SUN.y, 20, SUN.x, SUN.y, 460);
-  glow.addColorStop(0, 'rgba(255,236,190,0.8)');
-  glow.addColorStop(1, 'rgba(255,200,150,0)');
-  ctx.fillStyle = glow;
-  ctx.fillRect(0, 0, VIEW_W, VIEW_H);
-  ctx.fillStyle = '#fff3cf';
+  // lua fininha do outro lado
+  ctx.fillStyle = 'rgba(255,250,235,0.85)';
+  ctx.beginPath();
+  ctx.arc(180, 95, 18, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.fillStyle = '#2a3a6e';
+  ctx.beginPath();
+  ctx.arc(188, 90, 16, 0, Math.PI * 2);
+  ctx.fill();
+  // brilho grande do sol
+  for (const [r, a, c] of [[620, 0.5, '255,200,150'], [260, 0.7, '255,232,190'], [110, 0.9, '255,246,220']]) {
+    const glow = ctx.createRadialGradient(SUN.x, SUN.y, 20, SUN.x, SUN.y, r);
+    glow.addColorStop(0, `rgba(${c},${a})`);
+    glow.addColorStop(1, `rgba(${c},0)`);
+    ctx.fillStyle = glow;
+    ctx.fillRect(SUN.x - r, SUN.y - r, r * 2, r * 2);
+  }
+  ctx.fillStyle = '#fff6da';
   ctx.beginPath();
   ctx.arc(SUN.x, SUN.y, 54, 0, Math.PI * 2);
   ctx.fill();
-  // faixas de nuvem fina cortando o sol
-  for (const [y, w, x] of [[440, 380, 960], [470, 260, 1020]]) {
-    ctx.fillStyle = 'rgba(230,150,150,0.45)';
+  // faixas de nuvem fina, rosadas, com a borda de baixo dourada
+  for (const [y, w, x, a] of [[140, 520, 360, 0.35], [205, 420, 900, 0.3], [262, 600, 560, 0.28], [440, 380, 960, 0.5], [470, 280, 1030, 0.45]]) {
+    const cg = ctx.createLinearGradient(0, y - 6, 0, y + 7);
+    cg.addColorStop(0, `rgba(200,130,170,${a})`);
+    cg.addColorStop(1, `rgba(255,214,160,${a + 0.2})`);
+    ctx.fillStyle = cg;
     ctx.beginPath();
-    ctx.ellipse(x, y, w / 2, 5, 0, 0, Math.PI * 2);
+    ctx.ellipse(x, y, w / 2, 6, 0, 0, Math.PI * 2);
     ctx.fill();
   }
 }
 
 function skyAnimated(ctx, time) {
+  // raios do sol girando bem devagar
+  ctx.save();
+  ctx.globalCompositeOperation = 'lighter';
+  ctx.translate(SUN.x, SUN.y);
+  ctx.rotate(time * 0.01);
+  const rays = ctx.createRadialGradient(0, 0, 60, 0, 0, 760);
+  rays.addColorStop(0, 'rgba(255,220,170,0.09)');
+  rays.addColorStop(1, 'rgba(255,220,170,0)');
+  ctx.fillStyle = rays;
+  ctx.beginPath();
+  for (let i = 0; i < 12; i++) {
+    const a = (i / 12) * Math.PI * 2;
+    const w = i % 2 ? 0.035 : 0.07;
+    ctx.moveTo(0, 0);
+    ctx.lineTo(Math.cos(a - w) * 760, Math.sin(a - w) * 760);
+    ctx.lineTo(Math.cos(a + w) * 760, Math.sin(a + w) * 760);
+    ctx.closePath();
+  }
+  ctx.fill();
+  ctx.restore();
   // riscos de vento passando (os navios estão voando para a direita)
-  ctx.strokeStyle = 'rgba(255,255,255,0.32)';
+  ctx.strokeStyle = 'rgba(255,255,255,0.3)';
   ctx.lineWidth = 1.5;
   ctx.lineCap = 'round';
   for (let i = 0; i < 12; i++) {
@@ -75,88 +114,220 @@ function skyAnimated(ctx, time) {
 
 // ================================================================ longe
 
+// ilha flutuante: topo de grama, pedra afinando para baixo, raízes
+function isle(ctx, x, y, w, rand, tone, extra) {
+  const depth = w * (0.9 + rand() * 0.3);
+  ctx.fillStyle = tone.rock;
+  ctx.beginPath();
+  ctx.moveTo(x - w, y);
+  for (let k = 1; k < 7; k++) {
+    const u = k / 7;
+    ctx.lineTo(x - w + u * w * 2, y + depth * Math.sin(u * Math.PI) * (0.55 + rand() * 0.45));
+  }
+  ctx.lineTo(x + w, y);
+  ctx.closePath();
+  ctx.fill();
+  ctx.save();
+  ctx.clip();
+  ctx.fillStyle = tone.lit;
+  ctx.fillRect(x + w * 0.2, y, w, depth);
+  ctx.restore();
+  ctx.fillStyle = tone.grass;
+  ctx.fillRect(x - w, y - 4, w * 2, 6);
+  for (let k = 0; k < 3; k++) {
+    const tx = x - w * 0.6 + rand() * w * 1.2;
+    ctx.fillStyle = tone.tree;
+    ctx.beginPath();
+    ctx.arc(tx, y - w * 0.12, w * 0.1, 0, Math.PI * 2);
+    ctx.fill();
+  }
+  if (extra === 'farol') {
+    // farol pequeno (a luz pisca em farAnimated)
+    ctx.fillStyle = '#efe4dc';
+    ctx.beginPath();
+    ctx.moveTo(x + w * 0.3 - 6, y - 2);
+    ctx.lineTo(x + w * 0.3 - 4, y - 40);
+    ctx.lineTo(x + w * 0.3 + 4, y - 40);
+    ctx.lineTo(x + w * 0.3 + 6, y - 2);
+    ctx.fill();
+    ctx.fillStyle = '#c4553e';
+    ctx.fillRect(x + w * 0.3 - 5, y - 26, 10, 5);
+    ctx.fillRect(x + w * 0.3 - 6, y - 48, 12, 6);
+  }
+}
+
+const FAR_ISLE = { rock: 'rgba(120,96,150,0.8)', lit: 'rgba(255,190,170,0.3)', grass: 'rgba(140,175,120,0.85)', tree: 'rgba(110,150,105,0.85)' };
+const LIGHTHOUSE = { x: 1180 + 70 * 0.3, y: 330 - 46 };
+
 function drawFar(ctx, map, rand) {
-  // ilhas flutuando lá longe, apagadas pela distância
-  for (const [x, y, w] of [[-300, 360, 80], [140, 350, 60], [430, 320, 34], [1180, 340, 70], [1620, 360, 60]]) {
-    ctx.fillStyle = 'rgba(130,110,160,0.55)';
-    ctx.beginPath();
-    ctx.moveTo(x - w, y);
-    ctx.lineTo(x + w, y);
-    ctx.lineTo(x + w * 0.4, y + w * (0.7 + rand() * 0.3));
-    ctx.lineTo(x - w * 0.3, y + w * 0.5);
-    ctx.closePath();
-    ctx.fill();
-    ctx.fillStyle = 'rgba(140,170,120,0.55)';
-    ctx.fillRect(x - w, y - 3, w * 2, 4);
+  // picos de montanha furando o mar de nuvens lá longe
+  const pts = ridgeLine([[-760, 520], [-500, 420], [-260, 470], [-40, 380], [200, 460], [430, 405], [700, 470], [960, 395], [1240, 455], [1500, 400], [1780, 470], [2040, 520]], rand, 0.2, 5);
+  const mg = ctx.createLinearGradient(0, 380, 0, 520);
+  mg.addColorStop(0, '#a58fb8');
+  mg.addColorStop(1, '#d9a8ac');
+  ctx.fillStyle = mg;
+  ctx.beginPath();
+  ctx.moveTo(-760, 900);
+  for (const [x, y] of pts) ctx.lineTo(x, y);
+  ctx.lineTo(2040, 900);
+  ctx.closePath();
+  ctx.fill();
+  ctx.save();
+  ctx.clip();
+  ctx.fillStyle = 'rgba(255,240,236,0.75)';
+  ctx.beginPath();
+  ctx.moveTo(-760, 0);
+  ctx.lineTo(2040, 0);
+  for (let x = 2040; x >= -760; x -= 10) ctx.lineTo(x, 418 + Math.sin(x * 0.08) * 6 + (rand() - 0.3) * 12);
+  ctx.closePath();
+  ctx.fill();
+  ctx.restore();
+  // ilhas flutuantes
+  for (const [x, y, w, extra] of [[-320, 360, 70], [140, 340, 54], [450, 300, 30], [1180, 330, 70, 'farol'], [1640, 350, 56]]) {
+    isle(ctx, x, y, w, rand, FAR_ISLE, extra);
   }
-  // nuvens grandes e paradas no horizonte
-  ctx.fillStyle = 'rgba(255,220,210,0.55)';
-  for (let x = -760; x < 2040; x += 60 + rand() * 40) {
-    const r = 40 + rand() * 40;
+  // mar de nuvens lá longe
+  ctx.fillStyle = 'rgba(255,214,206,0.75)';
+  for (let x = -760; x < 2040; x += 50 + rand() * 40) {
+    const r = 36 + rand() * 40;
     ctx.beginPath();
-    ctx.arc(x, 560 - rand() * 30, r, 0, Math.PI * 2);
+    ctx.arc(x, 548 - rand() * 26, r, 0, Math.PI * 2);
     ctx.fill();
   }
-  ctx.fillRect(-760, 560, 2800, 900);
+  ctx.fillRect(-760, 548, 2800, 900);
+}
+
+// dirigível-navio pequeno (balão em cima e casco embaixo)
+function airship(ctx, x, y, s, alpha) {
+  ctx.save();
+  ctx.globalAlpha = alpha;
+  ctx.translate(x, y);
+  ctx.scale(s, s);
+  ctx.fillStyle = '#5c4a74';
+  ctx.beginPath();
+  ctx.ellipse(0, -28, 46, 16, 0, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.fillStyle = 'rgba(255,210,180,0.4)';
+  ctx.beginPath();
+  ctx.ellipse(6, -34, 30, 6, 0, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.strokeStyle = '#4a3a60';
+  ctx.lineWidth = 1.5;
+  ctx.beginPath();
+  ctx.moveTo(-26, -16);
+  ctx.lineTo(-18, -2);
+  ctx.moveTo(26, -16);
+  ctx.lineTo(18, -2);
+  ctx.stroke();
+  ctx.fillStyle = '#4a3a60';
+  ctx.beginPath();
+  ctx.moveTo(-30, -2);
+  ctx.lineTo(30, -2);
+  ctx.lineTo(22, 8);
+  ctx.lineTo(-24, 8);
+  ctx.closePath();
+  ctx.fill();
+  ctx.restore();
 }
 
 function farAnimated(ctx, time) {
-  // um navio pequenininho cruzando o céu lá longe
-  const fx = ((time * 12) % 1900) - 300;
-  ctx.fillStyle = 'rgba(70,60,100,0.5)';
-  ctx.beginPath();
-  ctx.moveTo(fx - 30, 250);
-  ctx.lineTo(fx + 30, 250);
-  ctx.lineTo(fx + 20, 258);
-  ctx.lineTo(fx - 22, 258);
-  ctx.closePath();
-  ctx.fill();
-  ctx.fillRect(fx - 1, 222, 2, 28);
-  ctx.beginPath();
-  ctx.moveTo(fx + 1, 224);
-  ctx.lineTo(fx + 16, 238);
-  ctx.lineTo(fx + 1, 246);
-  ctx.fill();
+  // luz do farol girando
+  const on = (Math.sin(time * 2.2) + 1) / 2;
+  ctx.save();
+  ctx.globalCompositeOperation = 'lighter';
+  const g = ctx.createRadialGradient(LIGHTHOUSE.x, LIGHTHOUSE.y, 1, LIGHTHOUSE.x, LIGHTHOUSE.y, 40);
+  g.addColorStop(0, `rgba(255,240,180,${0.9 * on})`);
+  g.addColorStop(1, 'rgba(255,240,180,0)');
+  ctx.fillStyle = g;
+  ctx.fillRect(LIGHTHOUSE.x - 40, LIGHTHOUSE.y - 40, 80, 80);
+  ctx.restore();
+  // dois dirigíveis passando lá longe, em velocidades diferentes
+  airship(ctx, ((time * 10) % 2100) - 400, 230, 0.55, 0.55);
+  airship(ctx, 1700 - ((time * 6 + 900) % 2200), 170, 0.35, 0.4);
+  // bando de pássaros
+  ctx.strokeStyle = 'rgba(60,45,70,0.6)';
+  ctx.lineWidth = 1.4;
+  const fx = ((time * 34) % 2200) - 400;
+  for (let i = 0; i < 6; i++) {
+    const row = Math.ceil(i / 2);
+    const side = i % 2 ? 1 : -1;
+    const bx = fx - row * 14;
+    const by = 300 + side * row * 8 + Math.sin(time * 0.8) * 5;
+    const f = Math.sin(time * 9 + i) * 3;
+    ctx.beginPath();
+    ctx.moveTo(bx - 6, by - f);
+    ctx.quadraticCurveTo(bx - 3, by - 3, bx, by);
+    ctx.quadraticCurveTo(bx + 3, by - 3, bx + 6, by - f);
+    ctx.stroke();
+  }
 }
 
 // ================================================================ meio: nuvens passando
 
-function puff(ctx, x, y, s) {
-  ctx.beginPath();
-  for (const [dx, dy, r] of [[-60, 8, 32], [-25, -10, 42], [20, -4, 38], [58, 10, 28], [0, 14, 36]]) {
-    ctx.moveTo(x + dx * s + r * s, y + dy * s);
-    ctx.arc(x + dx * s, y + dy * s, r * s, 0, Math.PI * 2);
-  }
-  ctx.fill();
+// nuvens fofas do treino com cor de pôr do sol (barriga rosada, topo dourado)
+const DUSK_CLOUDS = new Map();
+function duskCloud(seed) {
+  if (DUSK_CLOUDS.has(seed)) return DUSK_CLOUDS.get(seed);
+  const base = cloudSprite(seed);
+  const c = document.createElement('canvas');
+  c.width = base.width;
+  c.height = base.height;
+  const x = c.getContext('2d');
+  x.drawImage(base, 0, 0);
+  x.globalCompositeOperation = 'source-atop';
+  const g = x.createLinearGradient(0, 0, 0, c.height);
+  g.addColorStop(0, 'rgba(255,226,190,0.35)');
+  g.addColorStop(0.6, 'rgba(240,160,170,0.45)');
+  g.addColorStop(1, 'rgba(170,120,170,0.6)');
+  x.fillStyle = g;
+  x.fillRect(0, 0, c.width, c.height);
+  const r = x.createLinearGradient(c.width * 0.45, 0, c.width, 0);
+  r.addColorStop(0, 'rgba(255,230,180,0)');
+  r.addColorStop(1, 'rgba(255,226,170,0.45)');
+  x.fillStyle = r;
+  x.fillRect(0, 0, c.width, c.height);
+  DUSK_CLOUDS.set(seed, c);
+  return c;
 }
 
 const CLOUDS = (() => {
   const rand = seeded(77);
-  return Array.from({ length: 10 }, () => ({ x: rand() * 2400, y: 60 + rand() * 340, s: 0.5 + rand() * 0.9, v: 40 + rand() * 70 }));
+  return Array.from({ length: 8 }, (_, i) => ({ x: rand() * 2400, y: 40 + rand() * 330, s: 0.45 + rand() * 0.6, v: 40 + rand() * 70, seed: 1 + (i % 6) }));
 })();
 
 function drawMid() {}
 
-function midAnimated(ctx, time) {
-  ctx.fillStyle = 'rgba(255,236,226,0.55)';
-  for (const c of CLOUDS) {
-    const x = (((c.x - time * c.v) % 2600) + 2600) % 2600 - 600;
-    puff(ctx, x, c.y, c.s);
-  }
-  // mar de nuvens embaixo, correndo para trás
-  const g = ctx.createLinearGradient(0, 640, 0, 760);
-  g.addColorStop(0, 'rgba(255,226,210,0.95)');
-  g.addColorStop(1, 'rgba(240,190,200,1)');
-  ctx.fillStyle = g;
+function cloudSea(ctx, time, y, speed, color, light, step) {
+  ctx.fillStyle = color;
   ctx.beginPath();
-  for (let i = 0; i < 46; i++) {
+  for (let i = 0; i < 50; i++) {
     const r = 40 + ((i * 37) % 50);
-    const x = ((((i * 70) - time * 90) % 3200) + 3200) % 3200 - 700;
-    ctx.moveTo(x + r, 720);
-    ctx.arc(x, 720, r, 0, Math.PI * 2);
+    const x = ((((i * step) - time * speed) % 3400) + 3400) % 3400 - 800;
+    ctx.moveTo(x + r, y);
+    ctx.arc(x, y, r, 0, Math.PI * 2);
   }
-  ctx.rect(-700, 720, 3200, 800);
+  ctx.rect(-800, y, 3400, 900);
   ctx.fill();
+  // brilho do sol no alto das bolhas
+  ctx.fillStyle = light;
+  for (let i = 0; i < 50; i++) {
+    const r = 40 + ((i * 37) % 50);
+    const x = ((((i * step) - time * speed) % 3400) + 3400) % 3400 - 800;
+    ctx.beginPath();
+    ctx.ellipse(x + r * 0.15, y - r * 0.55, r * 0.55, r * 0.22, 0, 0, Math.PI * 2);
+    ctx.fill();
+  }
+}
+
+function midAnimated(ctx, time) {
+  for (const c of CLOUDS) {
+    const w = 320 * c.s;
+    const x = (((c.x - time * c.v) % 2600) + 2600) % 2600 - 600;
+    ctx.drawImage(duskCloud(c.seed), x, c.y, w, 150 * c.s);
+  }
+  // mar de nuvens: camada de trás mais lenta e rosada, a da frente mais clara
+  cloudSea(ctx, time, 700, 60, 'rgba(236,170,180,0.95)', 'rgba(255,220,200,0.6)', 66);
+  cloudSea(ctx, time, 745, 110, 'rgba(255,214,200,1)', 'rgba(255,240,220,0.8)', 72);
 }
 
 // ================================================================ navio
@@ -276,14 +447,8 @@ function hullSprite(i, sh, sternX, bowX, dir) {
 
 // pontas de cada navio a partir do mapa
 function shipShape(map, i) {
-  const solids = map.solids.filter((s) => s.ship === i);
-  const left = Math.min(...solids.map((s) => s.x));
-  const right = Math.max(...solids.map((s) => s.x + s.w));
-  const poop = solids.find((s) => s.y < DECK);
-  const dir = poop.x === left ? 1 : -1;   // 1 = popa na esquerda, proa na direita
-  const sternX = dir > 0 ? left : right;
-  const bowX = dir > 0 ? right : left;
-  return { sternX, bowX, dir };
+  const sh = map.ships[i];
+  return { sternX: sh.stern, bowX: sh.bow, dir: sh.stern < sh.bow ? 1 : -1 };
 }
 
 // mastro, velas, verga e gávea (com o balanço)
