@@ -1,7 +1,8 @@
-// Teclado e mouse -> comando do jogador (mesmo formato dos bots, ver shared/input.js).
+// Teclado, mouse e controle -> comando do jogador (mesmo formato dos bots, ver shared/input.js).
 // Botões do mouse entram no mapa como 'Mouse0' (esquerdo) e 'Mouse2' (direito).
 
 import { makeInput, INPUT_KEYS } from '/shared/input.js';
+import { padMoveInput } from './gamepad.js';
 
 export const KEYMAP = {
   left: ['KeyA', 'ArrowLeft'],
@@ -17,6 +18,7 @@ export class KeyboardController {
   constructor(keymap = KEYMAP, target = window) {
     this.keymap = keymap;
     this.target = target;
+    this.gamepad = true;   // também lê o controle
     this.heldCodes = new Set();
     // Tecla apertada e solta entre dois passos da simulação ainda conta.
     this.tapped = new Set();
@@ -57,9 +59,11 @@ export class KeyboardController {
     return this.keymap[action].some((code) => this.heldCodes.has(code));
   }
 
+  // teclado + mouse + controle (o que estiver apertado em qualquer um conta)
   getInput() {
     const partial = {};
-    for (const key of INPUT_KEYS) partial[key] = this.isHeld(key) || this.tapped.has(key);
+    const pad = this.gamepad ? padMoveInput() : null;
+    for (const key of INPUT_KEYS) partial[key] = this.isHeld(key) || this.tapped.has(key) || Boolean(pad?.[key]);
     this.tapped.clear();
     return makeInput(partial);
   }

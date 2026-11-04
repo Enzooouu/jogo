@@ -27,14 +27,11 @@ Ideias aprovadas pelo Enzo que ainda não foram feitas.
 - **Ranking**: tabela com os melhores jogadores do site (precisa do servidor
   no ar).
 
-### Controles
-
-- **Controle (gamepad)**: jogar com controle de Xbox ou PlayStation.
-
 ## Já feitas
 
 - **Treino livre** (boneco parado com painel de dano e combo).
 - **Marretão** (arma rara de 1 uso, muito forte).
+- **Controle (gamepad)** de Xbox, PlayStation ou parecido, na luta e nos menus.
 
 ## Outras ideias (ainda não escolhidas)
 

@@ -17,6 +17,7 @@ import { MapPicker, RANDOM_MAP, pickRandomMap } from './screens/maps.js';
 import { initControls } from './screens/controls.js';
 import { TutorialScreen } from './screens/tutorial.js';
 import { currentBindings, actionOf } from './input/bindings.js';
+import { watchGamepad } from './input/gamepad.js';
 import { VersusScreen } from './screens/versus.js';
 
 const $ = (sel) => document.querySelector(sel);
@@ -74,6 +75,13 @@ export function show(name) {
   else mapPicker.stop();
   if (name !== 'game') $('#training-hud').hidden = true;
   closePanels();
+  // jogando com o controle: já deixa a opção principal da tela escolhida
+  if (document.body.classList.contains('pad-nav') && name !== 'game' && name !== 'tutorial') {
+    setTimeout(() => {
+      const list = padTargets(padRoot());
+      if (list.length && !list.includes(document.activeElement)) padFocus(padDefault(list));
+    }, 60);
+  }
 }
 
 document.addEventListener('click', (e) => {
@@ -289,9 +297,15 @@ function buildCards() {
       next.focus({ preventScroll: true });
     } else if (e.code === 'Enter' && !(e.target instanceof HTMLButtonElement && !e.target.classList.contains('el-card'))) {
       e.preventDefault();
-      show('maps');
+      cardsNext();
     }
   });
+}
+
+// depois da carta: escolher o mapa (o treino livre tem o mapa dele)
+function cardsNext() {
+  if (state.mode === 'treino') startMatch(newSetup());
+  else show('maps');
 }
 
 function selectElement(id) {
@@ -780,6 +794,185 @@ function formatTime(sec) {
   return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`;
 }
 
+// ------------------------------------------------------------ controle (gamepad)
+
+// Nos menus o controle "aperta teclas": direções viram setas (as telas que
+// usam ← → já tratam), A confirma, B volta (Esc). Se a tela não usar a
+// seta, o foco anda para o botão mais perto naquela direção.
+function fakeKey(code, key = code) {
+  const e = new KeyboardEvent('keydown', { code, key, bubbles: true, cancelable: true });
+  (document.activeElement && document.activeElement !== document.body ? document.activeElement : window).dispatchEvent(e);
+  return e.defaultPrevented;
+}
+
+const FOCUSABLE = 'button, [href], input, select, [tabindex]:not([tabindex="-1"])';
+
+// onde o controle navega agora: painel aberto, janela por cima ou a tela
+function padRoot() {
+  const visible = (el) => el && !el.hidden && el.offsetParent !== null;
+  for (const sel of ['.side-panel:not([hidden])', '#welcome', '#pause-overlay', '.tut-overlay:not([hidden])']) {
+    const el = $(sel);
+    if (visible(el)) return el;
+  }
+  return $(`#screen-${state.screen}`);
+}
+
+function padTargets(root) {
+  return [...root.querySelectorAll(FOCUSABLE)].filter((el) => {
+    if (el.disabled || el.closest('[hidden]') || el.offsetParent === null) return false;
+    const r = el.getBoundingClientRect();
+    return r.width > 0 && r.height > 0 && getComputedStyle(el).visibility !== 'hidden';
+  });
+}
+
+function padFocus(el) {
+  el.focus({ preventScroll: false });
+  el.scrollIntoView?.({ block: 'nearest' });
+}
+
+// opção principal de cada tela (onde o foco cai primeiro)
+const PAD_DEFAULTS = ['.home-item.on', '.home-item', '.mode-tile[data-size="2"]', '.mode-tile', '.el-card.on', '.map-card.on',
+  '#play-btn', '#again-btn', '#resume-btn', '.welcome-go', '.primary', '.btn:not(.ghost)'];
+function padDefault(list) {
+  for (const sel of PAD_DEFAULTS) {
+    const el = list.find((e) => e.matches(sel));
+    if (el) return el;
+  }
+  return list.find((e) => !e.matches('.back')) ?? list[0];
+}
+
+function padMove(dir) {
+  const root = padRoot();
+  const list = padTargets(root);
+  if (!list.length) return;
+  const cur = document.activeElement;
+  if (!cur || !list.includes(cur)) {
+    padFocus(padDefault(list));
+    return;
+  }
+  const c = cur.getBoundingClientRect();
+  const cx = c.left + c.width / 2;
+  const cy = c.top + c.height / 2;
+  const [vx, vy] = { left: [-1, 0], right: [1, 0], up: [0, -1], down: [0, 1] }[dir];
+  let best = null;
+  let bestScore = Infinity;
+  for (const el of list) {
+    if (el === cur) continue;
+    const r = el.getBoundingClientRect();
+    const dx = r.left + r.width / 2 - cx;
+    const dy = r.top + r.height / 2 - cy;
+    const along = dx * vx + dy * vy;
+    if (along <= 4) continue;
+    const side = Math.abs(dx * vy) + Math.abs(dy * vx);
+    const score = along + side * 2.2;
+    if (score < bestScore) {
+      bestScore = score;
+      best = el;
+    }
+  }
+  // nada naquela direção (ex.: botões lado a lado): vai para o próximo/anterior
+  if (!best) {
+    const i = list.indexOf(cur);
+    best = list[i + (dir === 'down' || dir === 'right' ? 1 : -1)];
+  }
+  if (best) padFocus(best);
+}
+
+function padConfirm() {
+  const cur = document.activeElement;
+  const root = padRoot();
+  const list = padTargets(root);
+  if ((!cur || cur === document.body || !list.includes(cur)) && !['cards', 'maps', 'versus'].includes(state.screen) && list.length) {
+    padFocus(padDefault(list));
+    if (state.screen !== 'home') return;
+    document.activeElement.click();
+    return;
+  }
+  // nas telas de carta e mapa o A continua (igual ao Enter)
+  const onCard = !cur || cur === document.body || cur.matches('.el-card, .map-card');
+  if (state.screen === 'cards' && root.id === 'screen-cards' && onCard) {
+    cardsNext();
+    return;
+  }
+  if (state.screen === 'maps' && root.id === 'screen-maps' && onCard) {
+    mapPicker.onContinue(mapPicker.current());
+    return;
+  }
+  if (cur && cur !== document.body && root.contains(cur) && padTargets(root).includes(cur)) {
+    cur.click();
+    return;
+  }
+  if (state.screen === 'versus') {
+    $('#play-btn').click();
+    return;
+  }
+  if (!fakeKey('Enter')) padMove('down');
+}
+
+
+const TRAINING_CYCLE = ['espada', 'cajado', 'lanca', 'marretao'];
+let trainingPick = 0;
+
+function onPadButton(name) {
+  document.body.classList.add('pad-nav');
+  unlockAudio();
+  const playing = state.screen === 'game' && state.runner && !state.runner.paused;
+  if (playing) {
+    const inTraining = training && state.runner === training.runner;
+    if (name === 'start') setPaused(true);
+    else if (name === 'select' && inTraining) {
+      // treino: Select faz cair a próxima arma; L3 troca o alvo; R3 zera o alvo
+      const me = state.runner.game.playerById(1);
+      const w = TRAINING_CYCLE[trainingPick++ % TRAINING_CYCLE.length];
+      if (me && me.state !== 'respawning') state.runner.game.spawnWeaponAt(w, me.x + me.w / 2 + me.facing * 50, me.y - 40);
+    } else if (name === 'select') state.runner.renderer.showScores = true;
+    else if (name === 'l3' && inTraining) toggleDummy();
+    else if (name === 'r3' && inTraining) resetDummy();
+    return;
+  }
+  // tutorial rodando (sem janela por cima): só o Start, que pausa
+  const tutOverlay = document.querySelector('.tut-overlay:not([hidden])');
+  if (state.screen === 'tutorial' && !tutOverlay) {
+    if (name === 'start') tutorial.togglePause();
+    return;
+  }
+  if (state.screen === 'game' && state.runner?.paused && (name === 'start' || name === 'b')) {
+    setPaused(false);
+    return;
+  }
+  if (state.screen === 'tutorial' && !$('#tut-pause').hidden && (name === 'start' || name === 'b')) {
+    tutorial.togglePause();
+    return;
+  }
+  if (['up', 'down', 'left', 'right'].includes(name)) {
+    const code = { up: 'ArrowUp', down: 'ArrowDown', left: 'ArrowLeft', right: 'ArrowRight' }[name];
+    // na luta pausada as setas iriam para o boneco: só anda o foco
+    const inFight = state.screen === 'game' || state.screen === 'tutorial';
+    if (inFight || !fakeKey(code)) padMove(name);
+    else if (state.screen === 'maps') $('#screen-maps .map-card.on')?.focus({ preventScroll: true });
+  } else if (name === 'a' || name === 'start') padConfirm();
+  else if (name === 'b') fakeKey('Escape');
+}
+
+function onPadRelease(name) {
+  if (name === 'select' && state.runner) state.runner.renderer.showScores = false;
+}
+
+let padToastTimer = null;
+function onPadConnect(connected) {
+  document.body.classList.toggle('has-pad', connected);
+  const toast = $('#pad-toast');
+  toast.textContent = connected ? '🎮 Controle conectado' : '🎮 Controle desconectado';
+  toast.hidden = false;
+  toast.classList.remove('out');
+  clearTimeout(padToastTimer);
+  padToastTimer = setTimeout(() => toast.classList.add('out'), 2200);
+}
+
+watchGamepad({ onButton: onPadButton, onRelease: onPadRelease, onConnect: onPadConnect });
+// mexeu o mouse: tira o destaque de navegação pelo controle
+window.addEventListener('mousemove', () => document.body.classList.remove('pad-nav'));
+
 // ------------------------------------------------------------ teclado global
 
 window.addEventListener('keydown', (e) => {
@@ -919,7 +1112,7 @@ function init() {
   $('.mode-tile[data-mode="ffa"]').addEventListener('click', () => chooseMode(1, 'ffa'));
   $('.mode-tile[data-mode="treino"]').addEventListener('click', () => chooseMode(1, 'treino'));
   // treino livre tem o mapa dele: pula a escolha de mapa
-  $('#cards-next').addEventListener('click', () => (state.mode === 'treino' ? startMatch(newSetup()) : show('maps')));
+  $('#cards-next').addEventListener('click', cardsNext);
   $('#maps-next').addEventListener('click', () => mapPicker.onContinue(mapPicker.current()));
   $('#diff-seg').addEventListener('click', (e) => {
     const btn = e.target.closest('button');

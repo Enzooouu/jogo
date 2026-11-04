@@ -54,6 +54,18 @@
         <div class="bind-head"><span></span><span>Principal</span><span>Extra</span></div>
         <div id="bind-list" class="bind-list"></div>
         <p class="bind-msg" id="bind-msg" aria-live="polite"></p>
+        <h3 class="pad-title">🎮 Controle (Xbox, PlayStation ou parecido)</h3>
+        <p class="hint">É só ligar o controle no computador (fio ou Bluetooth) e apertar um botão. Funciona junto com o teclado.</p>
+        <ul class="keys pad-keys">
+          <li><span><b class="pad-btn">Analógico</b> ou <b class="pad-btn">Direcional</b></span> andar · para baixo desce</li>
+          <li><span><b class="pad-btn">A</b> / <b class="pad-btn">✕</b> ou <b class="pad-btn">Y</b> / <b class="pad-btn">△</b></span> pular</li>
+          <li><span><b class="pad-btn">X</b> / <b class="pad-btn">▢</b></span> atacar</li>
+          <li><span><b class="pad-btn">B</b> / <b class="pad-btn">◯</b></span> lançar a arma</li>
+          <li><span><b class="pad-btn">LB RB LT RT</b></span> dash</li>
+          <li><span><b class="pad-btn">Start</b></span> pausar</li>
+          <li><span><b class="pad-btn">Select</b> (segurar)</span> placar</li>
+          <li><span>Nos menus</span> direcional anda, <b class="pad-btn">A</b> confirma, <b class="pad-btn">B</b> volta</li>
+        </ul>
         <ul class="keys fixed-keys">
           <li><span>segurar na parede</span> se pendurar · pular sai</li>
           <li><span><kbd>Esc</kbd></span> pausar · voltar (não muda)</li>
@@ -163,10 +175,15 @@
           <dt id="th-dummy-label">Espantalho</dt><dd id="th-dummy">0%</dd>
         </dl>
         <button id="th-toggle" type="button" class="th-toggle">Virar boneco solto</button>
-        <div class="th-keys">
+        <div class="th-keys key-only">
           <span><kbd>R</kbd> zerar o alvo <kbd>T</kbd> espantalho / boneco</span>
           <span><kbd>1</kbd> espada <kbd>2</kbd> cajado <kbd>3</kbd> lança <kbd>4</kbd> marretão</span>
           <span><kbd>Esc</kbd> pausar / sair</span>
+        </div>
+        <div class="th-keys pad-only">
+          <span><b class="pad-btn">Select</b> faz cair a próxima arma</span>
+          <span><b class="pad-btn">L3</b> espantalho / boneco <b class="pad-btn">R3</b> zerar</span>
+          <span><b class="pad-btn">Start</b> pausar / sair</span>
         </div>
       </div>
       <div class="stage-wrap">
@@ -177,6 +194,7 @@
             <button id="resume-btn" type="button" class="btn">Continuar</button>
             <button id="quit-btn" type="button" class="btn ghost">Desistir</button>
             <p class="hint" id="quit-hint">Desistir conta como derrota.</p>
+            <p class="hint pad-only">🎮 <b class="pad-btn">A</b> escolhe · <b class="pad-btn">B</b> ou <b class="pad-btn">Start</b> continua</p>
           </div>
         </div>
       </div>
@@ -292,6 +310,7 @@
     </section>
 
   </div>
+  <div id="pad-toast" class="pad-toast" role="status" hidden></div>
   <script type="module" src="/js/main.js"></script>
 </body>
 </html>
