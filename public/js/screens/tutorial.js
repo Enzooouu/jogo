@@ -34,9 +34,17 @@ function markDone() {
 
 const escapeHtml = (s) => s.replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
 
-// "{up}" -> <kbd>W</kbd> com a tecla que o jogador escolheu
+// Nomes dos comandos no celular (botões na tela) e no controle
+const TOUCH_LABELS = { left: 'joystick ←', right: 'joystick →', down: 'joystick ↓', up: 'PULAR', attack: 'BATER', throw: 'ARMA', dash: 'DASH' };
+const PAD_LABELS = { left: '←', right: '→', down: '↓', up: 'A', attack: 'X', throw: 'B', dash: 'RB' };
+
+// "{up}" -> <kbd>W</kbd> com a tecla que o jogador escolheu (ou o botão da
+// tela no celular / o botão do controle, se estiver usando um)
 function withKeys(text, bindings) {
+  const cls = document.body.classList;
+  const labels = cls.contains('has-touch') ? TOUCH_LABELS : cls.contains('has-pad') ? PAD_LABELS : null;
   return escapeHtml(text).replace(/\{(\w+)\}/g, (m, action) => {
+    if (labels?.[action]) return `<kbd>${escapeHtml(labels[action])}</kbd>`;
     const code = bindings[action]?.[0];
     return code ? `<kbd>${escapeHtml(keyLabel(code))}</kbd>` : m;
   });

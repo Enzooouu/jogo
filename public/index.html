@@ -175,7 +175,11 @@
           <dt id="th-dummy-label">Espantalho</dt><dd id="th-dummy">0%</dd>
         </dl>
         <button id="th-toggle" type="button" class="th-toggle">Virar boneco solto</button>
-        <div class="th-keys key-only">
+        <div class="th-touch touch-only">
+          <button id="th-weapon" type="button" class="th-toggle">Cair arma</button>
+          <button id="th-reset" type="button" class="th-toggle">Zerar alvo</button>
+        </div>
+        <div class="th-keys key-only no-touch">
           <span><kbd>R</kbd> zerar o alvo <kbd>T</kbd> espantalho / boneco</span>
           <span><kbd>1</kbd> espada <kbd>2</kbd> cajado <kbd>3</kbd> lança <kbd>4</kbd> marretão</span>
           <span><kbd>Esc</kbd> pausar / sair</span>
@@ -311,6 +315,24 @@
 
   </div>
   <div id="pad-toast" class="pad-toast" role="status" hidden></div>
+  <!-- controles de toque (celular): joystick à esquerda, botões à direita -->
+  <div id="touch-controls" class="touch-controls" hidden>
+    <div class="tc-zone" aria-label="Joystick: encoste e arraste">
+      <div class="tc-stick"><div class="tc-base"><div class="tc-knob"></div></div></div>
+      <span class="tc-zone-hint">arraste para andar</span>
+    </div>
+    <div class="tc-top">
+      <button type="button" class="tc-small tc-scores" aria-label="Placar (segurar)">☰</button>
+      <button type="button" class="tc-small tc-pause" aria-label="Pausar">❚❚</button>
+    </div>
+    <div class="tc-buttons">
+      <button type="button" class="tc-btn tc-jump" data-act="up"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 4l7 8h-4.5v8h-5v-8H5z"/></svg><b>PULAR</b></button>
+      <button type="button" class="tc-btn tc-attack" data-act="attack"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 15c0-4 3-8 7-8h3l4-3v6l-3 1v2c0 3-2 6-5 6H9c-2 0-4-2-4-4z"/></svg><b>BATER</b></button>
+      <button type="button" class="tc-btn tc-dash" data-act="dash"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 8h8M2 12h9M3 16h8M12 6l9 6-9 6z"/></svg><b>DASH</b></button>
+      <button type="button" class="tc-btn tc-throw" data-act="throw"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 20L16 8M13 5l6 0 0 6M4 16l4 4"/></svg><b>ARMA</b></button>
+    </div>
+  </div>
+  <div id="rotate-hint" class="rotate-hint" aria-live="polite"><div><span class="rotate-phone"></span><b>Gire o celular</b><small>O jogo é na horizontal</small></div></div>
   <script type="module" src="/js/main.js"></script>
 </body>
 </html>

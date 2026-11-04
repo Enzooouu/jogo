@@ -1,8 +1,9 @@
-// Teclado, mouse e controle -> comando do jogador (mesmo formato dos bots, ver shared/input.js).
+// Teclado, mouse, controle e toque -> comando do jogador (mesmo formato dos bots, ver shared/input.js).
 // Botões do mouse entram no mapa como 'Mouse0' (esquerdo) e 'Mouse2' (direito).
 
 import { makeInput, INPUT_KEYS } from '/shared/input.js';
 import { padMoveInput } from './gamepad.js';
+import { touchMoveInput } from './touch.js';
 
 export const KEYMAP = {
   left: ['KeyA', 'ArrowLeft'],
@@ -63,7 +64,8 @@ export class KeyboardController {
   getInput() {
     const partial = {};
     const pad = this.gamepad ? padMoveInput() : null;
-    for (const key of INPUT_KEYS) partial[key] = this.isHeld(key) || this.tapped.has(key) || Boolean(pad?.[key]);
+    const touch = touchMoveInput();
+    for (const key of INPUT_KEYS) partial[key] = this.isHeld(key) || this.tapped.has(key) || Boolean(pad?.[key]) || Boolean(touch?.[key]);
     this.tapped.clear();
     return makeInput(partial);
   }

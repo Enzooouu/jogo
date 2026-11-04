@@ -2,6 +2,11 @@
 
 Ideias aprovadas pelo Enzo que ainda não foram feitas.
 
+## Para testar em casa
+
+- **Controle de verdade** (Xbox/PlayStation): ver se os botões estão certos na luta, nos menus, na pausa e no treino livre (Select = arma, L3 = trocar alvo, R3 = zerar). Se algum botão estiver trocado, anotar qual controle é.
+- **Celular de verdade**: ver se o joystick e os botões estão num tamanho bom para os dedos e se a tela cheia funciona.
+
 ## Para fazer (escolhidas)
 
 ### Jogabilidade
@@ -32,6 +37,7 @@ Ideias aprovadas pelo Enzo que ainda não foram feitas.
 - **Treino livre** (boneco parado com painel de dano e combo).
 - **Marretão** (arma rara de 1 uso, muito forte).
 - **Controle (gamepad)** de Xbox, PlayStation ou parecido, na luta e nos menus.
+- **Versão para celular**: joystick na esquerda e botões de pular, bater, dash e arma na direita.
 
 ## Outras ideias (ainda não escolhidas)
 

@@ -18,6 +18,7 @@ import { initControls } from './screens/controls.js';
 import { TutorialScreen } from './screens/tutorial.js';
 import { currentBindings, actionOf } from './input/bindings.js';
 import { watchGamepad } from './input/gamepad.js';
+import { TouchControls, isTouchDevice } from './input/touch.js';
 import { VersusScreen } from './screens/versus.js';
 
 const $ = (sel) => document.querySelector(sel);
@@ -486,6 +487,7 @@ function newSetup() {
 async function startMatch(setup) {
   state.lastSetup = setup;
   unlockAudio();
+  goFullscreen();
   // Tira o foco do botão clicado para Enter/Espaço não "clicarem" nele durante a luta.
   document.activeElement?.blur?.();
   show('game');
@@ -794,6 +796,60 @@ function formatTime(sec) {
   return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`;
 }
 
+// ------------------------------------------------------------ toque (celular)
+
+const touch = new TouchControls($('#touch-controls'), {
+  onPause: () => {
+    if (state.screen === 'game') setPaused(true);
+    else if (state.screen === 'tutorial') tutorial.setPaused(true);
+  },
+  onScores: (on) => {
+    if (state.runner && state.screen === 'game') state.runner.renderer.showScores = on;
+  },
+});
+let touchMode = isTouchDevice();
+document.body.classList.toggle('has-touch', touchMode);
+// encostou na tela: liga o modo toque (ex.: notebook com tela de toque)
+window.addEventListener('touchstart', () => {
+  if (touchMode) return;
+  touchMode = true;
+  document.body.classList.add('has-touch');
+}, { passive: true });
+
+// mostra os controles só durante a luta (sem pausa nem janela por cima)
+let wasPortrait = false;
+function syncTouch() {
+  const inFight = state.screen === 'game' || state.screen === 'tutorial';
+  document.body.classList.toggle('in-fight', inFight);
+  const fighting = (state.screen === 'game' && state.runner && !state.runner.paused && state.runner.game.phase !== 'ended')
+    || (state.screen === 'tutorial' && tutorial.running && !document.querySelector('.tut-overlay:not([hidden])'));
+  const want = touchMode && Boolean(fighting);
+  if (want !== !touch.root.hidden) touch.show(want);
+  // no treino o botão de placar não serve
+  touch.root.querySelector('.tc-scores').hidden = state.screen !== 'game' || Boolean(training && state.runner === training?.runner);
+  // virou o celular de pé no meio da luta: pausa sozinho
+  const portrait = touchMode && window.innerHeight > window.innerWidth;
+  if (portrait && !wasPortrait && fighting) {
+    if (state.screen === 'game') setPaused(true);
+    else tutorial.setPaused(true);
+  }
+  wasPortrait = portrait;
+  // o tutorial já tem o botão "Pausa" dele
+  touch.root.querySelector('.tc-pause').hidden = state.screen === 'tutorial';
+  requestAnimationFrame(syncTouch);
+}
+requestAnimationFrame(syncTouch);
+
+// no celular a luta abre em tela cheia, deitada
+function goFullscreen() {
+  if (!touchMode || document.fullscreenElement) return;
+  try {
+    document.documentElement.requestFullscreen?.({ navigationUI: 'hide' })?.then(() => screen.orientation?.lock?.('landscape').catch(() => {})).catch(() => {});
+  } catch {
+    // sem tela cheia (ex.: dentro de outra página): segue normal
+  }
+}
+
 // ------------------------------------------------------------ controle (gamepad)
 
 // Nos menus o controle "aperta teclas": direções viram setas (as telas que
@@ -1035,6 +1091,7 @@ const tutorial = new TutorialScreen({
 
 function openTutorial() {
   unlockAudio();
+  goFullscreen();
   document.activeElement?.blur?.();
   show('tutorial');
   tutorial.start(0);
@@ -1128,6 +1185,19 @@ function init() {
   });
   $('#resume-btn').addEventListener('click', () => setPaused(false));
   $('#quit-btn').addEventListener('click', quitMatch);
+  $('#th-weapon').addEventListener('click', (e) => {
+    const g = state.runner?.game;
+    const me = g?.playerById(1);
+    if (me && me.state !== 'respawning') {
+      const w = TRAINING_CYCLE[trainingPick++ % TRAINING_CYCLE.length];
+      g.spawnWeaponAt(w, me.x + me.w / 2 + me.facing * 50, me.y - 40);
+    }
+    e.currentTarget.blur();
+  });
+  $('#th-reset').addEventListener('click', (e) => {
+    resetDummy();
+    e.currentTarget.blur();
+  });
   $('#th-toggle').addEventListener('click', (e) => {
     toggleDummy();
     e.currentTarget.blur();
