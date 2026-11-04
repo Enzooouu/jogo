@@ -5,7 +5,10 @@ Ideias aprovadas pelo Enzo que ainda não foram feitas.
 ## Para testar em casa
 
 - **Controle de verdade** (Xbox/PlayStation): ver se os botões estão certos na luta, nos menus, na pausa e no treino livre (Select = arma, L3 = trocar alvo, R3 = zerar). Se algum botão estiver trocado, anotar qual controle é.
-- **Celular de verdade**: ver se o joystick e os botões estão num tamanho bom para os dedos e se a tela cheia funciona.
+- **Celular de verdade** (deixar para quando o jogo for publicado num site de verdade; hoje no celular só dá para abrir pela página do Claude, e assim fica difícil de jogar):
+  - ver se o joystick e os botões estão num tamanho bom para os dedos e no lugar certo;
+  - ver se a tela cheia e o "gire o celular" funcionam;
+  - arrumar o que estiver ruim no celular.
 
 ## Para fazer (escolhidas)
 
@@ -49,7 +52,7 @@ Ideias aprovadas pelo Enzo que ainda não foram feitas.
 - Online de verdade com código de sala
 - Elemento novo: Raio ou Gelo
 - Música para o menu e para as lutas
-- Publicar o jogo num site de verdade (Cloudflare Pages)
+- Publicar o jogo num site de verdade (Cloudflare Pages) — também libera testar e arrumar a versão de celular
 
 ## Outras ideias de mapa (ainda não escolhidas)
 
