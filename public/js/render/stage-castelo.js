@@ -423,23 +423,51 @@ function balcony(ctx, p) {
   crownShape(ctx, bx, y + 94, 0.8, GOLD);
 }
 
-// andaime de madeira (plataforma) apoiado em escoras que descem até o pátio
-function scaffold(ctx, p, groundY) {
+// ponte de madeira pendurada por cordas: uma ponta presa na sala do trono,
+// a outra na torre lá longe (plataforma: dá para atravessar de baixo)
+function ropeBridge(ctx, p, toKeep, toTower) {
+  const y = p.y;
+  // cordas que seguram a ponte
   ctx.strokeStyle = INK;
-  ctx.lineWidth = 7;
-  const posts = [p.x + 16, p.x + p.w - 16];
-  for (const x of posts) { ctx.beginPath(); ctx.moveTo(x, p.y + 6); ctx.lineTo(x, groundY); ctx.stroke(); }
-  ctx.strokeStyle = WOOD.mid;
-  ctx.lineWidth = 4.5;
-  for (const x of posts) { ctx.beginPath(); ctx.moveTo(x, p.y + 6); ctx.lineTo(x, groundY); ctx.stroke(); }
-  // travessas em X
-  ctx.strokeStyle = WOOD.dark;
-  ctx.lineWidth = 3;
+  ctx.lineWidth = 3.4;
+  const ropes = [[toKeep.anchor, toKeep.end], [toTower.anchor, toTower.end]];
+  for (const [[ax, ay], [ex, ey]] of ropes) {
+    ctx.beginPath(); ctx.moveTo(ax, ay); ctx.quadraticCurveTo((ax + ex) / 2, (ay + ey) / 2 + 18, ex, ey); ctx.stroke();
+  }
+  ctx.strokeStyle = '#d9b46a';
+  ctx.lineWidth = 1.8;
+  for (const [[ax, ay], [ex, ey]] of ropes) {
+    ctx.beginPath(); ctx.moveTo(ax, ay); ctx.quadraticCurveTo((ax + ex) / 2, (ay + ey) / 2 + 18, ex, ey); ctx.stroke();
+  }
+  // tábuas (com frestinhas)
+  ctx.strokeStyle = INK;
+  ctx.lineWidth = 2;
+  for (let x = p.x; x < p.x + p.w - 2; x += 14) {
+    const w = Math.min(12, p.x + p.w - x);
+    ctx.fillStyle = (x / 14) % 2 < 1 ? WOOD.mid : WOOD.light;
+    ctx.fillRect(x, y - 2, w, 11);
+    ctx.strokeRect(x, y - 2, w, 11);
+  }
+  // vigas por baixo
+  ctx.fillStyle = WOOD.dark;
+  ctx.fillRect(p.x, y + 9, p.w, 4);
+  ctx.strokeRect(p.x, y + 9, p.w, 4);
+  // corrimão de corda com postes
+  const posts = [];
+  for (let x = p.x + 6; x <= p.x + p.w - 6; x += (p.w - 12) / 4) posts.push(x);
+  ctx.strokeStyle = '#d9b46a';
+  ctx.lineWidth = 2;
   ctx.beginPath();
-  ctx.moveTo(posts[0], p.y + 14); ctx.lineTo(posts[1], groundY - 10);
-  ctx.moveTo(posts[1], p.y + 14); ctx.lineTo(posts[0], groundY - 10);
+  for (let i = 0; i < posts.length - 1; i++) {
+    ctx.moveTo(posts[i], y - 22);
+    ctx.quadraticCurveTo((posts[i] + posts[i + 1]) / 2, y - 13, posts[i + 1], y - 22);
+  }
   ctx.stroke();
-  walkway(ctx, p, 0);
+  ctx.fillStyle = WOOD.dark;
+  for (const x of posts) {
+    ctx.fillRect(x - 2.5, y - 26, 5, 26);
+    ctx.strokeStyle = INK; ctx.lineWidth = 1.2; ctx.strokeRect(x - 2.5, y - 26, 5, 26);
+  }
 }
 
 // Sala do trono: torre do meio com as paredes, uma grande abertura em arco
@@ -631,9 +659,11 @@ function drawTerrain(ctx, map, rand) {
   ctx.fillRect(yard.x + yard.w / 2 - 160, yard.y - 2, 320, 6);
   ctx.fillStyle = GOLD;
   ctx.fillRect(yard.x + yard.w / 2 - 160, yard.y + 3, 320, 2);
-  // andaimes
-  scaffold(ctx, scL, yard.y);
-  scaffold(ctx, scR, yard.y);
+  // pontes de madeira penduradas (na sala do trono e nas torres lá longe)
+  const keepL = floor.x + 34;
+  const keepR = floor.x + floor.w - 34;
+  ropeBridge(ctx, scL, { anchor: [keepL, 150], end: [scL.x + scL.w, scL.y - 22] }, { anchor: [towerL.x + towerL.w, towerL.y - 60], end: [scL.x, scL.y - 22] });
+  ropeBridge(ctx, scR, { anchor: [keepR, 150], end: [scR.x, scR.y - 22] }, { anchor: [towerR.x, towerR.y - 60], end: [scR.x + scR.w, scR.y - 22] });
   // suportes de tocha nas paredes do pátio
   ctx.fillStyle = '#3a2a22';
   for (const x of torchXs(map)) {
@@ -718,7 +748,7 @@ export const CASTELO_ART = {
     for (const [k, x] of [[0, floor.x + 40], [1, floor.x + floor.w - 40]]) torchFire(ctx, x, floor.y - 2, time + k * 1.3);
   },
   // pedaço do mundo guardado em imagem (as torres ficam fora da área padrão)
-  terrainRect: { x: -200, y: -420, w: 1680, h: 1600 },
+  terrainRect: { x: -300, y: -420, w: 1880, h: 1600 },
   haze: ['rgba(255,170,120,0)', 'rgba(255,150,110,0.22)'],
   vignette: 0.4,
 };

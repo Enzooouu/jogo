@@ -327,13 +327,47 @@ export class BotController {
     return game.hazardsNow().some((h) => rectsOverlap(item, h) && hazardReaction(me.element, h.type) !== 'imune');
   }
 
+  // A área está alta demais para um pulo duplo: vai antes para um degrau
+  // (plataforma ou bloco) que fique entre a altura atual e a da área, o mais
+  // perto possível na horizontal (ex.: as pontes do Castelo do Rei)
+  stepTowards(game, target) {
+    const me = game.playerById(this.playerId);
+    if (!me) return null;
+    const feet = me.y + me.h;
+    const goalFeet = target.y + target.h;
+    // degrau já escolhido: segue até pisar nele (ou desistir depois de 2 s)
+    if (this.step) {
+      const reached = me.onGround && Math.abs(feet - this.step.y) < 4;
+      if (!reached && game.tick < this.step.until && me.state === 'alive') return { x: this.step.x - 15, y: this.step.y - 66, w: 30, h: 66 };
+      this.step = null;
+    }
+    if (feet - goalFeet < 190 || !me.onGround) return null;
+    const cx = me.x + me.w / 2;
+    const tops = [
+      ...game.platforms.filter((pl) => !game.platformGone(pl)).map((pl) => ({ x: pl.x, y: pl.y, w: pl.w })),
+      ...game.solidsNow().map((s) => ({ x: s.x, y: s.y, w: s.w })),
+    ];
+    let best = null;
+    for (const t of tops) {
+      const up = feet - t.y;
+      if (up < 50 || up > 250 || t.y < goalFeet - 10) continue;
+      const nx = Math.max(t.x + 20, Math.min(t.x + t.w - 20, cx));
+      const d = Math.abs(nx - cx) + Math.abs(nx - (target.x + target.w / 2)) * 0.5;
+      if (!best || d < best.d) best = { d, x: nx, y: t.y };
+    }
+    if (!best) return null;
+    this.step = { x: best.x, y: best.y, until: game.tick + 120 };
+    return { x: best.x - 15, y: best.y - 66, w: 30, h: 66 };
+  }
+
   resolveGoal(game) {
     if (!this.goal) return null;
     if (this.goal.type === 'hill') {
       if (!game.hill) return null;
       const r = this.goal.next ? game.hill.nextRect() : game.hill.rect();
       const spread = ((this.playerId * 37) % 5 - 2) * 22;
-      return { x: r.x + r.w / 2 - 15 + spread, y: r.y + r.h - 66, w: 30, h: 66 };
+      const target = { x: r.x + r.w / 2 - 15 + spread, y: r.y + r.h - 66, w: 30, h: 66 };
+      return this.stepTowards(game, target) ?? target;
     }
     if (this.goal.type === 'enemy') {
       const e = game.playerById(this.goal.id);
