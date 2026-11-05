@@ -64,17 +64,24 @@ export function drawUniversalStaff(ctx, t) {
   ctx.lineCap = 'round';
   const glow = prismColor(t);
   // haste clara com espiral de ouro
-  spShaft(ctx, '#ffffff', '#f1e4cf', '#c8b494', 4.4, 18, -46);
+  spShaft(ctx, '#ffffff', '#f1e4cf', '#c8b494', 4.4, 14, -30);
   ctx.strokeStyle = '#d9a93f';
   ctx.lineWidth = 1.2;
   ctx.beginPath();
-  for (let y = -4; y > -44; y -= 1.4) {
+  for (let y = -4; y > -29; y -= 1.4) {
     const x = Math.sin(y * 0.4) * 1.7;
     if (y === -4) ctx.moveTo(x, y); else ctx.lineTo(x, y);
   }
   ctx.stroke();
-  spGrip(ctx, '#2a2040', '#ffe08a', '#a87a2a', 3.1);
-  spButt(ctx, '#ffe08a', '#a87a2a');
+  ctx.fillStyle = '#d9a93f';
+  ctx.beginPath(); ctx.moveTo(-2.6, 13); ctx.lineTo(0, 20); ctx.lineTo(2.6, 13); ctx.closePath(); ctx.fill();
+  ctx.strokeStyle = INK; ctx.lineWidth = 1.3; ctx.stroke();
+  // cabeça mais perto da mão e um pouco menor (como os cajados originais)
+  ctx.save();
+  ctx.translate(0, 16);
+  ctx.translate(0, -62);
+  ctx.scale(0.88, 0.88);
+  ctx.translate(0, 62);
   const cy = -62;
   // meia-lua dourada segurando a esfera
   for (const [w, c] of [[5.4, INK], [3, '#e8c76a']]) {
@@ -111,6 +118,7 @@ export function drawUniversalStaff(ctx, t) {
   }
   ctx.fillStyle = 'rgba(255,255,255,0.9)';
   ctx.beginPath(); ctx.ellipse(-3, cy - 3.6, 2.2, 1.2, -0.6, 0, Math.PI * 2); ctx.fill();
+  ctx.restore();
   ctx.restore();
 }
 
