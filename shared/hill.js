@@ -74,7 +74,7 @@ export class KingOfHill {
     if (g.phase !== 'playing') return;
     // acompanha o chão embaixo da área (navio balançando, plataforma, gelo...)
     const here = this.spot;
-    this.y = here.plat !== undefined ? here.y : groundAt(g, here.x, this.y) ?? this.y;
+    this.y = here.plat !== undefined || here.fixed ? here.y : groundAt(g, here.x, this.y) ?? this.y;
 
     this.timer -= DT;
     if (this.timer <= 0) {
@@ -82,7 +82,7 @@ export class KingOfHill {
       this.next = this.pickNext();
       this.timer = HILL.move;
       const s = this.spot;
-      this.y = s.plat !== undefined ? s.y : groundAt(g, s.x, s.y) ?? s.y;
+      this.y = s.plat !== undefined || s.fixed ? s.y : groundAt(g, s.x, s.y) ?? s.y;
       g.emit('hillMove', { x: this.spot.x, y: this.y });
     }
 
@@ -133,7 +133,7 @@ function findSpots(game) {
   // mapa do Rei da Ilha: os lugares já vêm escolhidos à mão
   if (game.map.hillSpots) {
     return game.map.hillSpots.map((s) => {
-      if (s.plat === undefined) return { x: s.x, y: s.y };
+      if (s.plat === undefined) return { x: s.x, y: s.y, fixed: s.fixed };
       const pl = game.platforms[s.plat];
       return { x: Math.round(pl.x + pl.w / 2), y: pl.y, plat: s.plat, ox: Math.round(pl.w / 2) };
     });

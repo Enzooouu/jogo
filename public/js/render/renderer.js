@@ -381,9 +381,14 @@ export class Renderer {
     ctx.lineTo(r.x + r.w, r.y + 20);
     ctx.stroke();
     ctx.setLineDash([]);
-    // faixa no chão
-    ctx.fillStyle = hexA(color, 0.85);
-    ctx.fillRect(r.x, base - 3, r.w, 4);
+    // faixa no chão, seguindo o formato dele (rampa, degraus...)
+    const prof = this.hillGround(r);
+    ctx.strokeStyle = hexA(color, 0.9);
+    ctx.lineWidth = 4;
+    ctx.lineJoin = 'round';
+    ctx.beginPath();
+    prof.forEach(([x, y], i) => (i ? ctx.lineTo(x, y - 1) : ctx.moveTo(x, y - 1)));
+    ctx.stroke();
     // faíscas subindo
     for (let i = 0; i < 9; i++) {
       const k = (t * 0.5 + i * 0.37) % 1;
@@ -419,6 +424,27 @@ export class Renderer {
       drawCrown(ctx, n.x + n.w / 2, n.y + 30, 0.7, '#ffe08a');
       ctx.restore();
     }
+  }
+
+  // Altura do chão embaixo da área, de 6 em 6 px (para a faixa seguir rampas)
+  hillGround(r) {
+    const solids = this.game.solidsNow();
+    const plats = this.game.platforms;
+    const base = r.y + r.h;
+    const out = [];
+    for (let x = r.x; x <= r.x + r.w + 0.1; x += 6) {
+      let best = null;
+      for (const s of solids) {
+        if (x < s.x || x > s.x + s.w || s.y < r.y || s.y > base + 30) continue;
+        if (best === null || s.y < best) best = s.y;
+      }
+      for (const pl of plats) {
+        if (x < pl.x || x > pl.x + pl.w || Math.abs(pl.y - base) > 4) continue;
+        if (best === null || pl.y < best) best = pl.y;
+      }
+      out.push([x, best ?? base]);
+    }
+    return out;
   }
 
   // Placar do Rei da Ilha embaixo do relógio

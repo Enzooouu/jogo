@@ -767,9 +767,142 @@ function urn(ctx, x, y) {
   ctx.fillRect(x - 9, y - 14, 18, 3);
 }
 
+// faixa azul com hieróglifos (dentro de um recorte já aplicado)
+function glyphBand(ctx, x0, x1, y) {
+  ctx.fillStyle = 'rgba(60,110,170,0.8)';
+  ctx.fillRect(x0, y, x1 - x0, 18);
+  ctx.fillStyle = GOLD.mid;
+  ctx.fillRect(x0, y, x1 - x0, 2);
+  ctx.fillRect(x0, y + 16, x1 - x0, 2);
+  ctx.strokeStyle = GOLD.light;
+  ctx.lineWidth = 1.6;
+  for (let x = x0 + 16, i = 0; x < x1 - 10; x += 30, i++) {
+    ctx.beginPath();
+    const k = i % 4;
+    if (k === 0) { ctx.arc(x, y + 8, 4, 0, Math.PI * 2); ctx.moveTo(x, y + 12); ctx.lineTo(x, y + 16); }
+    else if (k === 1) { ctx.moveTo(x - 5, y + 14); ctx.lineTo(x, y + 4); ctx.lineTo(x + 5, y + 14); }
+    else if (k === 2) { ctx.ellipse(x, y + 9, 6, 3.5, 0, 0, Math.PI * 2); ctx.moveTo(x + 1.5, y + 9); ctx.arc(x, y + 9, 1.5, 0, Math.PI * 2); }
+    else { ctx.moveTo(x - 5, y + 5); ctx.quadraticCurveTo(x + 6, y + 6, x - 1, y + 14); }
+    ctx.stroke();
+  }
+}
+
+// a pirâmide: duas faces (a da esquerda na sombra, a da direita no sol),
+// fileiras de blocos, faixa de hieróglifos, porta no pé e o topo de ouro
+function pyramid(ctx, P, rand) {
+  const [l0, l1] = P.rampL;
+  const [r1, r0] = P.rampR;   // r1 = alto (740), r0 = pé (1010)
+  const mid = (l1 + r1) / 2;
+  const outline = () => {
+    ctx.beginPath();
+    ctx.moveTo(l0, P.ground);
+    ctx.lineTo(l1, P.top);
+    ctx.lineTo(r1, P.top);
+    ctx.lineTo(r0, P.ground);
+    ctx.closePath();
+  };
+  ctx.save();
+  outline();
+  ctx.clip();
+  // face da esquerda (sombra) e da direita (sol)
+  const left = ctx.createLinearGradient(l0, 0, mid, 0);
+  left.addColorStop(0, STONE.dark);
+  left.addColorStop(1, STONE.mid);
+  ctx.fillStyle = left;
+  ctx.fillRect(l0, P.top, mid - l0, P.ground - P.top);
+  const right = ctx.createLinearGradient(mid, 0, r0, 0);
+  right.addColorStop(0, STONE.light);
+  right.addColorStop(1, '#ecd09a');
+  ctx.fillStyle = right;
+  ctx.fillRect(mid, P.top, r0 - mid, P.ground - P.top);
+  // fileiras de blocos
+  const rowH = 14;
+  for (let y = P.top + 6, r = 0; y < P.ground; y += rowH, r++) {
+    ctx.strokeStyle = 'rgba(90,60,25,0.35)';
+    ctx.lineWidth = 1.2;
+    ctx.beginPath();
+    ctx.moveTo(l0, y);
+    ctx.lineTo(r0, y);
+    for (let x = l0 + (r % 2) * 22; x < r0; x += 44) {
+      ctx.moveTo(x, y);
+      ctx.lineTo(x, y + rowH);
+    }
+    ctx.stroke();
+    // pedras mais claras e mais escuras soltas
+    for (let x = l0 + (r % 2) * 22; x < r0; x += 44) {
+      const v = rand();
+      if (v < 0.25) {
+        ctx.fillStyle = `rgba(255,240,205,${0.08 + rand() * 0.1})`;
+        ctx.fillRect(x + 2, y + 2, 40, rowH - 4);
+      } else if (v > 0.85) {
+        ctx.fillStyle = `rgba(90,60,25,${0.06 + rand() * 0.08})`;
+        ctx.fillRect(x + 2, y + 2, 40, rowH - 4);
+      }
+    }
+  }
+  // faixa de hieróglifos atravessando as duas faces
+  glyphBand(ctx, l0, r0, P.top + 78);
+  glyphBand(ctx, l0, r0, P.top + 142);
+  // aresta do meio (onde as duas faces se encontram)
+  ctx.fillStyle = 'rgba(255,245,220,0.35)';
+  ctx.fillRect(mid - 1, P.top, 3, P.ground - P.top);
+  ctx.fillStyle = 'rgba(80,50,20,0.25)';
+  ctx.fillRect(mid - 6, P.top, 5, P.ground - P.top);
+  ctx.restore();
+
+  // porta no pé da pirâmide, com o disco solar em cima
+  const dx = mid;
+  const dy = P.ground;
+  ctx.fillStyle = STONE.top;
+  ctx.strokeStyle = INK;
+  ctx.lineWidth = 2.5;
+  ctx.fillRect(dx - 34, dy - 66, 68, 66);
+  ctx.strokeRect(dx - 34, dy - 66, 68, 66);
+  ctx.fillStyle = '#3a2412';
+  ctx.beginPath();
+  ctx.moveTo(dx - 20, dy);
+  ctx.lineTo(dx - 20, dy - 40);
+  ctx.lineTo(dx, dy - 52);
+  ctx.lineTo(dx + 20, dy - 40);
+  ctx.lineTo(dx + 20, dy);
+  ctx.closePath();
+  ctx.fill();
+  ctx.stroke();
+  ctx.fillStyle = GOLD.mid;
+  ctx.beginPath();
+  ctx.arc(dx, dy - 58, 4.5, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.fillRect(dx - 18, dy - 59, 36, 2);
+
+  // revestimento liso nas rampas (onde se pisa), com beirada clara
+  for (const [xa, ya, xb, yb] of [[l0, P.ground, l1, P.top], [r0, P.ground, r1, P.top]]) {
+    ctx.strokeStyle = INK;
+    ctx.lineWidth = 12;
+    ctx.lineCap = 'round';
+    ctx.beginPath();
+    ctx.moveTo(xa, ya + 2);
+    ctx.lineTo(xb, yb + 2);
+    ctx.stroke();
+    ctx.strokeStyle = STONE.top;
+    ctx.lineWidth = 8;
+    ctx.stroke();
+    ctx.strokeStyle = 'rgba(255,250,232,0.85)';
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.moveTo(xa, ya - 1);
+    ctx.lineTo(xb, yb - 1);
+    ctx.stroke();
+  }
+  ctx.lineCap = 'butt';
+
+  // topo de ouro
+  capstone(ctx, { x: l1, y: P.top, w: r1 - l1, h: 46 });
+}
+
 function drawTerrain(ctx, map, rand) {
-  const [base, s2, s3, top] = map.solids;
-  // monte de areia na base da pirâmide (abre para os lados até embaixo)
+  const P = map.pyramid;
+  const base = map.solids[0];
+  // monte de areia embaixo de tudo (desce até o fundo da tela)
   const sand = ctx.createLinearGradient(0, base.y, 0, base.y + 200);
   sand.addColorStop(0, SAND.light);
   sand.addColorStop(0.5, SAND.mid);
@@ -783,7 +916,6 @@ function drawTerrain(ctx, map, rand) {
   ctx.bezierCurveTo(base.x - 40, base.y + 150, base.x - 26, base.y + 70, base.x - 20, base.y + 6);
   ctx.closePath();
   ctx.fill();
-  // brilho na crista da areia
   ctx.strokeStyle = 'rgba(255,248,220,0.7)';
   ctx.lineWidth = 2;
   ctx.beginPath();
@@ -792,28 +924,53 @@ function drawTerrain(ctx, map, rand) {
   ctx.moveTo(base.x + base.w + 20, base.y + 6);
   ctx.bezierCurveTo(base.x + base.w + 26, base.y + 70, base.x + base.w + 40, base.y + 150, base.x + base.w + 110, base.y + 220);
   ctx.stroke();
-  // ondinhas na areia
   ctx.strokeStyle = 'rgba(150,110,50,0.4)';
   ctx.lineWidth = 1.5;
-  for (let i = 0; i < 9; i++) {
-    const y = base.y + 30 + i * 18;
+  for (let i = 0; i < 8; i++) {
+    const y = base.y + 50 + i * 18;
     ctx.beginPath();
     ctx.moveTo(base.x + 20 + rand() * 60, y);
     ctx.quadraticCurveTo(base.x + base.w / 2, y + 8, base.x + base.w - 20 - rand() * 60, y);
     ctx.stroke();
   }
-  // degraus (de baixo para cima)
-  step(ctx, { ...base, h: 40 }, rand, false);
-  step(ctx, s2, rand, true);
-  step(ctx, s3, rand, true);
-  capstone(ctx, top);
-  // escadinha no meio da frente
-  ctx.fillStyle = 'rgba(120,80,40,0.3)';
-  for (const s of [s2, s3]) ctx.fillRect(s.x + s.w / 2 - 30, s.y + 34, 60, s.h - 34);
-  // vasos nas beiradas
-  for (const [x, y] of [[base.x + 24, base.y], [base.x + base.w - 24, base.y], [s2.x + 24, s2.y], [s2.x + s2.w - 24, s2.y]]) urn(ctx, x, y);
+  // calçada de pedra em volta da pirâmide (o chão onde se pisa)
+  step(ctx, { x: base.x, y: base.y, w: base.w, h: 40 }, rand, false);
+  pyramid(ctx, P, rand);
+  // vasos e estátuas de gato nas pontas da calçada
+  urn(ctx, base.x + 22, base.y);
+  urn(ctx, base.x + base.w - 22, base.y);
+  for (const [x, dir] of [[base.x + 48, 1], [base.x + base.w - 48, -1]]) catStatue(ctx, x, base.y, dir);
   // blocos flutuando
   for (const p of map.platforms) floatingBlock(ctx, p, rand);
+}
+
+// estatueta de gato sentado (Bastet), preta com colar dourado
+function catStatue(ctx, x, y, dir) {
+  ctx.save();
+  ctx.translate(x, y);
+  ctx.scale(dir, 1);
+  ctx.fillStyle = '#2a2230';
+  ctx.strokeStyle = INK;
+  ctx.lineWidth = 1.5;
+  ctx.beginPath();
+  ctx.moveTo(-8, 0);
+  ctx.quadraticCurveTo(-10, -18, -4, -26);
+  ctx.lineTo(-5, -34);
+  ctx.lineTo(-1, -30);
+  ctx.lineTo(3, -34);
+  ctx.lineTo(3, -26);
+  ctx.quadraticCurveTo(8, -16, 8, 0);
+  ctx.closePath();
+  ctx.fill();
+  ctx.stroke();
+  ctx.fillStyle = GOLD.mid;
+  ctx.fillRect(-5, -23, 9, 2);
+  ctx.beginPath();
+  ctx.arc(1, -20, 1.4, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.fillStyle = 'rgba(255,255,255,0.25)';
+  ctx.fillRect(-6, -18, 2, 14);
+  ctx.restore();
 }
 
 // ================================================================ frente (animado)
@@ -869,7 +1026,7 @@ export const PIRAMIDE_ART = {
   terrain: drawTerrain,
   behind() {},
   front(ctx, map, time) {
-    const top = map.solids[3];
+    const top = map.solids[1];
     brazier(ctx, top.x + 14, top.y, time);
     brazier(ctx, top.x + top.w - 14, top.y, time + 1.3);
     map.platforms.forEach((p, i) => sandTrickle(ctx, p.x + p.w / 2 + (i ? 20 : -20), p.y + 40, time + i * 0.5));

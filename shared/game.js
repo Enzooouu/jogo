@@ -620,6 +620,23 @@ export class Game {
       p.vy = 0;
     }
 
+    // descendo uma rampa (degrauzinhos): continua grudado no chão em vez de
+    // cair degrau por degrau
+    if (!p.onGround && grounded && p.vy >= 0) {
+      const feet = p.y + p.h;
+      let snap = null;
+      for (const s of solids) {
+        if (!s.ramp || p.x + p.w <= s.x || p.x >= s.x + s.w) continue;
+        if (s.y >= feet - 0.05 && s.y - feet <= STEP_UP && (snap === null || s.y < snap)) snap = s.y;
+      }
+      if (snap !== null) {
+        p.y = snap - p.h;
+        p.vy = 0;
+        p.onGround = true;
+        p.standingOn = 'solid';
+      }
+    }
+
     if (p.vy >= 0 && p.dropTimer <= 0) {
       const bottom = p.y + p.h;
       for (const pl of platforms) {

@@ -97,3 +97,21 @@ test('bots disputam a ilha e a partida termina', () => {
   const total = Object.values(g.result.hillScores).reduce((a, b) => a + b, 0);
   assert.ok(total > 40, `pontos ${total}`);
 });
+
+test('Pirâmide do Sol: dá para subir e descer a rampa andando, sem sair do chão', () => {
+  const g = new Game({ players: [{ id: 1, element: 'fogo', team: 'A' }, { id: 2, element: 'agua', team: 'B' }], mode: 'rei', mapId: 'piramide', items: false });
+  while (g.phase === 'countdown') g.step({});
+  const o = g.playerById(2);
+  o.state = 'respawning';
+  o.respawnTimer = 999;
+  const p = g.playerById(1);
+  p.x = 220;
+  p.y = 600 - p.h;
+  for (let i = 0; i < 5; i++) g.step({});
+  let air = 0;
+  for (let i = 0; i < 70; i++) { g.step({ 1: { right: true } }); if (!p.onGround) air++; }
+  assert.equal(Math.round(p.y + p.h), 410, 'chegou no topo');
+  for (let i = 0; i < 80; i++) { g.step({ 1: { right: true } }); if (!p.onGround) air++; }
+  assert.equal(Math.round(p.y + p.h), 600, 'desceu do outro lado');
+  assert.ok(air <= 3, `ficou ${air} quadros no ar`);
+});

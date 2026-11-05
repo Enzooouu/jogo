@@ -5,6 +5,30 @@
 
 const BLAST = { left: -260, right: 1540, top: -560, bottom: 1000 };
 
+// Rampa: o jogo só tem blocos retos, então a rampa é feita de degrauzinhos
+// de 4 px (o lutador sobe sozinho degraus de até 10 px e "gruda" no chão ao
+// descer, então anda liso). Vai de (x0, y0) a (x1, y1); o desenho é uma
+// rampa lisa por cima. Os degraus mais baixos vêm primeiro (importante para
+// subir correndo ou de dash).
+export function rampSteps(x0, y0, x1, y1, bottom, stepH = 4) {
+  const out = [];
+  const n = Math.max(1, Math.round(Math.abs(y1 - y0) / stepH));
+  for (let i = 0; i < n; i++) {
+    // degrau i fica entre os pontos i e i+1 da rampa; a altura dele é a do
+    // meio desse pedaço, então a linha da rampa passa no meio do degrau
+    const k0 = i / n;
+    const k1 = (i + 1) / n;
+    const top = Math.round(y0 + ((y1 - y0) * (k0 + k1)) / 2);
+    const xa = x0 + (x1 - x0) * k0;
+    // cada degrau vai do começo dele até o pé do alto da rampa (sem frestas)
+    const left = Math.round(Math.min(xa, x1));
+    const right = Math.round(Math.max(xa, x1));
+    out.push({ x: left, y: top, w: Math.max(1, right - left), h: bottom - top, ramp: true });
+  }
+  // de baixo para cima
+  return out.sort((a, b) => b.y - a.y);
+}
+
 export const HILL_MAPS = {
   // Pátio de um castelo ao entardecer: duas torres com passarelas nas
   // ameias, o trono no meio do pátio e a sacada lá no alto.
@@ -39,8 +63,8 @@ export const HILL_MAPS = {
     theme: { skyTop: '#2a3a7a', skyBottom: '#ffb46a', haze: '#ffd2a0' },
   },
 
-  // Pirâmide em degraus no deserto, ao meio-dia: o topo dourado é o lugar
-  // mais disputado; dois blocos de arenito flutuam dos lados.
+  // Pirâmide no deserto, ao meio-dia: duas rampas lisas sobem até o topo de
+  // ouro (o lugar mais disputado); dois blocos de arenito flutuam dos lados.
   piramide: {
     id: 'piramide',
     name: 'Pirâmide do Sol',
@@ -49,21 +73,29 @@ export const HILL_MAPS = {
     width: 1280,
     height: 720,
     blast: BLAST,
+    // desenho: chão de 200 a 1080 em y 600, rampas de 270→540 e 740→1010, topo em y 410
+    pyramid: { left: 200, right: 1080, ground: 600, rampL: [270, 540], rampR: [740, 1010], top: 410 },
     solids: [
-      { x: 220, y: 590, w: 840, h: 170 },   // base
-      { x: 320, y: 520, w: 640, h: 70 },    // 2º degrau
-      { x: 420, y: 450, w: 440, h: 70 },    // 3º degrau
-      { x: 540, y: 380, w: 200, h: 70 },    // topo dourado
+      { x: 200, y: 600, w: 880, h: 160 },   // chão da base
+      { x: 540, y: 410, w: 200, h: 190 },   // topo de ouro
+      ...rampSteps(270, 600, 540, 410, 600),
+      ...rampSteps(1010, 600, 740, 410, 600),
     ],
     platforms: [
-      { x: 60, y: 450, w: 160 },
-      { x: 1060, y: 450, w: 160 },
+      { x: 50, y: 470, w: 160 },
+      { x: 1070, y: 470, w: 160 },
     ],
     hazards: [],
-    hillSpots: [{ x: 640, y: 380 }, { x: 370, y: 520 }, { x: 910, y: 520 }, { x: 270, y: 590 }, { x: 1010, y: 590 }, { plat: 0 }, { plat: 1 }],
+    hillSpots: [
+      { x: 640, y: 410 },
+      { x: 400, y: 565, fixed: true },     // meio da rampa da esquerda
+      { x: 880, y: 565, fixed: true },     // meio da rampa da direita
+      { x: 220, y: 600 }, { x: 1060, y: 600 },
+      { plat: 0 }, { plat: 1 },
+    ],
     spawns: [
-      { x: 280, y: 590 }, { x: 1000, y: 590 }, { x: 370, y: 520 }, { x: 910, y: 520 },
-      { x: 250, y: 590 }, { x: 1030, y: 590 }, { x: 470, y: 450 }, { x: 810, y: 450 },
+      { x: 240, y: 600 }, { x: 1040, y: 600 }, { x: 320, y: 600 }, { x: 960, y: 600 },
+      { x: 220, y: 600 }, { x: 1060, y: 600 }, { x: 600, y: 410 }, { x: 680, y: 410 },
     ],
     respawns: [{ x: 640, y: 120 }, { x: 480, y: 150 }, { x: 800, y: 150 }],
     itemSpawn: { minX: 240, maxX: 1040, y: -40 },

@@ -51,7 +51,7 @@ Ideias aprovadas pelo Enzo que ainda não foram feitas.
 - Online de verdade com código de sala
 - Elemento novo: Raio ou Gelo
 - Música para o menu e para as lutas
-- Publicar o jogo num site de verdade (Cloudflare Pages) — também libera testar e arrumar a versão de celular
+- Publicar o jogo num site de verdade (Cloudflare Pages) — também libera testar e arrumar a versão de celular. **Domínio escolhido: jogaelementum.com.br** (comprar quando o dinheiro cair).
 
 ## Mapas do Rei da Ilha (escolhidos, para fazer depois)
 
