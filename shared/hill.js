@@ -25,6 +25,8 @@ export class KingOfHill {
     // começa no lugar mais perto do meio do mapa
     const mid = game.map.width / 2;
     this.index = this.spots.reduce((best, s, i) => (Math.abs(s.x - mid) < Math.abs(this.spots[best].x - mid) ? i : best), 0);
+    // um lugar só (mapas do Rei da Ilha): a área fica fixa, sem trocar
+    this.fixed = this.spots.length === 1;
     this.next = this.pickNext();
     this.timer = HILL.move;
     this.y = this.spots[this.index].y;
@@ -58,7 +60,7 @@ export class KingOfHill {
   }
 
   get warning() {
-    return this.timer <= HILL.warn;
+    return !this.fixed && this.timer <= HILL.warn;
   }
 
   pickNext() {
@@ -76,7 +78,7 @@ export class KingOfHill {
     const here = this.spot;
     this.y = here.plat !== undefined || here.fixed ? here.y : groundAt(g, here.x, this.y) ?? this.y;
 
-    this.timer -= DT;
+    if (!this.fixed) this.timer -= DT;
     if (this.timer <= 0) {
       this.index = this.next;
       this.next = this.pickNext();

@@ -1,5 +1,6 @@
 // Mapas exclusivos do Rei da Ilha (só aparecem nesse modo, e o modo só usa
-// eles). Cada um diz onde a área com a coroa pode aparecer (`hillSpots`):
+// eles). Cada um diz onde a área com a coroa fica (`hillSpots`; com um lugar
+// só, ela fica fixa ali o tempo todo):
 // { x, y } = meio da área em cima do chão, ou { plat } = em cima daquela
 // plataforma.
 
@@ -52,7 +53,8 @@ export const HILL_MAPS = {
       { x: 545, y: 285, w: 190 },           // sacada do rei
     ],
     hazards: [],
-    hillSpots: [{ x: 640, y: 530 }, { x: 235, y: 410 }, { x: 1045, y: 410 }, { x: 410, y: 560 }, { x: 870, y: 560 }, { plat: 2 }],
+    // a área do rei fica sempre no trono (não muda de lugar)
+    hillSpots: [{ x: 640, y: 530 }],
     spawns: [
       { x: 380, y: 560 }, { x: 900, y: 560 }, { x: 460, y: 560 }, { x: 820, y: 560 },
       { x: 300, y: 560 }, { x: 980, y: 560 }, { x: 240, y: 410 }, { x: 1040, y: 410 },
@@ -86,13 +88,8 @@ export const HILL_MAPS = {
       { x: 1070, y: 470, w: 160 },
     ],
     hazards: [],
-    hillSpots: [
-      { x: 640, y: 410 },
-      { x: 400, y: 565, fixed: true },     // meio da rampa da esquerda
-      { x: 880, y: 565, fixed: true },     // meio da rampa da direita
-      { x: 220, y: 600 }, { x: 1060, y: 600 },
-      { plat: 0 }, { plat: 1 },
-    ],
+    // a área do rei fica sempre no topo de ouro (não muda de lugar)
+    hillSpots: [{ x: 640, y: 410 }],
     spawns: [
       { x: 240, y: 600 }, { x: 1040, y: 600 }, { x: 320, y: 600 }, { x: 960, y: 600 },
       { x: 220, y: 600 }, { x: 1060, y: 600 }, { x: 600, y: 410 }, { x: 680, y: 410 },

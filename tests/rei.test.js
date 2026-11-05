@@ -31,10 +31,15 @@ test('o Rei da Ilha tem mapas só dele (fora da lista dos outros modos)', () => 
   for (const id of Object.keys(HILL_MAPS)) assert.equal(MAPS[id], undefined, id);
 });
 
-test('todo mapa do Rei da Ilha tem pelo menos 4 lugares para a área', () => {
+test('nos mapas do Rei da Ilha a área fica fixa no centro', () => {
   for (const id of Object.keys(HILL_MAPS)) {
     const g = hillGame(id);
-    assert.ok(g.hill.spots.length >= 4, `${id}: ${g.hill.spots.length}`);
+    while (g.phase === 'countdown') g.step({});
+    assert.equal(g.hill.fixed, true, id);
+    const x = g.hill.rect().x;
+    assert.equal(g.hill.spot.x, 640, id);
+    for (let i = 0; i < 60 * 60; i++) g.step({});
+    assert.equal(g.hill.rect().x, x, `${id}: mudou de lugar`);
   }
 });
 

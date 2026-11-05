@@ -402,12 +402,14 @@ export class Renderer {
     ctx.globalAlpha = fade;
     // coroa flutuando
     drawCrown(ctx, cx, r.y + 2 + Math.sin(t * 2.4) * 4, 1, color);
-    // tempo até mudar de lugar
-    const left = Math.max(0, hill.timer / HILL.move);
-    ctx.fillStyle = 'rgba(0,0,0,0.45)';
-    ctx.fillRect(cx - 40, r.y + 26, 80, 5);
-    ctx.fillStyle = hill.warning ? '#ff5b6a' : '#ffffff';
-    ctx.fillRect(cx - 40, r.y + 26, 80 * left, 5);
+    // tempo até mudar de lugar (área fixa não tem)
+    if (!hill.fixed) {
+      const left = Math.max(0, hill.timer / HILL.move);
+      ctx.fillStyle = 'rgba(0,0,0,0.45)';
+      ctx.fillRect(cx - 40, r.y + 26, 80, 5);
+      ctx.fillStyle = hill.warning ? '#ff5b6a' : '#ffffff';
+      ctx.fillRect(cx - 40, r.y + 26, 80 * left, 5);
+    }
     ctx.restore();
 
     // aviso: onde ela vai aparecer
