@@ -1,0 +1,351 @@
+<title>Identidade Elementum</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow:ital,wght@0,500;0,700;0,800;1,800;1,900&display=swap">
+<style>
+/* Layout: guia de marca em pranchas — logo completa no palco, depois símbolo, tamanhos, fundo claro e monocromática */
+:root {
+  color-scheme: dark;
+  --bg: #0b0a18;          /* azul-marinho bem escuro */
+  --stage-a: #141634;     /* palco: marinho */
+  --stage-b: #1d1236;     /* palco: roxo profundo */
+  --line: #262444;
+  --fg: #ece8f6;
+  --muted: #9d97b8;
+  --paper: #f3eee5;
+  --ink: #17112a;
+  --gold: #f2c440;
+  --display: "Barlow", "Arial Narrow", system-ui, sans-serif;
+  --body: "Barlow", system-ui, -apple-system, "Segoe UI", sans-serif;
+}
+* { box-sizing: border-box; }
+body {
+  margin: 0; background: var(--bg); color: var(--fg); font: 500 16px/1.55 var(--body);
+  padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px));
+  padding-block: 32px 64px;
+}
+.wrap { max-width: 1080px; margin: 0 auto; display: grid; gap: 44px; }
+header { display: grid; gap: 6px; }
+.eyebrow { letter-spacing: .3em; font-weight: 800; font-size: 12px; color: var(--muted); text-transform: uppercase; }
+h1 { margin: 0; font: italic 900 clamp(32px, 5.5vw, 52px)/1 var(--display); text-wrap: balance; }
+header p { margin: 4px 0 0; color: var(--muted); max-width: 64ch; }
+
+section { display: grid; gap: 14px; }
+.head { display: flex; flex-wrap: wrap; align-items: baseline; gap: 6px 14px; }
+h2 { margin: 0; font: italic 900 24px/1.15 var(--display); }
+.head span { color: var(--muted); font-size: 15px; }
+
+.stage {
+  border-radius: 20px; border: 1px solid var(--line); overflow: hidden;
+  background:
+    radial-gradient(55% 75% at 34% 50%, rgba(120,110,255,.13), transparent 70%),
+    radial-gradient(40% 60% at 22% 52%, rgba(255,190,90,.08), transparent 70%),
+    linear-gradient(135deg, var(--stage-a), var(--stage-b));
+  display: grid; place-items: center; padding: clamp(24px, 6vw, 64px) clamp(14px, 4vw, 48px);
+}
+.stage svg { width: 100%; height: auto; display: block; }
+.lockup { max-width: 860px; }
+.stacked { max-width: 420px; }
+
+.grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); gap: 12px; }
+.tile { border: 1px solid var(--line); border-radius: 16px; padding: 20px 16px; display: grid; justify-items: center; align-content: center; gap: 12px; background: linear-gradient(160deg, #15142e, #110d22); min-width: 0; }
+.tile .cap { font-size: 13px; color: var(--muted); text-align: center; }
+.tile.paper { background: var(--paper); border-color: #e0d7c6; }
+.tile.paper .cap { color: #6b6056; }
+.app { border-radius: 23%; display: grid; place-items: center; background: radial-gradient(70% 70% at 50% 40%, #2a2456, #120f26); box-shadow: inset 0 1px 0 rgba(255,255,255,.08), 0 10px 24px rgba(0,0,0,.45); }
+.app svg { width: 80%; height: 80%; }
+.row { display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: center; gap: 18px; }
+.px { display: grid; justify-items: center; gap: 6px; font-size: 12px; color: var(--muted); font-variant-numeric: tabular-nums; }
+.tab { display: flex; align-items: center; gap: 8px; padding: 7px 12px; border-radius: 10px 10px 0 0; background: #24223e; font-size: 13px; color: #d9d4ea; }
+
+.wide { border-radius: 20px; padding: clamp(20px, 5vw, 48px); display: grid; place-items: center; }
+.wide.paper { background: var(--paper); border: 1px solid #e0d7c6; }
+.wide svg { width: 100%; max-width: 760px; height: auto; display: block; }
+.mono { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 12px; }
+.mono > div { border-radius: 16px; padding: 22px 16px; display: grid; place-items: center; gap: 10px; border: 1px solid var(--line); }
+.mono svg { width: 100%; max-width: 300px; height: auto; }
+.mono .cap { font-size: 13px; }
+.m-white { background: #12112a; color: #ffffff; --mbg: #12112a; }
+.m-ink { background: var(--paper); color: var(--ink); --mbg: var(--paper); border-color: #e0d7c6 !important; }
+.m-ink .cap { color: #6b6056; }
+.m-gold { background: #0d0c1c; color: #e9b949; --mbg: #0d0c1c; }
+.m-white .cap, .m-gold .cap { color: var(--muted); }
+
+.compare { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 12px; }
+.compare > div { border: 1px solid var(--line); border-radius: 16px; padding: 18px; display: grid; justify-items: center; gap: 10px; background: #110f24; }
+.compare svg { width: 150px; height: 150px; }
+.compare .cap { font-size: 13px; color: var(--muted); }
+
+ul.notes { margin: 0; padding-left: 18px; color: var(--muted); display: grid; gap: 4px; max-width: 70ch; }
+footer { color: var(--muted); font-size: 14px; border-top: 1px solid var(--line); padding-top: 18px; }
+</style>
+
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <defs>
+    <!-- ouro metálico: claro em cima, reflexo no meio, sombra embaixo -->
+    <linearGradient id="gold" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#fff1b8"/>
+      <stop offset=".22" stop-color="#f6cf5a"/>
+      <stop offset=".5" stop-color="#d9a032"/>
+      <stop offset=".62" stop-color="#f3c75a"/>
+      <stop offset="1" stop-color="#9a6416"/>
+    </linearGradient>
+    <linearGradient id="goldEdge" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#fff8dc" stop-opacity=".9"/>
+      <stop offset=".5" stop-color="#fff8dc" stop-opacity=".15"/>
+      <stop offset="1" stop-color="#fff8dc" stop-opacity="0"/>
+    </linearGradient>
+    <radialGradient id="field" cx=".5" cy=".38" r=".75">
+      <stop offset="0" stop-color="#2c2a66"/>
+      <stop offset=".55" stop-color="#1a1840"/>
+      <stop offset="1" stop-color="#0e0c24"/>
+    </radialGradient>
+    <radialGradient id="halo" cx=".5" cy=".5" r=".5">
+      <stop offset="0" stop-color="#ffe9a0" stop-opacity=".45"/>
+      <stop offset="1" stop-color="#ffe9a0" stop-opacity="0"/>
+    </radialGradient>
+    <linearGradient id="star" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#fff6cf"/>
+      <stop offset=".45" stop-color="#f7cf55"/>
+      <stop offset="1" stop-color="#c48a1e"/>
+    </linearGradient>
+    <!-- esferas -->
+    <radialGradient id="oFogo" cx=".35" cy=".3" r=".8"><stop offset="0" stop-color="#ffc061"/><stop offset=".6" stop-color="#ff6a1f"/><stop offset="1" stop-color="#c8360e"/></radialGradient>
+    <radialGradient id="oAgua" cx=".35" cy=".3" r=".8"><stop offset="0" stop-color="#9fdcff"/><stop offset=".6" stop-color="#2f86f0"/><stop offset="1" stop-color="#1748a8"/></radialGradient>
+    <radialGradient id="oTerra" cx=".35" cy=".3" r=".8"><stop offset="0" stop-color="#e2b77a"/><stop offset=".6" stop-color="#9a6634"/><stop offset="1" stop-color="#5e3a1a"/></radialGradient>
+    <radialGradient id="oAr" cx=".35" cy=".3" r=".8"><stop offset="0" stop-color="#d9fff4"/><stop offset=".6" stop-color="#4fd1b8"/><stop offset="1" stop-color="#1f8f7c"/></radialGradient>
+    <!-- arcos do anel -->
+    <linearGradient id="aFogo" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#ffb347"/><stop offset="1" stop-color="#ff5a1f"/></linearGradient>
+    <linearGradient id="aAgua" x1="1" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#5fb4ff"/><stop offset="1" stop-color="#2f6fe0"/></linearGradient>
+    <linearGradient id="aTerra" x1="1" y1="1" x2="0" y2="0"><stop offset="0" stop-color="#b07a40"/><stop offset="1" stop-color="#7a4c22"/></linearGradient>
+    <linearGradient id="aAr" x1="0" y1="1" x2="1" y2="0"><stop offset="0" stop-color="#3fbfa8"/><stop offset="1" stop-color="#a9f5e4"/></linearGradient>
+    <!-- nome: amarelo → laranja → vermelho → roxo → azul -->
+    <linearGradient id="word" x1="0" x2="1" y1="0" y2="0">
+      <stop offset="0" stop-color="#ffd84a"/>
+      <stop offset=".26" stop-color="#ff8f1f"/>
+      <stop offset=".48" stop-color="#ff4b4b"/>
+      <stop offset=".74" stop-color="#b65cff"/>
+      <stop offset="1" stop-color="#4f9bff"/>
+    </linearGradient>
+    <linearGradient id="wordShine" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#ffffff" stop-opacity=".32"/>
+      <stop offset=".45" stop-color="#ffffff" stop-opacity="0"/>
+    </linearGradient>
+    <clipPath id="fieldClip"><path d="M36 54 H164 V114 C164 154 136 180 100 194 C64 180 36 154 36 114Z"/></clipPath>
+    <clipPath id="starClip"><path d="M100 90 C103 109 108 114 128 118 C108 122 103 127 100 146 C97 127 92 122 72 118 C92 114 97 109 100 90Z"/></clipPath>
+
+    <!-- contorno único do escudo com a coroa (uma peça só) -->
+    <path id="shieldShape" d="M26 44 H70 L64 18 L84 30 L100 8 L116 30 L136 18 L130 44 H174 V114 C174 160 140 190 100 208 C60 190 26 160 26 114Z"/>
+
+    <!-- ícones brancos das esferas (centro 0,0) -->
+    <path id="iFogo" d="M0 -10 C6 -3 8 2 6 6 C4 10 -4 10 -6 6 C-8 2 -4 -1 -3 -5 C-1 -2 1 -2 0 -10Z"/>
+    <path id="iAgua" d="M0 -10 C5 -3 7 1 7 4 A7 7 0 0 1 -7 4 C-7 1 -5 -3 0 -10Z"/>
+    <path id="iTerra" d="M-9 7 L-3 -5 L1 1 L4 -3 L9 7Z"/>
+    <path id="iAr" d="M-8 -3 H3 A3.5 3.5 0 1 0 0 -7 M-6 4 H6 A3.5 3.5 0 1 1 3 8"/>
+
+    <!-- SÍMBOLO (completo) -->
+    <symbol id="crest" viewBox="0 0 200 220">
+      <!-- sombra no chão -->
+      <ellipse cx="100" cy="212" rx="60" ry="5" fill="#000" opacity=".25"/>
+      <!-- contorno escuro e o ouro -->
+      <use href="#shieldShape" fill="#120c22" stroke="#120c22" stroke-width="12" stroke-linejoin="round"/>
+      <use href="#shieldShape" fill="url(#gold)"/>
+      <use href="#shieldShape" fill="none" stroke="url(#goldEdge)" stroke-width="2.5" stroke-linejoin="round" transform="translate(0 1.2)"/>
+      <!-- faixa da coroa: o ouro fica um pouco mais escuro onde a coroa encosta -->
+      <path d="M70 44 L66 26 L84 34 L100 16 L116 34 L134 26 L130 44Z" fill="#000" opacity=".1"/>
+      <!-- joia da coroa -->
+      <circle cx="100" cy="33" r="5.5" fill="#3fa9ff" stroke="#120c22" stroke-width="2.2"/>
+      <circle cx="98.4" cy="31.4" r="1.6" fill="#e8f6ff"/>
+      <!-- campo -->
+      <path d="M36 54 H164 V114 C164 154 136 180 100 194 C64 180 36 154 36 114Z" fill="url(#field)" stroke="#6b4512" stroke-width="2"/>
+      <g clip-path="url(#fieldClip)">
+        <!-- luz suave de cada elemento atrás da esfera -->
+        <circle cx="64" cy="86" r="40" fill="#4fd1b8" opacity=".10"/>
+        <circle cx="136" cy="86" r="40" fill="#ff6a1f" opacity=".11"/>
+        <circle cx="64" cy="150" r="40" fill="#b07a40" opacity=".12"/>
+        <circle cx="136" cy="150" r="40" fill="#2f86f0" opacity=".12"/>
+        <path d="M36 54 H164 V66 C120 60 80 60 36 66Z" fill="#fff" opacity=".05"/>
+      </g>
+      <!-- anel -->
+      <g fill="none" stroke-width="6" stroke-linecap="round">
+        <path d="M100 74 A44 44 0 0 1 144 118" stroke="url(#aFogo)"/>
+        <path d="M144 118 A44 44 0 0 1 100 162" stroke="url(#aAgua)"/>
+        <path d="M100 162 A44 44 0 0 1 56 118" stroke="url(#aTerra)"/>
+        <path d="M56 118 A44 44 0 0 1 100 74" stroke="url(#aAr)"/>
+      </g>
+      <!-- estrela central -->
+      <circle cx="100" cy="118" r="30" fill="url(#halo)"/>
+      <path d="M100 90 C103 109 108 114 128 118 C108 122 103 127 100 146 C97 127 92 122 72 118 C92 114 97 109 100 90Z" fill="url(#star)" stroke="#120c22" stroke-width="3.5" stroke-linejoin="round"/>
+      <g clip-path="url(#starClip)"><path d="M70 150 L130 88 V150Z" fill="#8a5410" opacity=".28"/></g>
+      <!-- esferas (Ar, Fogo, Terra, Água) -->
+      <g stroke="#120c22" stroke-width="3.5">
+        <circle cx="68.5" cy="86.5" r="16" fill="url(#oAr)"/>
+        <circle cx="131.5" cy="86.5" r="16" fill="url(#oFogo)"/>
+        <circle cx="68.5" cy="149.5" r="16" fill="url(#oTerra)"/>
+        <circle cx="131.5" cy="149.5" r="16" fill="url(#oAgua)"/>
+      </g>
+      <g fill="#fff" opacity=".35">
+        <ellipse cx="63" cy="80" rx="5" ry="3" transform="rotate(-30 63 80)"/>
+        <ellipse cx="126" cy="80" rx="5" ry="3" transform="rotate(-30 126 80)"/>
+        <ellipse cx="63" cy="143" rx="5" ry="3" transform="rotate(-30 63 143)"/>
+        <ellipse cx="126" cy="143" rx="5" ry="3" transform="rotate(-30 126 143)"/>
+      </g>
+      <use href="#iAr" transform="translate(68.5 86.5)" fill="none" stroke="#fff" stroke-width="2.8" stroke-linecap="round"/>
+      <use href="#iFogo" transform="translate(131.5 87.5)" fill="#fff8e0"/>
+      <use href="#iTerra" transform="translate(68.5 150.5)" fill="#fff3dc"/>
+      <use href="#iAgua" transform="translate(131.5 149.5)" fill="#fff"/>
+    </symbol>
+
+    <!-- SÍMBOLO reduzido (32 e 16 px): sem anel nem ícones; esferas e estrela maiores -->
+    <symbol id="crestSmall" viewBox="0 0 200 220">
+      <use href="#shieldShape" fill="#120c22" stroke="#120c22" stroke-width="16" stroke-linejoin="round"/>
+      <use href="#shieldShape" fill="url(#gold)"/>
+      <path d="M38 56 H162 V114 C162 152 135 177 100 191 C65 177 38 152 38 114Z" fill="url(#field)"/>
+      <path d="M100 82 C104 108 110 114 136 118 C110 122 104 128 100 154 C96 128 90 122 64 118 C90 114 96 108 100 82Z" fill="url(#star)" stroke="#120c22" stroke-width="5" stroke-linejoin="round"/>
+      <g stroke="#120c22" stroke-width="5">
+        <circle cx="66" cy="84" r="17" fill="url(#oAr)"/>
+        <circle cx="134" cy="84" r="17" fill="url(#oFogo)"/>
+        <circle cx="66" cy="152" r="17" fill="url(#oTerra)"/>
+        <circle cx="134" cy="152" r="17" fill="url(#oAgua)"/>
+      </g>
+    </symbol>
+
+    <!-- SÍMBOLO monocromático (uma cor: currentColor; o fundo: --mbg) -->
+    <symbol id="crestMono" viewBox="0 0 200 220">
+      <use href="#shieldShape" fill="currentColor"/>
+      <circle cx="100" cy="33" r="5" fill="var(--mbg)"/>
+      <path d="M36 54 H164 V114 C164 154 136 180 100 194 C64 180 36 154 36 114Z" fill="var(--mbg)"/>
+      <circle cx="100" cy="118" r="44" fill="none" stroke="currentColor" stroke-width="5"/>
+      <path d="M100 90 C103 109 108 114 128 118 C108 122 103 127 100 146 C97 127 92 122 72 118 C92 114 97 109 100 90Z" fill="currentColor"/>
+      <g fill="currentColor" stroke="var(--mbg)" stroke-width="4">
+        <circle cx="68.5" cy="86.5" r="16"/><circle cx="131.5" cy="86.5" r="16"/><circle cx="68.5" cy="149.5" r="16"/><circle cx="131.5" cy="149.5" r="16"/>
+      </g>
+      <use href="#iAr" transform="translate(68.5 86.5)" fill="none" stroke="var(--mbg)" stroke-width="2.8" stroke-linecap="round"/>
+      <use href="#iFogo" transform="translate(131.5 87.5)" fill="var(--mbg)"/>
+      <use href="#iTerra" transform="translate(68.5 150.5)" fill="var(--mbg)"/>
+      <use href="#iAgua" transform="translate(131.5 149.5)" fill="var(--mbg)"/>
+    </symbol>
+
+    <!-- NOME: largura fixa (textLength) para o slogan alinhar certinho embaixo -->
+    <symbol id="wordmark" viewBox="0 0 640 112" overflow="visible">
+      <g font-family="Barlow, 'Arial Narrow', sans-serif" font-style="italic" font-weight="900" font-size="108">
+        <text x="14" y="94" textLength="612" lengthAdjust="spacingAndGlyphs" fill="#0a0716" opacity=".55" transform="translate(4 6)">ELEMENTUM</text>
+        <text x="14" y="94" textLength="612" lengthAdjust="spacingAndGlyphs" fill="none" stroke="#120c22" stroke-width="7" stroke-linejoin="round">ELEMENTUM</text>
+        <text x="14" y="94" textLength="612" lengthAdjust="spacingAndGlyphs" fill="url(#word)">ELEMENTUM</text>
+        <text x="14" y="94" textLength="612" lengthAdjust="spacingAndGlyphs" fill="url(#wordShine)">ELEMENTUM</text>
+      </g>
+    </symbol>
+    <symbol id="wordmarkMono" viewBox="0 0 640 112" overflow="visible">
+      <text x="14" y="94" textLength="612" lengthAdjust="spacingAndGlyphs" font-family="Barlow, 'Arial Narrow', sans-serif" font-style="italic" font-weight="900" font-size="108" fill="currentColor">ELEMENTUM</text>
+    </symbol>
+  </defs>
+</svg>
+
+<div class="wrap">
+  <header>
+    <span class="eyebrow">Elementum · guia da marca</span>
+    <h1>Identidade visual do Elementum</h1>
+    <p>Evolução da E1 (Brasão com a faísca): o mesmo escudo com coroa, as quatro esferas e o nome inclinado em degradê, agora com desenho mais limpo, ouro metálico e versões para cada uso.</p>
+  </header>
+
+  <!-- 1. Logo completa -->
+  <section aria-labelledby="s1">
+    <div class="head"><h2 id="s1">Logo completa</h2><span>Símbolo, nome e slogan. O slogan ocupa exatamente a largura do nome.</span></div>
+    <div class="stage">
+      <svg class="lockup" viewBox="0 0 900 250" role="img" aria-label="Logo ELEMENTUM com escudo e slogan">
+        <use href="#crest" x="0" y="8" width="210" height="231"/>
+        <use href="#wordmark" x="232" y="38" width="640" height="112"/>
+        <text x="252" y="196" textLength="606" lengthAdjust="spacing" font-family="Barlow, sans-serif" font-weight="800" font-size="25" fill="#cfc8e6">DERRUBE · DOMINE · SOBREVIVA</text>
+        <rect x="252" y="160" width="606" height="2" fill="#cfc8e6" opacity=".18"/>
+      </svg>
+    </div>
+  </section>
+
+  <!-- vertical -->
+  <section aria-labelledby="s1b">
+    <div class="head"><h2 id="s1b">Versão vertical</h2><span>Para a tela de carregamento e lugares estreitos.</span></div>
+    <div class="stage">
+      <svg class="stacked" viewBox="0 0 640 520" role="img" aria-label="Logo ELEMENTUM vertical">
+        <use href="#crest" x="220" y="0" width="200" height="220"/>
+        <use href="#wordmark" x="0" y="252" width="640" height="112"/>
+        <text x="30" y="420" textLength="590" lengthAdjust="spacing" font-family="Barlow, sans-serif" font-weight="800" font-size="25" fill="#cfc8e6">DERRUBE · DOMINE · SOBREVIVA</text>
+      </svg>
+    </div>
+  </section>
+
+  <!-- 2. Símbolo -->
+  <section aria-labelledby="s2">
+    <div class="head"><h2 id="s2">Símbolo e ícone do app</h2><span>O escudo sozinho, num quadrado arredondado.</span></div>
+    <div class="grid">
+      <div class="tile"><div class="app" style="width:132px;height:132px"><svg viewBox="0 0 200 220"><use href="#crest"/></svg></div><span class="cap">ícone do app · 132 px</span></div>
+      <div class="tile"><div class="app" style="width:96px;height:96px"><svg viewBox="0 0 200 220"><use href="#crest"/></svg></div><span class="cap">96 px</span></div>
+      <div class="tile"><svg width="150" height="165" viewBox="0 0 200 220" role="img" aria-label="Símbolo"><use href="#crest"/></svg><span class="cap">símbolo sem fundo</span></div>
+    </div>
+  </section>
+
+  <!-- 3. Tamanhos pequenos -->
+  <section aria-labelledby="s3">
+    <div class="head"><h2 id="s3">Tamanhos pequenos</h2><span>Em 48 px vai o símbolo completo; em 32 e 16 px, a versão reduzida (sem anel nem ícones, esferas e estrela maiores).</span></div>
+    <div class="grid">
+      <div class="tile">
+        <div class="row">
+          <div class="px"><svg width="48" height="53" viewBox="0 0 200 220"><use href="#crest"/></svg>48</div>
+          <div class="px"><svg width="32" height="35" viewBox="0 0 200 220"><use href="#crestSmall"/></svg>32</div>
+          <div class="px"><svg width="16" height="18" viewBox="0 0 200 220"><use href="#crestSmall"/></svg>16</div>
+        </div>
+        <span class="cap">fundo escuro</span>
+      </div>
+      <div class="tile paper">
+        <div class="row">
+          <div class="px"><svg width="48" height="53" viewBox="0 0 200 220"><use href="#crest"/></svg>48</div>
+          <div class="px"><svg width="32" height="35" viewBox="0 0 200 220"><use href="#crestSmall"/></svg>32</div>
+          <div class="px"><svg width="16" height="18" viewBox="0 0 200 220"><use href="#crestSmall"/></svg>16</div>
+        </div>
+        <span class="cap">fundo claro</span>
+      </div>
+      <div class="tile">
+        <div class="tab"><svg width="16" height="18" viewBox="0 0 200 220"><use href="#crestSmall"/></svg>Elementum · jogaelementum.com.br</div>
+        <span class="cap">na aba do navegador</span>
+      </div>
+    </div>
+  </section>
+
+  <!-- 4. Fundo claro -->
+  <section aria-labelledby="s4">
+    <div class="head"><h2 id="s4">Horizontal em fundo claro</h2><span>Contorno escuro mais grosso no nome para o amarelo não sumir no claro.</span></div>
+    <div class="wide paper">
+      <svg viewBox="0 0 900 250" role="img" aria-label="Logo ELEMENTUM em fundo claro">
+        <use href="#crest" x="0" y="8" width="210" height="231"/>
+        <use href="#wordmark" x="232" y="38" width="640" height="112"/>
+        <text x="252" y="196" textLength="606" lengthAdjust="spacing" font-family="Barlow, sans-serif" font-weight="800" font-size="25" fill="#3a3150">DERRUBE · DOMINE · SOBREVIVA</text>
+      </svg>
+    </div>
+  </section>
+
+  <!-- 5. Monocromática -->
+  <section aria-labelledby="s5">
+    <div class="head"><h2 id="s5">Monocromática</h2><span>Uma cor só, para carimbo, camiseta, gravação e marca-d'água.</span></div>
+    <div class="mono">
+      <div class="m-white"><svg viewBox="0 0 900 250" role="img" aria-label="Logo branca"><use href="#crestMono" x="0" y="8" width="210" height="231"/><use href="#wordmarkMono" x="232" y="38" width="640" height="112"/><text x="252" y="196" textLength="606" lengthAdjust="spacing" font-family="Barlow, sans-serif" font-weight="800" font-size="25" fill="currentColor" opacity=".8">DERRUBE · DOMINE · SOBREVIVA</text></svg><span class="cap">branca</span></div>
+      <div class="m-ink"><svg viewBox="0 0 900 250" role="img" aria-label="Logo preta"><use href="#crestMono" x="0" y="8" width="210" height="231"/><use href="#wordmarkMono" x="232" y="38" width="640" height="112"/><text x="252" y="196" textLength="606" lengthAdjust="spacing" font-family="Barlow, sans-serif" font-weight="800" font-size="25" fill="currentColor" opacity=".8">DERRUBE · DOMINE · SOBREVIVA</text></svg><span class="cap">preta</span></div>
+      <div class="m-gold"><svg viewBox="0 0 900 250" role="img" aria-label="Logo dourada"><use href="#crestMono" x="0" y="8" width="210" height="231"/><use href="#wordmarkMono" x="232" y="38" width="640" height="112"/><text x="252" y="196" textLength="606" lengthAdjust="spacing" font-family="Barlow, sans-serif" font-weight="800" font-size="25" fill="currentColor" opacity=".8">DERRUBE · DOMINE · SOBREVIVA</text></svg><span class="cap">dourada</span></div>
+    </div>
+  </section>
+
+  <!-- antes e depois -->
+  <section aria-labelledby="s6">
+    <div class="head"><h2 id="s6">O que mudou da E1</h2></div>
+    <ul class="notes">
+      <li>A coroa agora é parte do contorno do escudo (uma peça só), com a joia azul no meio.</li>
+      <li>Ouro metálico com reflexo no meio e sombra embaixo, e um filete claro na borda de cima.</li>
+      <li>Saíram os rebites e as linhas que dividiam o campo; as cores dos elementos viraram luzes suaves atrás de cada esfera.</li>
+      <li>Esferas maiores, com volume e ícone branco mais grosso (vento, chama, montanha, gota).</li>
+      <li>Estrela central com duas faces de luz e um halo discreto.</li>
+      <li>Nome com degradê amarelo → laranja → vermelho → roxo → azul, contorno escuro, sombra de profundidade e um brilho leve em cima. Slogan alinhado à largura do nome.</li>
+      <li>Versão reduzida própria para 32 e 16 px.</li>
+    </ul>
+  </section>
+
+  <footer>Próximo passo: aprovar e eu coloco no jogo (aba do navegador, tela inicial, tela de carregamento) e gero os arquivos do ícone do site.</footer>
+</div>
