@@ -42,14 +42,14 @@ export const HILL_MAPS = {
     width: 1280,
     height: 720,
     // a linha de eliminação dos lados fica depois das torres
-    blast: { left: -480, right: 1760, top: -560, bottom: 1000 },
+    blast: { left: -1040, right: 2320, top: -560, bottom: 1000 },
     solids: [
       { x: 150, y: 560, w: 980, h: 200 },   // pátio
-      { x: -345, y: 330, w: 200, h: 430 },  // torre da esquerda (bem longe, dá para pisar)
-      { x: 1425, y: 330, w: 200, h: 430 },  // torre da direita (bem longe, dá para pisar)
+      { x: -900, y: 255, w: 280, h: 505 },  // torre redonda da esquerda (bem longe, dá para pisar)
+      { x: 1900, y: 255, w: 280, h: 505 },  // torre redonda da direita (bem longe, dá para pisar)
     ],
     // torres desenhadas (as mesmas dos blocos acima)
-    castleTowers: [{ x: -345, y: 330, w: 200 }, { x: 1425, y: 330, w: 200 }],
+    castleTowers: [{ x: -900, y: 255, w: 280 }, { x: 1900, y: 255, w: 280 }],
     platforms: [
       { x: 40, y: 345, w: 250 },            // ponte de madeira da esquerda
       { x: 990, y: 345, w: 250 },           // ponte de madeira da direita

@@ -603,125 +603,146 @@ function keep(ctx, floor, rand) {
   throne(ctx, cx, floor.y - 2);
 }
 
-// Torre afastada (dá para pisar no alto): grossa, com cantoneiras de pedra
-// clara, um parapeito com mísulas logo abaixo do topo, janela grande em arco
-// com luz, seteiras, um estandarte comprido, hera subindo e uma tocha.
-// As ameias ficam só do lado de fora, para não atrapalhar quem está em cima.
+// Torre redonda afastada (dá para pisar no alto), como as da foto: corpo
+// cilíndrico de pedra com luz no meio e sombra nas bordas, um anel de
+// mísulas lá em cima segurando o parapeito mais largo, e as ameias
+// (os quadradinhos) em volta do topo; janela em arco acesa, seteira,
+// estandarte, escudo e hera
 function farTower(ctx, s, rand, side) {
-  const x = s.x;
-  const w = s.w;
   const top = s.y;
-  const cx = x + w / 2;
-  // corpo da torre (vai até embaixo), um pouco mais largo na base
+  const cx = s.x + s.w / 2;
+  const bodyW = s.w - 44;          // o corpo é mais fino que o topo
+  const bx = cx - bodyW / 2;
+  const bottom = top + 900;
+  // corpo cilíndrico
   ctx.save();
   ctx.beginPath();
-  ctx.moveTo(x, top); ctx.lineTo(x + w, top); ctx.lineTo(x + w + 14, top + 900); ctx.lineTo(x - 14, top + 900); ctx.closePath();
+  ctx.rect(bx, top + 40, bodyW, bottom - top);
   ctx.clip();
-  stoneFace(ctx, x - 14, top, w + 28, 900, rand, 50, 28);
-  // luz do lado de dentro (virado para o castelo) e sombra do lado de fora
-  const lit = ctx.createLinearGradient(x, 0, x + w, 0);
-  lit.addColorStop(0, side < 0 ? 'rgba(20,10,30,0.35)' : 'rgba(255,200,150,0.12)');
-  lit.addColorStop(1, side < 0 ? 'rgba(255,200,150,0.12)' : 'rgba(20,10,30,0.35)');
-  ctx.fillStyle = lit;
-  ctx.fillRect(x - 14, top, w + 28, 900);
-  // cantoneiras: blocos claros alternados nas quinas
-  for (let y = top + 30, k = 0; y < top + 700; y += 28, k++) {
-    for (const qx of [x - 14 + (y - top) / 900 * 0, x + w - 26]) {
-      const wq = k % 2 ? 26 : 18;
-      const bx = qx === x - 14 ? x + (y - top) * -0.0155 : x + w + (y - top) * 0.0155 - wq;
-      ctx.fillStyle = STONE.top;
-      ctx.fillRect(bx, y, wq, 24);
-      ctx.strokeStyle = 'rgba(40,24,20,0.5)';
-      ctx.lineWidth = 1.2;
-      ctx.strokeRect(bx, y, wq, 24);
-    }
+  stoneFace(ctx, bx, top + 40, bodyW, bottom - top, rand, 44, 26);
+  // volume redondo: claro no meio, escuro nas bordas
+  const round = ctx.createLinearGradient(bx, 0, bx + bodyW, 0);
+  round.addColorStop(0, 'rgba(20,10,30,0.55)');
+  round.addColorStop(0.28, 'rgba(20,10,30,0.08)');
+  round.addColorStop(0.5, 'rgba(255,220,180,0.12)');
+  round.addColorStop(0.72, 'rgba(20,10,30,0.08)');
+  round.addColorStop(1, 'rgba(20,10,30,0.55)');
+  ctx.fillStyle = round;
+  ctx.fillRect(bx, top + 40, bodyW, bottom - top);
+  // fiadas de pedra levemente curvas (parece redondo)
+  ctx.strokeStyle = 'rgba(40,24,20,0.35)';
+  ctx.lineWidth = 1.4;
+  for (let y = top + 70; y < bottom; y += 26) {
+    ctx.beginPath(); ctx.moveTo(bx, y); ctx.quadraticCurveTo(cx, y + 6, bx + bodyW, y); ctx.stroke();
   }
   ctx.restore();
   ctx.strokeStyle = INK;
   ctx.lineWidth = 3;
-  ctx.beginPath(); ctx.moveTo(x, top); ctx.lineTo(x - 14, top + 900); ctx.moveTo(x + w, top); ctx.lineTo(x + w + 14, top + 900); ctx.stroke();
-  // parapeito com mísulas logo abaixo do topo
-  ctx.fillStyle = STONE.light;
-  ctx.fillRect(x - 4, top + 6, w + 8, 18);
-  ctx.strokeStyle = INK;
-  ctx.lineWidth = 2.5;
-  ctx.strokeRect(x - 4, top + 6, w + 8, 18);
-  for (let mx = x - 4; mx < x + w + 4; mx += 22) {
+  ctx.beginPath(); ctx.moveTo(bx, top + 40); ctx.lineTo(bx, bottom); ctx.moveTo(bx + bodyW, top + 40); ctx.lineTo(bx + bodyW, bottom); ctx.stroke();
+  // anel de mísulas embaixo do parapeito
+  for (let mx = bx; mx < bx + bodyW - 4; mx += 20) {
     ctx.fillStyle = STONE.mid;
-    ctx.beginPath(); ctx.moveTo(mx, top + 24); ctx.lineTo(mx + 14, top + 24); ctx.lineTo(mx + 10, top + 36); ctx.lineTo(mx + 4, top + 36); ctx.closePath();
-    ctx.fill(); ctx.lineWidth = 1.5; ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(mx - 2, top + 34); ctx.lineTo(mx + 18, top + 34); ctx.lineTo(mx + 13, top + 50); ctx.lineTo(mx + 3, top + 50); ctx.closePath();
+    ctx.fill(); ctx.strokeStyle = INK; ctx.lineWidth = 1.5; ctx.stroke();
   }
-  stoneLip(ctx, x, top, w);
-  // ameias só do lado de fora
-  const ox = side < 0 ? x - 4 : x + w - 18;
-  for (let k = 0; k < 2; k++) {
-    const my = top - 22 - k * 0;
-    ctx.fillStyle = STONE.light;
-    ctx.fillRect(ox + (side < 0 ? 0 : 0), my, 22, 22);
-    ctx.strokeStyle = INK; ctx.lineWidth = 2; ctx.strokeRect(ox, my, 22, 22);
-    ctx.fillStyle = 'rgba(255,245,220,0.5)';
-    ctx.fillRect(ox, my, 22, 3);
+  // parapeito mais largo (onde se pisa), com volume redondo
+  const px0 = s.x;
+  const pw = s.w;
+  const par = ctx.createLinearGradient(px0, 0, px0 + pw, 0);
+  par.addColorStop(0, '#8a7462');
+  par.addColorStop(0.5, STONE.light);
+  par.addColorStop(1, '#8a7462');
+  ctx.fillStyle = par;
+  ctx.beginPath();
+  ctx.moveTo(px0, top); ctx.lineTo(px0 + pw, top); ctx.lineTo(px0 + pw - 6, top + 36); ctx.quadraticCurveTo(cx, top + 44, px0 + 6, top + 36);
+  ctx.closePath();
+  ctx.fill();
+  ctx.strokeStyle = INK; ctx.lineWidth = 2.5; ctx.stroke();
+  ctx.strokeStyle = 'rgba(40,24,20,0.35)';
+  ctx.lineWidth = 1.2;
+  for (let x = px0 + 24; x < px0 + pw - 10; x += 30) { ctx.beginPath(); ctx.moveTo(x, top + 4); ctx.lineTo(x, top + 34); ctx.stroke(); }
+  // ameias (os quadradinhos) em volta do topo, atrás de quem está em cima
+  const n = 7;
+  const mw = pw / (n * 2 - 1);
+  for (let k = 0; k < n; k++) {
+    const mx = px0 + k * mw * 2;
+    const g = ctx.createLinearGradient(mx, 0, mx + mw, 0);
+    g.addColorStop(0, STONE.light);
+    g.addColorStop(1, STONE.mid);
+    ctx.fillStyle = g;
+    ctx.fillRect(mx, top - 24, mw, 24);
+    ctx.strokeStyle = INK; ctx.lineWidth = 2; ctx.strokeRect(mx, top - 24, mw, 24);
+    ctx.fillStyle = 'rgba(255,245,220,0.55)';
+    ctx.fillRect(mx, top - 24, mw, 3);
   }
+  stoneLip(ctx, px0, top, pw);
   // janela grande em arco com luz e grade
-  const glow = ctx.createRadialGradient(cx, top + 92, 4, cx, top + 92, 60);
+  const glow = ctx.createRadialGradient(cx, top + 120, 4, cx, top + 120, 70);
   glow.addColorStop(0, 'rgba(255,190,90,0.45)');
   glow.addColorStop(1, 'rgba(255,190,90,0)');
   ctx.fillStyle = glow;
-  ctx.fillRect(cx - 60, top + 32, 120, 120);
+  ctx.fillRect(cx - 70, top + 50, 140, 140);
   ctx.fillStyle = '#ffc66a';
-  roundRect(ctx, cx - 18, top + 62, 36, 58, 18);
+  roundRect(ctx, cx - 20, top + 86, 40, 64, 20);
   ctx.fill();
   ctx.strokeStyle = INK; ctx.lineWidth = 3; ctx.stroke();
   ctx.strokeStyle = '#6a4a2a';
   ctx.lineWidth = 2;
-  ctx.beginPath(); ctx.moveTo(cx, top + 64); ctx.lineTo(cx, top + 120); ctx.moveTo(cx - 18, top + 92); ctx.lineTo(cx + 18, top + 92); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(cx, top + 88); ctx.lineTo(cx, top + 150); ctx.moveTo(cx - 20, top + 118); ctx.lineTo(cx + 20, top + 118); ctx.stroke();
   ctx.fillStyle = STONE.top;
-  ctx.fillRect(cx - 24, top + 118, 48, 7);
-  ctx.strokeStyle = INK; ctx.lineWidth = 2; ctx.strokeRect(cx - 24, top + 118, 48, 7);
-  // seteiras
+  ctx.fillRect(cx - 26, top + 148, 52, 7);
+  ctx.strokeStyle = INK; ctx.lineWidth = 2; ctx.strokeRect(cx - 26, top + 148, 52, 7);
+  // segunda janela mais embaixo e seteira
+  ctx.fillStyle = '#ffc66a';
+  roundRect(ctx, cx - 14, top + 250, 28, 44, 14);
+  ctx.fill(); ctx.strokeStyle = INK; ctx.lineWidth = 2.5; ctx.stroke();
   ctx.fillStyle = '#1e1218';
-  for (const dx of [-52, 52]) { roundRect(ctx, cx + dx - 4, top + 150, 8, 34, 4); ctx.fill(); }
-  // estandarte comprido com coroa, do lado de dentro
-  const bx = side < 0 ? x + w - 40 : x + 40;
+  roundRect(ctx, cx - 4, top + 190, 8, 34, 4); ctx.fill();
+  // estandarte comprido do lado de dentro (virado para o castelo)
+  const ex = side < 0 ? bx + bodyW - 34 : bx + 34;
   ctx.fillStyle = RED;
   ctx.beginPath();
-  ctx.moveTo(bx - 18, top + 40); ctx.lineTo(bx + 18, top + 40); ctx.lineTo(bx + 18, top + 220); ctx.lineTo(bx, top + 200); ctx.lineTo(bx - 18, top + 220);
+  ctx.moveTo(ex - 18, top + 60); ctx.lineTo(ex + 18, top + 60); ctx.lineTo(ex + 18, top + 240); ctx.lineTo(ex, top + 220); ctx.lineTo(ex - 18, top + 240);
   ctx.closePath();
-  ctx.fill();
-  ctx.strokeStyle = INK; ctx.lineWidth = 2; ctx.stroke();
+  ctx.fill(); ctx.strokeStyle = INK; ctx.lineWidth = 2; ctx.stroke();
   ctx.fillStyle = GOLD;
-  ctx.fillRect(bx - 18, top + 40, 36, 5);
-  crownShape(ctx, bx, top + 100, 0.6, GOLD);
-  // escudo azul com coroa
+  ctx.fillRect(ex - 18, top + 60, 36, 5);
+  crownShape(ctx, ex, top + 120, 0.6, GOLD);
+  // escudo azul com coroa do lado de fora
+  const sx = side < 0 ? bx + 40 : bx + bodyW - 40;
   ctx.fillStyle = '#2f5fb8';
   ctx.strokeStyle = INK;
   ctx.lineWidth = 2.5;
-  const sx = side < 0 ? x + 54 : x + w - 54;
   ctx.beginPath();
-  ctx.moveTo(sx - 26, top + 240); ctx.lineTo(sx + 26, top + 240); ctx.lineTo(sx + 26, top + 270);
-  ctx.quadraticCurveTo(sx, top + 300, sx - 26, top + 270);
+  ctx.moveTo(sx - 24, top + 320); ctx.lineTo(sx + 24, top + 320); ctx.lineTo(sx + 24, top + 348);
+  ctx.quadraticCurveTo(sx, top + 376, sx - 24, top + 348);
   ctx.closePath();
   ctx.fill(); ctx.stroke();
-  ctx.fillStyle = 'rgba(255,255,255,0.25)';
-  ctx.fillRect(sx - 22, top + 244, 10, 24);
-  crownShape(ctx, sx, top + 272, 0.75, GOLD);
+  crownShape(ctx, sx, top + 350, 0.7, GOLD);
   // hera subindo pelo lado de fora
-  const ivyX = side < 0 ? x + 6 : x + w - 6;
+  const ivyX = side < 0 ? bx + 6 : bx + bodyW - 6;
   ctx.strokeStyle = '#3f6f2c';
   ctx.lineWidth = 2;
   ctx.beginPath();
-  ctx.moveTo(ivyX, top + 420);
-  for (let y = top + 420; y > top + 160; y -= 12) ctx.lineTo(ivyX + Math.sin(y * 0.08) * 6, y);
+  for (let y = top + 520; y > top + 200; y -= 12) ctx.lineTo(ivyX + Math.sin(y * 0.08) * 6, y);
   ctx.stroke();
-  for (let y = top + 410; y > top + 170; y -= 16) {
+  for (let y = top + 510; y > top + 210; y -= 16) {
     ctx.fillStyle = (y / 16) % 2 < 1 ? '#5f9f3a' : '#4a8a2e';
     ctx.beginPath(); ctx.ellipse(ivyX + Math.sin(y * 0.08) * 6 + ((y / 16) % 2 < 1 ? 5 : -5), y, 4.5, 3, 0.5, 0, Math.PI * 2); ctx.fill();
   }
+  // gancho de ferro onde a corda da ponte fica amarrada
+  const hx = side < 0 ? px0 + pw - 8 : px0 + 8;
+  ctx.strokeStyle = INK;
+  ctx.lineWidth = 3;
+  ctx.beginPath(); ctx.arc(hx, top + 14, 5, 0, Math.PI * 2); ctx.stroke();
+  ctx.strokeStyle = '#8a8a92';
+  ctx.lineWidth = 1.6;
+  ctx.stroke();
   // suporte de tocha do lado de dentro
-  const tx = side < 0 ? x + w - 18 : x + 18;
+  const tx = side < 0 ? bx + bodyW - 16 : bx + 16;
   ctx.fillStyle = '#3a2a22';
-  ctx.fillRect(tx - 3, top + 262, 6, 22);
-  ctx.fillRect(tx - 9, top + 258, 18, 6);
+  ctx.fillRect(tx - 3, top + 292, 6, 22);
+  ctx.fillRect(tx - 9, top + 288, 18, 6);
 }
 
 function drawTerrain(ctx, map, rand) {
@@ -755,8 +776,8 @@ function drawTerrain(ctx, map, rand) {
   // pontes de madeira penduradas (na sala do trono e nas torres lá longe)
   const keepL = floor.x + 34;
   const keepR = floor.x + floor.w - 34;
-  ropeBridge(ctx, scL, { anchor: [keepL, 150], end: [scL.x + scL.w, scL.y - 22] }, { anchor: [towerL.x + towerL.w, towerL.y - 60], end: [scL.x, scL.y - 22] });
-  ropeBridge(ctx, scR, { anchor: [keepR, 150], end: [scR.x, scR.y - 22] }, { anchor: [towerR.x, towerR.y - 60], end: [scR.x + scR.w, scR.y - 22] });
+  ropeBridge(ctx, scL, { anchor: [keepL, 150], end: [scL.x + scL.w, scL.y - 22] }, { anchor: [towerL.x + towerL.w - 8, towerL.y + 14], end: [scL.x, scL.y - 22] });
+  ropeBridge(ctx, scR, { anchor: [keepR, 150], end: [scR.x, scR.y - 22] }, { anchor: [towerR.x + 8, towerR.y + 14], end: [scR.x + scR.w, scR.y - 22] });
   // suportes de tocha nas paredes do pátio
   ctx.fillStyle = '#3a2a22';
   for (const x of torchXs(map)) {
@@ -833,18 +854,18 @@ export const CASTELO_ART = {
     const [yard] = map.solids;
     const [towerL, towerR] = map.castleTowers;
     const floor = map.platforms[2];
-    flag(ctx, towerL.x + 2, towerL.y - 22, time, 1);
-    flag(ctx, towerR.x + towerR.w - 2, towerR.y - 22, time + 1, -1);
+    flag(ctx, towerL.x + towerL.w / 2, towerL.y - 24, time, 1);
+    flag(ctx, towerR.x + towerR.w / 2, towerR.y - 24, time + 1, -1);
     // bandeira no alto do telhado da sala do trono
     flag(ctx, floor.x + floor.w / 2, 70 - 16 - 196, time + 0.5, 1);
     torchXs(map).forEach((x, i) => torchFire(ctx, x, yard.y + 36, time + i));
-    torchFire(ctx, towerL.x + towerL.w - 18, towerL.y + 258, time + 0.7);
-    torchFire(ctx, towerR.x + 18, towerR.y + 258, time + 1.9);
+    torchFire(ctx, towerL.x + towerL.w - 22 - 16, towerL.y + 288, time + 0.7);
+    torchFire(ctx, towerR.x + 22 + 16, towerR.y + 288, time + 1.9);
     // braseiros dos lados do trono
     for (const [k, x] of [[0, floor.x + 40], [1, floor.x + floor.w - 40]]) torchFire(ctx, x, floor.y - 2, time + k * 1.3);
   },
   // pedaço do mundo guardado em imagem (as torres ficam fora da área padrão)
-  terrainRect: { x: -420, y: -420, w: 2120, h: 1600 },
+  terrainRect: { x: -960, y: -420, w: 3200, h: 1600 },
   haze: ['rgba(255,170,120,0)', 'rgba(255,150,110,0.22)'],
   vignette: 0.4,
 };
