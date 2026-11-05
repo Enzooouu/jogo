@@ -199,6 +199,22 @@ export function playEvents(events, localId) {
         if (e.weapon === 'marretao') noise({ dur: 0.3, vol: 0.18, freq: 500 });
         else noise({ dur: 0.07, vol: 0.12, freq: 3000 });
         break;
+      // Rei da Ilha
+      case 'hillMove':
+        tone({ freq: 523, dur: 0.12, type: 'triangle', vol: 0.16 });
+        tone({ freq: 659, dur: 0.12, type: 'triangle', vol: 0.16, delay: 0.12 });
+        tone({ freq: 784, dur: 0.25, type: 'triangle', vol: 0.18, delay: 0.24 });
+        break;
+      case 'hillCapture':
+        tone({ freq: 440, to: 880, dur: 0.18, type: 'triangle', vol: 0.15 });
+        break;
+      case 'hillContest':
+        tone({ freq: 300, dur: 0.08, type: 'square', vol: 0.08 });
+        tone({ freq: 300, dur: 0.08, type: 'square', vol: 0.08, delay: 0.12 });
+        break;
+      case 'hillPoint':
+        if (e.points % 10 === 0) tone({ freq: 988, dur: 0.08, type: 'sine', vol: 0.1 });
+        break;
       case 'hammerSlam':
         noise({ dur: 0.5, vol: 0.55, freq: 400 });
         tone({ freq: 110, to: 35, dur: 0.45, type: 'sine', vol: 0.5 });

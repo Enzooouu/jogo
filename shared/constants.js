@@ -62,4 +62,5 @@ export const ITEMS = {
 export const MODES = {
   times: { id: 'times', name: 'Time vs Time', teams: true },
   ffa: { id: 'ffa', name: 'Todos contra todos', teams: false },
+  rei: { id: 'rei', name: 'Rei da Ilha', teams: true, hill: true },
 };

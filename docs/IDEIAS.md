@@ -19,8 +19,6 @@ Ideias aprovadas pelo Enzo que ainda não foram feitas.
 
 ### Modos de jogo
 
-- **Rei da Ilha**: uma área no mapa que dá pontos para quem fica dentro dela;
-  quem tiver mais pontos no fim vence.
 - **Sobrevivência**: você contra ondas de bots cada vez mais fortes, com
   recorde de quantas ondas aguentou.
 
@@ -40,6 +38,7 @@ Ideias aprovadas pelo Enzo que ainda não foram feitas.
 - **Treino livre** (boneco parado com painel de dano e combo).
 - **Marretão** (arma rara de 1 uso, muito forte).
 - **Controle (gamepad)** de Xbox, PlayStation ou parecido, na luta e nos menus.
+- **Rei da Ilha** (área com coroa que dá pontos, muda de lugar a cada 25 s).
 - **Versão para celular**: joystick na esquerda e botões de pular, bater, dash e arma na direita.
 
 ## Outras ideias (ainda não escolhidas)

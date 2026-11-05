@@ -2,6 +2,7 @@
 // Também transforma os eventos da partida (golpes, K.O....) em efeitos.
 
 import { drawHammerArt } from './hammer-art.js';
+import { HILL } from '/shared/hill.js';
 import { ELEMENTS } from '/shared/elements.js';
 import { weaponProfile } from '/shared/weapons.js';
 import { StageRenderer, roundRect } from './stage.js';
@@ -302,10 +303,159 @@ export class Renderer {
           }
           break;
         }
+        // Rei da Ilha
+        case 'hillMove': {
+          P.add({ type: 'ring', x: e.x, y: e.y - 10, size: 20, grow: 380, life: 0.6, color: '#ffe08a' });
+          P.burst(e.x, e.y - 20, { type: 'spark', count: 22, speed: 380, life: 0.7, size: 3, color: '#ffe08a', drag: 2.5 });
+          this.pushFeed('👑 A ilha mudou de lugar!', null, true);
+          break;
+        }
+        case 'hillCapture': {
+          const color = this.teamColor.get(e.team) ?? '#fff';
+          P.add({ type: 'ring', x: e.x, y: e.y - 40, size: 16, grow: 300, life: 0.45, color });
+          // avisa só quando a ilha troca de dono (entrar e sair toda hora não repete)
+          if (this.hillAnnounced !== e.team) {
+            this.hillAnnounced = e.team;
+            const idx = this.game.teams().indexOf(e.team);
+            this.pushFeed(`👑 ${Renderer.teamName(idx)} pegou a ilha`, this.game.players.find((p) => p.team === e.team));
+          }
+          break;
+        }
+        case 'hillContest':
+          P.add({ type: 'text', text: 'DISPUTA!', x: e.x, y: e.y - HILL.h - 30, vy: -24, life: 0.9, size: 24, color: '#ffffff' });
+          break;
         default:
           break;
       }
     }
+  }
+
+  // Área do Rei da Ilha: coluna de luz com a cor do time que está dentro,
+  // coroa em cima e uma barrinha com o tempo até ela mudar de lugar
+  drawHill(ctx) {
+    const hill = this.game.hill;
+    if (!hill) return;
+    const t = this.time;
+    const r = hill.rect();
+    const cx = r.x + r.w / 2;
+    const base = r.y + r.h;
+    const blink = hill.contested ? (Math.floor(t * 6) % 2 === 0) : false;
+    const color = hill.owner !== null ? this.teamColor.get(hill.owner) : hill.contested ? (blink ? '#ff5b6a' : '#ffffff') : '#ffe9a8';
+    const fade = hill.warning ? 0.55 + 0.45 * Math.abs(Math.sin(t * 7)) : 1;
+    ctx.save();
+    ctx.globalAlpha = fade;
+    // brilho no chão
+    const glow = ctx.createRadialGradient(cx, base, 4, cx, base, r.w * 0.62);
+    glow.addColorStop(0, hexA(color, 0.55));
+    glow.addColorStop(1, hexA(color, 0));
+    ctx.fillStyle = glow;
+    ctx.beginPath();
+    ctx.ellipse(cx, base, r.w * 0.62, 26, 0, 0, Math.PI * 2);
+    ctx.fill();
+    // coluna de luz
+    const col = ctx.createLinearGradient(0, base, 0, r.y);
+    col.addColorStop(0, hexA(color, 0.3));
+    col.addColorStop(0.7, hexA(color, 0.08));
+    col.addColorStop(1, hexA(color, 0));
+    ctx.fillStyle = col;
+    ctx.fillRect(r.x, r.y, r.w, r.h);
+    // bordas tracejadas subindo
+    ctx.strokeStyle = hexA(color, 0.75);
+    ctx.lineWidth = 3;
+    ctx.setLineDash([12, 10]);
+    ctx.lineDashOffset = t * 30;
+    ctx.beginPath();
+    ctx.moveTo(r.x, base);
+    ctx.lineTo(r.x, r.y + 20);
+    ctx.moveTo(r.x + r.w, base);
+    ctx.lineTo(r.x + r.w, r.y + 20);
+    ctx.stroke();
+    ctx.setLineDash([]);
+    // faixa no chão
+    ctx.fillStyle = hexA(color, 0.85);
+    ctx.fillRect(r.x, base - 3, r.w, 4);
+    // faíscas subindo
+    for (let i = 0; i < 9; i++) {
+      const k = (t * 0.5 + i * 0.37) % 1;
+      const x = r.x + ((i * 53.7) % r.w);
+      ctx.globalAlpha = fade * (1 - k) * 0.9;
+      ctx.fillStyle = color;
+      ctx.beginPath();
+      ctx.arc(x + Math.sin(t * 2 + i) * 6, base - k * r.h, 2.4, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    ctx.globalAlpha = fade;
+    // coroa flutuando
+    drawCrown(ctx, cx, r.y + 2 + Math.sin(t * 2.4) * 4, 1, color);
+    // tempo até mudar de lugar
+    const left = Math.max(0, hill.timer / HILL.move);
+    ctx.fillStyle = 'rgba(0,0,0,0.45)';
+    ctx.fillRect(cx - 40, r.y + 26, 80, 5);
+    ctx.fillStyle = hill.warning ? '#ff5b6a' : '#ffffff';
+    ctx.fillRect(cx - 40, r.y + 26, 80 * left, 5);
+    ctx.restore();
+
+    // aviso: onde ela vai aparecer
+    if (hill.warning) {
+      const n = hill.nextRect();
+      ctx.save();
+      ctx.globalAlpha = 0.5 + 0.5 * Math.abs(Math.sin(t * 7));
+      ctx.strokeStyle = '#ffe08a';
+      ctx.lineWidth = 3;
+      ctx.setLineDash([10, 8]);
+      ctx.lineDashOffset = -t * 40;
+      ctx.strokeRect(n.x, n.y + 20, n.w, n.h - 20);
+      ctx.setLineDash([]);
+      drawCrown(ctx, n.x + n.w / 2, n.y + 30, 0.7, '#ffe08a');
+      ctx.restore();
+    }
+  }
+
+  // Placar do Rei da Ilha embaixo do relógio
+  drawHillHud(ctx) {
+    const hill = this.game.hill;
+    if (!hill) return;
+    const teams = this.game.teams();
+    const w = 150;
+    const gap = 16;
+    const total = teams.length * w + (teams.length - 1) * gap;
+    let x = VIEW_W / 2 - total / 2;
+    const y = 58;
+    teams.forEach((team, i) => {
+      const color = this.teamColor.get(team);
+      const pts = hill.points(team);
+      const on = hill.owner === team;
+      ctx.fillStyle = 'rgba(0,0,0,0.5)';
+      roundRect(ctx, x, y, w, 34, 10);
+      ctx.fill();
+      if (on) {
+        ctx.strokeStyle = color;
+        ctx.lineWidth = 2;
+        roundRect(ctx, x, y, w, 34, 10);
+        ctx.stroke();
+      }
+      // barra até o alvo
+      ctx.fillStyle = 'rgba(255,255,255,0.12)';
+      roundRect(ctx, x + 10, y + 24, w - 20, 5, 2.5);
+      ctx.fill();
+      ctx.fillStyle = color;
+      roundRect(ctx, x + 10, y + 24, Math.max(5, (w - 20) * Math.min(1, pts / HILL.target)), 5, 2.5);
+      ctx.fill();
+      drawCrown(ctx, x + 18, y + 18, 0.42, on ? color : 'rgba(255,255,255,0.35)');
+      ctx.font = '700 12px system-ui, sans-serif';
+      ctx.textAlign = 'left';
+      ctx.fillStyle = color;
+      ctx.fillText(Renderer.teamName(i).replace('Time ', ''), x + 32, y + 18);
+      ctx.font = '900 18px system-ui, sans-serif';
+      ctx.textAlign = 'right';
+      ctx.fillStyle = '#fff';
+      ctx.fillText(`${pts}`, x + w - 12, y + 19);
+      x += w + gap;
+    });
+    ctx.font = '800 11px system-ui, sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillStyle = hill.contested ? '#ff8a95' : 'rgba(255,255,255,0.75)';
+    ctx.fillText(hill.contested ? 'DISPUTA!' : `${HILL.target} PONTOS VENCE`, VIEW_W / 2, y + 48);
   }
 
   pushFeed(text, player, strong = false) {
@@ -368,6 +518,7 @@ export class Renderer {
     this.stage.drawTerrain(ctx, this.time, this.game.platforms, alpha);
     const hazards = this.game.hazardsNow?.() ?? this.game.map.hazards;
     this.stage.drawHazards(ctx, this.time, false, hazards);
+    this.drawHill(ctx);
     // desenho extra no mundo (ex.: bandeira de chegada do tutorial)
     this.drawExtra?.(ctx, this.time);
     this.drawWinds(ctx);
@@ -1045,6 +1196,7 @@ export class Renderer {
       ctx.fillStyle = left < 30 ? '#ff5b5b' : '#ffffff';
       ctx.fillText(`${mm}:${ss}`, VIEW_W / 2, 40);
     }
+    this.drawHillHud(ctx);
 
     // Feed de K.O.
     ctx.textAlign = 'right';
@@ -1562,4 +1714,35 @@ function fit(ctx, text, maxW) {
   let t = text;
   while (t.length > 1 && ctx.measureText(`${t}…`).width > maxW) t = t.slice(0, -1);
   return `${t}…`;
+}
+
+// Coroa (Rei da Ilha). (x, y) = meio da base da coroa
+export function drawCrown(ctx, x, y, k, color) {
+  ctx.save();
+  ctx.translate(x, y);
+  ctx.scale(k, k);
+  ctx.beginPath();
+  ctx.moveTo(-18, 0);
+  ctx.lineTo(-20, -18);
+  ctx.lineTo(-9, -9);
+  ctx.lineTo(0, -24);
+  ctx.lineTo(9, -9);
+  ctx.lineTo(20, -18);
+  ctx.lineTo(18, 0);
+  ctx.closePath();
+  ctx.fillStyle = color;
+  ctx.strokeStyle = 'rgba(20,10,30,0.9)';
+  ctx.lineWidth = 2.5;
+  ctx.lineJoin = 'round';
+  ctx.fill();
+  ctx.stroke();
+  ctx.fillStyle = 'rgba(255,255,255,0.55)';
+  ctx.fillRect(-16, -5, 32, 3);
+  ctx.fillStyle = 'rgba(20,10,30,0.9)';
+  for (const [cx, cy] of [[-20, -18], [0, -24], [20, -18]]) {
+    ctx.beginPath();
+    ctx.arc(cx, cy, 3, 0, Math.PI * 2);
+    ctx.fill();
+  }
+  ctx.restore();
 }

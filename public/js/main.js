@@ -4,9 +4,10 @@
 import { ELEMENTS, HAZARDS, HAZARD_REACTION } from '/shared/elements.js';
 import { WEAPONS, weaponProfile } from '/shared/weapons.js';
 import { MAPS, getMap } from '/shared/maps.js';
+import { HILL } from '/shared/hill.js';
 import { MatchRunner } from './match.js';
 import { unlockAudio, toggleMute, isMuted } from './audio.js';
-import { Renderer, TEAM_COLORS } from './render/renderer.js';
+import { Renderer, TEAM_COLORS, drawCrown } from './render/renderer.js';
 import { drawPortrait, fitCanvas } from './render/portrait.js';
 import { buildLocalSetup, outcomeFor } from './setup.js';
 import { api } from './api.js';
@@ -177,6 +178,21 @@ function drawModeTiles() {
         drawPortrait(ctx, 'mortal', w * 0.68, h - 12, s, { facing: -1, extra: { skin: 'espantalho' } });
         continue;
       }
+      if (tile.dataset.mode === 'rei') {
+        // dois times disputando a área com a coroa
+        const s = Math.min(1.5, h / 95) * 0.82;
+        const glow = ctx.createRadialGradient(w / 2, h - 12, 2, w / 2, h - 12, w * 0.28);
+        glow.addColorStop(0, 'rgba(255,224,138,0.7)');
+        glow.addColorStop(1, 'rgba(255,224,138,0)');
+        ctx.fillStyle = glow;
+        ctx.fillRect(0, 0, w, h);
+        drawPortrait(ctx, 'fogo', w * 0.2, h - 12, s, { facing: 1 });
+        drawPortrait(ctx, 'fogo', w * 0.33, h - 12, s, { facing: 1 });
+        drawPortrait(ctx, 'agua', w * 0.67, h - 12, s, { facing: -1 });
+        drawPortrait(ctx, 'agua', w * 0.8, h - 12, s, { facing: -1 });
+        drawCrown(ctx, w / 2, h * 0.36, Math.min(1.5, h / 75), '#ffd25a');
+        continue;
+      }
       const ffa = tile.dataset.mode === 'ffa';
       const n = ffa ? 2 : Number(tile.dataset.size);
       const scale = Math.min(1.5, h / 95) * (n === 3 ? 0.78 : n === 2 ? 0.9 : 1);
@@ -211,6 +227,8 @@ function chooseMode(teamSize, mode = 'times') {
     ? 'Todos contra todos · cada jogador tem um elemento diferente'
     : mode === 'treino'
       ? 'Treino livre · teste golpes e combos num boneco parado'
+      : mode === 'rei'
+        ? `Rei da Ilha ${teamSize} × ${teamSize} · fique na área brilhante: ${HILL.target} pontos vence`
       : `Modo ${teamSize} × ${teamSize} · o time inteiro usa o elemento da carta`;
   $(`.el-card[data-element="${state.element}"]`)?.focus();
 }
@@ -714,6 +732,12 @@ function teamLabel(result, team) {
   return Renderer.teamName(teams.indexOf(team));
 }
 
+// "Dourado 60 × 41 Violeta"
+function hillLine(result) {
+  const teams = [...new Set(result.players.map((p) => p.team))];
+  return teams.map((t) => `${teamLabel(result, t).replace('Time ', '')} ${result.hillScores[t] ?? 0}`).join(' × ');
+}
+
 function teamColor(result, team) {
   const teams = [...new Set(result.players.map((p) => p.team))];
   return TEAM_COLORS[teams.indexOf(team) % TEAM_COLORS.length];
@@ -732,7 +756,10 @@ function showResult(setup, result) {
   const winner = result.winnerTeam !== null ? (ffa ? championName : teamLabel(result, result.winnerTeam)) : null;
   const subs = {
     eliminacao: winner ? (ffa ? `${winner} ficou por último de pé.` : `${winner} eliminou o adversário.`) : 'Todos caíram ao mesmo tempo.',
-    tempo: winner ? `Tempo esgotado — ${winner} tinha mais vidas.` : 'Tempo esgotado e tudo empatado.',
+    tempo: result.hillScores
+      ? (winner ? `Tempo esgotado — ${winner} tinha mais pontos (${hillLine(result)}).` : `Tempo esgotado e pontos empatados (${hillLine(result)}).`)
+      : winner ? `Tempo esgotado — ${winner} tinha mais vidas.` : 'Tempo esgotado e tudo empatado.',
+    pontos: result.hillScores ? `${winner} chegou a ${HILL.target} pontos na ilha (${hillLine(result)}).` : '',
     desistencia: 'Você desistiu da partida.',
   };
   $('#result-sub').textContent = subs[result.reason] ?? '';
@@ -763,7 +790,7 @@ function showResult(setup, result) {
       <div class="ptags"></div>
       <div class="pstats">
         ${stat('', p.kills, 'Kills')}${stat('', p.deaths, 'Mortes')}${stat('', p.hits ?? 0, 'Golpes')}
-        ${stat('dealt', p.damageDealt, 'Dano feito')}${stat('taken', p.damageTaken, 'Dano levado')}${stat('', p.pickups ?? 0, 'Armas')}
+        ${stat('dealt', p.damageDealt, 'Dano feito')}${stat('taken', p.damageTaken, 'Dano levado')}${result.hillScores ? stat('', p.hillTime ?? 0, 'Seg. na ilha') : stat('', p.pickups ?? 0, 'Armas')}
       </div>`;
     card.querySelector('.pavatar').textContent = p.name.charAt(0).toUpperCase();
     card.querySelector('.pname').textContent = p.name;
@@ -1168,6 +1195,7 @@ function init() {
   }
   $('.mode-tile[data-mode="ffa"]').addEventListener('click', () => chooseMode(1, 'ffa'));
   $('.mode-tile[data-mode="treino"]').addEventListener('click', () => chooseMode(1, 'treino'));
+  $('.mode-tile[data-mode="rei"]').addEventListener('click', () => chooseMode(2, 'rei'));
   // treino livre tem o mapa dele: pula a escolha de mapa
   $('#cards-next').addEventListener('click', cardsNext);
   $('#maps-next').addEventListener('click', () => mapPicker.onContinue(mapPicker.current()));

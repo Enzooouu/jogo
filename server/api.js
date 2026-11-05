@@ -99,8 +99,9 @@ export function createApi(store) {
       mode,
       element,
       teamSize,
-      maxKills: enemies * PLAYER.lives,
-      maxDeaths: PLAYER.lives,
+      // Rei da Ilha: ninguém perde vida, então dá para cair (e derrubar) bem mais
+      maxKills: MODES[mode].hill ? 99 : enemies * PLAYER.lives,
+      maxDeaths: MODES[mode].hill ? 99 : PLAYER.lives,
     });
     res.status(201).json({ matchId });
   });

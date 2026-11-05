@@ -15,6 +15,7 @@ import { EMPTY_INPUT } from './input.js';
 import { createRng } from './rng.js';
 import { rectsOverlap, circleRectOverlap, approach } from './geometry.js';
 import { FrozenLake, LAKE } from './lake.js';
+import { KingOfHill, HILL } from './hill.js';
 import { Airships } from './ship.js';
 
 // Combinação de disparos: quem continua (o primeiro da lista ganha), o nome
@@ -78,8 +79,9 @@ export class Game {
     this.map = getMap(mapId);
     this.seed = seed;
     this.rng = createRng(seed);
-    this.lives = lives;
-    this.timeLimit = timeLimit;
+    // Rei da Ilha: ninguém perde vida (game.lives = 0 esconde as bolinhas de vida)
+    this.lives = this.mode.hill ? 0 : lives;
+    this.timeLimit = this.mode.hill && config.timeLimit === undefined ? HILL.timeLimit : timeLimit;
     this.practice = practice;
     this.itemsEnabled = items;
 
@@ -116,7 +118,7 @@ export class Game {
       // No "todos contra todos" cada jogador é seu próprio time.
       const team = this.mode.teams ? cfg.team : `solo-${cfg.id}`;
       if (team === undefined || team === null) throw new Error(`Jogador ${cfg.id} sem time`);
-      return createPlayer({ ...cfg, team }, index, lives);
+      return createPlayer({ ...cfg, team }, index, this.mode.hill ? 1 : lives);
     });
     if (new Set(this.players.map((p) => p.team)).size < 2) {
       throw new Error('A partida precisa de pelo menos 2 times');
@@ -127,6 +129,8 @@ export class Game {
       if (error) throw new Error(error);
     }
     this.placeAtSpawns();
+    // Rei da Ilha: a área que dá pontos (precisa dos times prontos)
+    this.hill = this.mode.hill ? new KingOfHill(this) : null;
   }
 
   // ---------------------------------------------------------------- consulta
@@ -220,6 +224,7 @@ export class Game {
     this.lake?.update();
     this.ships?.update();
     for (const p of this.players) this.updatePlayer(p, inputs[p.id] ?? EMPTY_INPUT);
+    this.hill?.update();
     this.updateProjectiles();
     this.updateItems();
     this.spawnItems();
@@ -822,7 +827,7 @@ export class Game {
     if (p.state !== 'alive') return;
     const cx = p.x + p.w / 2;
     const cy = p.y + p.h / 2;
-    if (!this.practice) p.lives--;
+    if (!this.practice && !this.mode.hill) p.lives--;
     p.stats.deaths++;
     if (cause === 'queda') p.stats.falls++;
     else p.stats.hazardDeaths++;
@@ -1362,6 +1367,11 @@ export class Game {
 
   checkEnd() {
     if (this.practice) return;
+    if (this.hill) {
+      // Rei da Ilha: os pontos decidem (a área chama finish ao chegar no alvo)
+      if (this.timeLimit > 0 && this.time >= this.timeLimit) this.finish(this.hill.winnerByPoints(), 'tempo');
+      return;
+    }
     const alive = new Set(this.players.filter((p) => p.state !== 'out').map((p) => p.team));
     if (alive.size <= 1) {
       this.finish(alive.size === 1 ? [...alive][0] : null, 'eliminacao');
@@ -1411,12 +1421,14 @@ export class Game {
       reason,
       mode: this.mode.id,
       duration: this.time,
+      hillScores: this.hill ? Object.fromEntries([...this.hill.scores].map(([t, v]) => [t, Math.floor(v)])) : null,
       players: this.players.map((p) => ({
         id: p.id, name: p.name, team: p.team, element: p.element, isBot: p.isBot,
         kills: p.stats.kills, deaths: p.stats.deaths, falls: p.stats.falls,
         hazardDeaths: p.stats.hazardDeaths,
         damageDealt: Math.round(p.stats.damageDealt), damageTaken: Math.round(p.stats.damageTaken),
         hits: p.stats.hits, pickups: p.stats.pickups, livesLeft: p.state === 'out' ? 0 : p.lives,
+        hillTime: Math.floor(p.stats.hillTime),
       })),
     };
     const winnerElement = winnerTeam !== null ? this.players.find((p) => p.team === winnerTeam)?.element ?? null : null;
@@ -1477,6 +1489,6 @@ function createPlayer(cfg, index, lives) {
     lastHitBy: null,
     lastHitTime: -Infinity,
     prevInput: { ...EMPTY_INPUT },
-    stats: { kills: 0, deaths: 0, falls: 0, hazardDeaths: 0, damageDealt: 0, damageTaken: 0, hits: 0, pickups: 0 },
+    stats: { kills: 0, deaths: 0, falls: 0, hazardDeaths: 0, damageDealt: 0, damageTaken: 0, hits: 0, pickups: 0, hillTime: 0 },
   };
 }

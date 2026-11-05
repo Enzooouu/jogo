@@ -147,6 +147,19 @@ export class BotController {
 
     let goal = nearestEnemy ? { type: 'enemy', id: nearestEnemy.id } : null;
 
+    // Rei da Ilha: o objetivo é ficar na área. Se tem inimigo dentro (ou
+    // perto dela), vai bater nele; se não, vai para lá e fica.
+    if (game.hill) {
+      const r = game.hill.rect();
+      const near = (p) => p.x + p.w > r.x - 120 && p.x < r.x + r.w + 120 && p.y + p.h > r.y - 60 && p.y < r.y + r.h + 60;
+      const meIn = near(me);
+      const threat = minBy(enemies.filter(near), (e) => dist(me, e));
+      if (threat && (meIn || dist(me, threat) < 260)) goal = { type: 'enemy', id: threat.id };
+      else if (!meIn || !nearestEnemy || dist(me, nearestEnemy) > 220) goal = { type: 'hill' };
+      // na hora do aviso, os mais espertos já vão para o próximo lugar
+      if (goal.type === 'hill' && game.hill.warning && this.rng.chance(this.cfg.reflex * 0.7)) goal = { type: 'hill', next: true };
+    }
+
     if (!me.weapon && this.rng.chance(this.cfg.itemGreed)) {
       const items = game.items.filter((i) => !this.itemIsDeadly(game, me, i));
       const item = minBy(items, (i) => dist(me, i));
@@ -175,6 +188,9 @@ export class BotController {
 
     if (this.goal.type === 'item') {
       if (Math.abs(dx) > 8) dir = Math.sign(dx);
+    } else if (this.goal.type === 'hill') {
+      // anda até a área e fica lá dentro (cada bot num cantinho dela)
+      if (Math.abs(dx) > 34) dir = Math.sign(dx);
     } else {
       const profile = weaponProfile(me.weapon?.id ?? null, me.element);
       const ranged = profile.kind === 'ranged';
@@ -310,6 +326,12 @@ export class BotController {
 
   resolveGoal(game) {
     if (!this.goal) return null;
+    if (this.goal.type === 'hill') {
+      if (!game.hill) return null;
+      const r = this.goal.next ? game.hill.nextRect() : game.hill.rect();
+      const spread = ((this.playerId * 37) % 5 - 2) * 22;
+      return { x: r.x + r.w / 2 - 15 + spread, y: r.y + r.h - 66, w: 30, h: 66 };
+    }
     if (this.goal.type === 'enemy') {
       const e = game.playerById(this.goal.id);
       return e && e.state === 'alive' ? e : null;
