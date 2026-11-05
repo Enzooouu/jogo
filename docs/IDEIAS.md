@@ -53,6 +53,11 @@ Ideias aprovadas pelo Enzo que ainda não foram feitas.
 - Música para o menu e para as lutas
 - Publicar o jogo num site de verdade (Cloudflare Pages) — também libera testar e arrumar a versão de celular
 
+## Mapas do Rei da Ilha (escolhidos, para fazer depois)
+
+- **Templo na selva** 🌿: ruínas de pedra com cipós e cachoeirinhas, plataformas em vários andares.
+- **Ilha do tesouro** 🏴‍☠️: ilha pirata com baú de ouro, coqueiros e mar em volta.
+
 ## Outras ideias de mapa (ainda não escolhidas)
 
 - **Maré Alta** 🌊: ruínas numa baía; a maré sobe e desce a cada 30 s.

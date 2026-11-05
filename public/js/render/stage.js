@@ -14,6 +14,8 @@ import { CAMPO_ART } from './stage-campo.js';
 import { NAVIO_ART } from './stage-navio.js';
 import { GELO_ART } from './stage-gelo.js';
 import { COLISEU_ART } from './stage-coliseu.js';
+import { CASTELO_ART } from './stage-castelo.js';
+import { PIRAMIDE_ART } from './stage-piramide.js';
 import { drawVolcano, volcanoAnimated, drawMidLava, midLavaAnimated } from './volcano.js';
 
 export { roundRect };
@@ -40,7 +42,7 @@ export class StageRenderer {
     this.map = map;
     this.scale = 0;
     // cada mapa tem o seu cenário; os perigos são desenhados igual em todos
-    const ARTS = { treino: TREINO_ART, gelo: GELO_ART, coliseu: COLISEU_ART, navio: NAVIO_ART };
+    const ARTS = { treino: TREINO_ART, gelo: GELO_ART, coliseu: COLISEU_ART, navio: NAVIO_ART, castelo: CASTELO_ART, piramide: PIRAMIDE_ART };
     // o Campo Aberto usa o campo do treino, mas com um fundo só dele
     this.art = map.id === 'campo' ? CAMPO_ART : ARTS[map.art] ?? (map.id === 'pico' ? PICO_ART : CALDEIRA_ART);
     // pedaço do mundo guardado em imagem (o cenário pode pedir outro)

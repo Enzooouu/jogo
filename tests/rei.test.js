@@ -3,11 +3,11 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { Game } from '../shared/game.js';
-import { MAPS } from '../shared/maps.js';
+import { MAPS, HILL_MAPS } from '../shared/maps.js';
 import { HILL } from '../shared/hill.js';
 import { BotController } from '../shared/ai.js';
 
-function hillGame(mapId = 'campo', seed = 1) {
+function hillGame(mapId = 'castelo', seed = 1) {
   return new Game({
     players: [
       { id: 1, element: 'fogo', team: 'A' }, { id: 2, element: 'fogo', team: 'A' },
@@ -25,6 +25,18 @@ function putInside(g, p) {
   p.vx = 0;
   p.vy = 0;
 }
+
+test('o Rei da Ilha tem mapas só dele (fora da lista dos outros modos)', () => {
+  assert.ok(Object.keys(HILL_MAPS).length >= 2);
+  for (const id of Object.keys(HILL_MAPS)) assert.equal(MAPS[id], undefined, id);
+});
+
+test('todo mapa do Rei da Ilha tem pelo menos 4 lugares para a área', () => {
+  for (const id of Object.keys(HILL_MAPS)) {
+    const g = hillGame(id);
+    assert.ok(g.hill.spots.length >= 4, `${id}: ${g.hill.spots.length}`);
+  }
+});
 
 test('todo mapa tem pelo menos 2 lugares para a ilha', () => {
   for (const id of Object.keys(MAPS)) {
@@ -74,7 +86,7 @@ test('a ilha muda de lugar a cada 25 s', () => {
 });
 
 test('bots disputam a ilha e a partida termina', () => {
-  const g = hillGame('caldeira', 3);
+  const g = hillGame('piramide', 3);
   const bots = g.players.map((p) => new BotController(p.id, { seed: p.id }));
   for (let n = 0; g.phase !== 'ended' && n < 60 * 200; n++) {
     const inputs = {};

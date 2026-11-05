@@ -359,8 +359,18 @@ export class Renderer {
     col.addColorStop(1, hexA(color, 0));
     ctx.fillStyle = col;
     ctx.fillRect(r.x, r.y, r.w, r.h);
-    // bordas tracejadas subindo
-    ctx.strokeStyle = hexA(color, 0.75);
+    // bordas tracejadas subindo (com contorno escuro para aparecer em mapa claro)
+    ctx.strokeStyle = 'rgba(30,15,40,0.45)';
+    ctx.lineWidth = 6;
+    ctx.setLineDash([12, 10]);
+    ctx.lineDashOffset = t * 30;
+    ctx.beginPath();
+    ctx.moveTo(r.x, base);
+    ctx.lineTo(r.x, r.y + 20);
+    ctx.moveTo(r.x + r.w, base);
+    ctx.lineTo(r.x + r.w, r.y + 20);
+    ctx.stroke();
+    ctx.strokeStyle = hexA(color, 0.9);
     ctx.lineWidth = 3;
     ctx.setLineDash([12, 10]);
     ctx.lineDashOffset = t * 30;

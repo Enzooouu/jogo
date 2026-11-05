@@ -14,7 +14,7 @@ import { api } from './api.js';
 import { renderAccountBox, initAuthScreen, setAuthMode, focusAuth, loadProfile } from './screens/account.js';
 import { DemoArena } from './screens/demo.js';
 import { initHomeMenu } from './screens/home-menu.js';
-import { MapPicker, RANDOM_MAP, pickRandomMap } from './screens/maps.js';
+import { MapPicker, RANDOM_MAP, pickRandomMap, mapIdsFor } from './screens/maps.js';
 import { initControls } from './screens/controls.js';
 import { TutorialScreen } from './screens/tutorial.js';
 import { currentBindings, actionOf } from './input/bindings.js';
@@ -32,6 +32,7 @@ const state = {
   mode: 'times',
   difficulty: loadPref('dificuldade', 'normal'),
   mapChoice: loadPref('mapa', RANDOM_MAP), // id do mapa ou 'aleatorio'
+  mapChoiceRei: loadPref('mapa-rei', RANDOM_MAP), // o Rei da Ilha tem mapas só dele
   demo: loadPref('demo', '1') === '1',
   admin: loadPref('adm', '0') === '1', // modo ADM (testes): golpes dão 999%
   runner: null,
@@ -49,8 +50,13 @@ let homeMenu = null;
 // tela de mapas: ao continuar, guarda a escolha e vai para o versus
 const mapPicker = new MapPicker($('#screen-maps'), {
   onContinue(id) {
-    state.mapChoice = id;
-    savePref('mapa', id);
+    if (state.mode === 'rei') {
+      state.mapChoiceRei = id;
+      savePref('mapa-rei', id);
+    } else {
+      state.mapChoice = id;
+      savePref('mapa', id);
+    }
     goVersus();
   },
 });
@@ -73,7 +79,10 @@ export function show(name) {
   if (name === 'cards') startCardAnimation();
   else stopCardAnimation();
   if (name === 'mode') drawModeTiles();
-  if (name === 'maps') mapPicker.open(state.mapChoice);
+  if (name === 'maps') {
+    mapPicker.setMaps(mapIdsFor(state.mode));
+    mapPicker.open(state.mode === 'rei' ? state.mapChoiceRei : state.mapChoice);
+  }
   else mapPicker.stop();
   if (name !== 'game') $('#training-hud').hidden = true;
   closePanels();
@@ -488,7 +497,9 @@ function newSetup() {
     difficulty: state.difficulty,
     admin: state.admin,
   });
-  setup.mapId = state.mapChoice === RANDOM_MAP ? pickRandomMap() : MAPS[state.mapChoice] ? state.mapChoice : 'caldeira';
+  const ids = mapIdsFor(state.mode);
+  const choice = state.mode === 'rei' ? state.mapChoiceRei : state.mapChoice;
+  setup.mapId = choice !== RANDOM_MAP && ids.includes(choice) ? choice : pickRandomMap(Math.random, ids);
   if (state.mode === 'treino') {
     // você contra um espantalho preso ao chão (dá para virar boneco solto)
     setup.mode = 'times';

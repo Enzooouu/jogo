@@ -13,6 +13,9 @@
 //            (surfaces = chãos onde podem nascer; dir = sempre para fora)
 
 import { TUTORIAL_MAPS } from './maps-treino.js';
+import { HILL_MAPS } from './maps-rei.js';
+
+export { HILL_MAPS };
 
 // Plataforma pendurada em balão (Pico dos Ventos)
 const SWING = { length: 130, push: 3.2, wind: 0.9, gravity: 620, damping: 0.6, maxAngle: 1.15 };
@@ -334,7 +337,7 @@ export const MAPS = {
 export const DEFAULT_MAP = 'caldeira';
 
 export function getMap(id = DEFAULT_MAP) {
-  const map = MAPS[id] ?? TUTORIAL_MAPS[id];
+  const map = MAPS[id] ?? HILL_MAPS[id] ?? TUTORIAL_MAPS[id];
   if (!map) throw new Error(`Mapa desconhecido: ${id}`);
   return map;
 }

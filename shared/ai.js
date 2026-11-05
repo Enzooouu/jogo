@@ -68,8 +68,11 @@ export class BotController {
     const back = home ? null : crossIsland ? { island: crossIsland, x: crossing.x } : recoveryTarget(this.islands, currentMap(game), me.element, cx);
     const island = home ?? back.island;
     const offStage = !home;
-    // Cabeça abaixo do chão da ilha (e fora das piscinas) = embaixo dela.
-    const underStage = !offStage && me.y > island.top + 60;
+    // Cabeça abaixo do chão da ilha e um bloco por cima de mim = embaixo
+    // dela. (Num mapa com andares, como torres e degraus, estar mais baixo
+    // que o topo não quer dizer estar embaixo.)
+    const underStage = !offStage && me.y > island.top + 60
+      && game.solidsNow().some((s) => cx > s.x && cx < s.x + s.w && s.y + s.h <= me.y + 4);
 
     if (underStage) {
       // Preso embaixo da ilha: sai pela borda mais próxima.

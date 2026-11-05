@@ -7,7 +7,7 @@
 // Enter (ou clique no cartão do meio) para continuar.
 
 import { Game } from '/shared/game.js';
-import { MAPS } from '/shared/maps.js';
+import { MAPS, HILL_MAPS, getMap } from '/shared/maps.js';
 import { Renderer } from '../render/renderer.js';
 
 export const RANDOM_MAP = 'aleatorio';
@@ -20,7 +20,14 @@ const INFO = {
   gelo: { text: 'Gelo que escorrega e racha, plataformas que derretem e nevasca.', tags: ['Gelo', 'Nevasca', 'Pingentes'] },
   coliseu: { text: 'A torcida joga as armas e, depois de 2:30, o palco se abre.', tags: ['Torcida', 'Morte súbita'] },
   navio: { text: 'Dois navios voando, com canhões que atiram em arco.', tags: ['Canhão', 'Balanço'] },
+  castelo: { text: 'Pátio do castelo com torres, passarelas e o trono no meio.', tags: ['Rei da Ilha', 'Torres', 'Trono'] },
+  piramide: { text: 'Pirâmide em degraus no deserto; o topo dourado é o mais disputado.', tags: ['Rei da Ilha', 'Degraus', 'Deserto'] },
 };
+
+// mapas de cada modo: o Rei da Ilha tem os dele (e só eles)
+export function mapIdsFor(mode) {
+  return Object.keys(mode === 'rei' ? HILL_MAPS : MAPS);
+}
 
 export class MapPicker {
   constructor(root, { onContinue }) {
@@ -31,6 +38,8 @@ export class MapPicker {
     this.previews = new Map();   // id -> { renderer }
     this.frame = null;
     this.build();
+    this.root.querySelector('.map-prev').addEventListener('click', () => this.go(this.index - 1));
+    this.root.querySelector('.map-next').addEventListener('click', () => this.go(this.index + 1));
     window.addEventListener('keydown', (e) => {
       if (!this.root.offsetParent) return;
       if (e.code === 'ArrowRight') this.go(this.index + 1);
@@ -49,7 +58,7 @@ export class MapPicker {
     const track = this.root.querySelector('.map-track');
     track.innerHTML = '';
     this.cards = this.ids.map((id, i) => {
-      const map = MAPS[id];
+      const map = id === RANDOM_MAP ? null : getMap(id);
       const info = INFO[id] ?? { text: '', tags: [] };
       const card = document.createElement('button');
       card.type = 'button';
@@ -73,13 +82,20 @@ export class MapPicker {
     this.dots = this.ids.map((id, i) => {
       const d = document.createElement('button');
       d.type = 'button';
-      d.setAttribute('aria-label', id === RANDOM_MAP ? 'Aleatório' : MAPS[id].name);
+      d.setAttribute('aria-label', id === RANDOM_MAP ? 'Aleatório' : getMap(id).name);
       d.addEventListener('click', () => this.go(i));
       dots.appendChild(d);
       return d;
     });
-    this.root.querySelector('.map-prev').addEventListener('click', () => this.go(this.index - 1));
-    this.root.querySelector('.map-next').addEventListener('click', () => this.go(this.index + 1));
+  }
+
+  // troca a lista de mapas (ex.: Rei da Ilha) e monta os cartões de novo
+  setMaps(ids) {
+    const next = [RANDOM_MAP, ...ids];
+    if (next.join() === this.ids.join()) return;
+    this.ids = next;
+    this.previews.clear();
+    this.build();
   }
 
   open(current) {
@@ -162,7 +178,6 @@ export class MapPicker {
 }
 
 // sorteia um mapa de verdade
-export function pickRandomMap(rng = Math.random) {
-  const ids = Object.keys(MAPS);
+export function pickRandomMap(rng = Math.random, ids = Object.keys(MAPS)) {
   return ids[Math.floor(rng() * ids.length)];
 }

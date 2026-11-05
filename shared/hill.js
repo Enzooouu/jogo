@@ -130,6 +130,14 @@ export class KingOfHill {
 // Lugares possíveis: em cima dos blocos sólidos largos, longe de piscinas e
 // espinhos e sem nada em cima.
 function findSpots(game) {
+  // mapa do Rei da Ilha: os lugares já vêm escolhidos à mão
+  if (game.map.hillSpots) {
+    return game.map.hillSpots.map((s) => {
+      if (s.plat === undefined) return { x: s.x, y: s.y };
+      const pl = game.platforms[s.plat];
+      return { x: Math.round(pl.x + pl.w / 2), y: pl.y, plat: s.plat, ox: Math.round(pl.w / 2) };
+    });
+  }
   const solids = game.solidsNow();
   const hazards = game.hazardsNow();
   const spots = [];
