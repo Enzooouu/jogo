@@ -603,33 +603,125 @@ function keep(ctx, floor, rand) {
   throne(ctx, cx, floor.y - 2);
 }
 
-// torre afastada: vai até embaixo, com ameias e janela acesa
+// Torre afastada (dá para pisar no alto): grossa, com cantoneiras de pedra
+// clara, um parapeito com mísulas logo abaixo do topo, janela grande em arco
+// com luz, seteiras, um estandarte comprido, hera subindo e uma tocha.
+// As ameias ficam só do lado de fora, para não atrapalhar quem está em cima.
 function farTower(ctx, s, rand, side) {
-  stoneFace(ctx, s.x, s.y, s.w, 900, rand, 42, 26);
-  const cx = s.x + s.w / 2;
+  const x = s.x;
+  const w = s.w;
+  const top = s.y;
+  const cx = x + w / 2;
+  // corpo da torre (vai até embaixo), um pouco mais largo na base
+  ctx.save();
+  ctx.beginPath();
+  ctx.moveTo(x, top); ctx.lineTo(x + w, top); ctx.lineTo(x + w + 14, top + 900); ctx.lineTo(x - 14, top + 900); ctx.closePath();
+  ctx.clip();
+  stoneFace(ctx, x - 14, top, w + 28, 900, rand, 50, 28);
+  // luz do lado de dentro (virado para o castelo) e sombra do lado de fora
+  const lit = ctx.createLinearGradient(x, 0, x + w, 0);
+  lit.addColorStop(0, side < 0 ? 'rgba(20,10,30,0.35)' : 'rgba(255,200,150,0.12)');
+  lit.addColorStop(1, side < 0 ? 'rgba(255,200,150,0.12)' : 'rgba(20,10,30,0.35)');
+  ctx.fillStyle = lit;
+  ctx.fillRect(x - 14, top, w + 28, 900);
+  // cantoneiras: blocos claros alternados nas quinas
+  for (let y = top + 30, k = 0; y < top + 700; y += 28, k++) {
+    for (const qx of [x - 14 + (y - top) / 900 * 0, x + w - 26]) {
+      const wq = k % 2 ? 26 : 18;
+      const bx = qx === x - 14 ? x + (y - top) * -0.0155 : x + w + (y - top) * 0.0155 - wq;
+      ctx.fillStyle = STONE.top;
+      ctx.fillRect(bx, y, wq, 24);
+      ctx.strokeStyle = 'rgba(40,24,20,0.5)';
+      ctx.lineWidth = 1.2;
+      ctx.strokeRect(bx, y, wq, 24);
+    }
+  }
+  ctx.restore();
+  ctx.strokeStyle = INK;
+  ctx.lineWidth = 3;
+  ctx.beginPath(); ctx.moveTo(x, top); ctx.lineTo(x - 14, top + 900); ctx.moveTo(x + w, top); ctx.lineTo(x + w + 14, top + 900); ctx.stroke();
+  // parapeito com mísulas logo abaixo do topo
+  ctx.fillStyle = STONE.light;
+  ctx.fillRect(x - 4, top + 6, w + 8, 18);
+  ctx.strokeStyle = INK;
+  ctx.lineWidth = 2.5;
+  ctx.strokeRect(x - 4, top + 6, w + 8, 18);
+  for (let mx = x - 4; mx < x + w + 4; mx += 22) {
+    ctx.fillStyle = STONE.mid;
+    ctx.beginPath(); ctx.moveTo(mx, top + 24); ctx.lineTo(mx + 14, top + 24); ctx.lineTo(mx + 10, top + 36); ctx.lineTo(mx + 4, top + 36); ctx.closePath();
+    ctx.fill(); ctx.lineWidth = 1.5; ctx.stroke();
+  }
+  stoneLip(ctx, x, top, w);
+  // ameias só do lado de fora
+  const ox = side < 0 ? x - 4 : x + w - 18;
+  for (let k = 0; k < 2; k++) {
+    const my = top - 22 - k * 0;
+    ctx.fillStyle = STONE.light;
+    ctx.fillRect(ox + (side < 0 ? 0 : 0), my, 22, 22);
+    ctx.strokeStyle = INK; ctx.lineWidth = 2; ctx.strokeRect(ox, my, 22, 22);
+    ctx.fillStyle = 'rgba(255,245,220,0.5)';
+    ctx.fillRect(ox, my, 22, 3);
+  }
+  // janela grande em arco com luz e grade
+  const glow = ctx.createRadialGradient(cx, top + 92, 4, cx, top + 92, 60);
+  glow.addColorStop(0, 'rgba(255,190,90,0.45)');
+  glow.addColorStop(1, 'rgba(255,190,90,0)');
+  ctx.fillStyle = glow;
+  ctx.fillRect(cx - 60, top + 32, 120, 120);
   ctx.fillStyle = '#ffc66a';
-  roundRect(ctx, cx - 9, s.y + 40, 18, 34, 9);
+  roundRect(ctx, cx - 18, top + 62, 36, 58, 18);
+  ctx.fill();
+  ctx.strokeStyle = INK; ctx.lineWidth = 3; ctx.stroke();
+  ctx.strokeStyle = '#6a4a2a';
+  ctx.lineWidth = 2;
+  ctx.beginPath(); ctx.moveTo(cx, top + 64); ctx.lineTo(cx, top + 120); ctx.moveTo(cx - 18, top + 92); ctx.lineTo(cx + 18, top + 92); ctx.stroke();
+  ctx.fillStyle = STONE.top;
+  ctx.fillRect(cx - 24, top + 118, 48, 7);
+  ctx.strokeStyle = INK; ctx.lineWidth = 2; ctx.strokeRect(cx - 24, top + 118, 48, 7);
+  // seteiras
+  ctx.fillStyle = '#1e1218';
+  for (const dx of [-52, 52]) { roundRect(ctx, cx + dx - 4, top + 150, 8, 34, 4); ctx.fill(); }
+  // estandarte comprido com coroa, do lado de dentro
+  const bx = side < 0 ? x + w - 40 : x + 40;
+  ctx.fillStyle = RED;
+  ctx.beginPath();
+  ctx.moveTo(bx - 18, top + 40); ctx.lineTo(bx + 18, top + 40); ctx.lineTo(bx + 18, top + 220); ctx.lineTo(bx, top + 200); ctx.lineTo(bx - 18, top + 220);
+  ctx.closePath();
   ctx.fill();
   ctx.strokeStyle = INK; ctx.lineWidth = 2; ctx.stroke();
-  ctx.fillStyle = '#1e1218';
-  roundRect(ctx, cx - 4, s.y + 120, 8, 30, 4);
-  ctx.fill();
-  // escudo com coroa
+  ctx.fillStyle = GOLD;
+  ctx.fillRect(bx - 18, top + 40, 36, 5);
+  crownShape(ctx, bx, top + 100, 0.6, GOLD);
+  // escudo azul com coroa
   ctx.fillStyle = '#2f5fb8';
   ctx.strokeStyle = INK;
-  ctx.lineWidth = 2;
+  ctx.lineWidth = 2.5;
+  const sx = side < 0 ? x + 54 : x + w - 54;
   ctx.beginPath();
-  ctx.moveTo(cx - 22, s.y + 190); ctx.lineTo(cx + 22, s.y + 190); ctx.lineTo(cx + 22, s.y + 216);
-  ctx.quadraticCurveTo(cx, s.y + 242, cx - 22, s.y + 216);
+  ctx.moveTo(sx - 26, top + 240); ctx.lineTo(sx + 26, top + 240); ctx.lineTo(sx + 26, top + 270);
+  ctx.quadraticCurveTo(sx, top + 300, sx - 26, top + 270);
   ctx.closePath();
   ctx.fill(); ctx.stroke();
-  crownShape(ctx, cx, s.y + 217, 0.6, GOLD);
-  stoneLip(ctx, s.x, s.y, s.w);
-  // ameias só do lado de fora (não atrapalham quem está em cima)
-  ctx.fillStyle = STONE.light;
-  const ox = side < 0 ? s.x : s.x + s.w - 18;
-  ctx.fillRect(ox, s.y - 20, 18, 20);
-  ctx.strokeStyle = INK; ctx.lineWidth = 2; ctx.strokeRect(ox, s.y - 20, 18, 20);
+  ctx.fillStyle = 'rgba(255,255,255,0.25)';
+  ctx.fillRect(sx - 22, top + 244, 10, 24);
+  crownShape(ctx, sx, top + 272, 0.75, GOLD);
+  // hera subindo pelo lado de fora
+  const ivyX = side < 0 ? x + 6 : x + w - 6;
+  ctx.strokeStyle = '#3f6f2c';
+  ctx.lineWidth = 2;
+  ctx.beginPath();
+  ctx.moveTo(ivyX, top + 420);
+  for (let y = top + 420; y > top + 160; y -= 12) ctx.lineTo(ivyX + Math.sin(y * 0.08) * 6, y);
+  ctx.stroke();
+  for (let y = top + 410; y > top + 170; y -= 16) {
+    ctx.fillStyle = (y / 16) % 2 < 1 ? '#5f9f3a' : '#4a8a2e';
+    ctx.beginPath(); ctx.ellipse(ivyX + Math.sin(y * 0.08) * 6 + ((y / 16) % 2 < 1 ? 5 : -5), y, 4.5, 3, 0.5, 0, Math.PI * 2); ctx.fill();
+  }
+  // suporte de tocha do lado de dentro
+  const tx = side < 0 ? x + w - 18 : x + 18;
+  ctx.fillStyle = '#3a2a22';
+  ctx.fillRect(tx - 3, top + 262, 6, 22);
+  ctx.fillRect(tx - 9, top + 258, 18, 6);
 }
 
 function drawTerrain(ctx, map, rand) {
@@ -741,16 +833,18 @@ export const CASTELO_ART = {
     const [yard] = map.solids;
     const [towerL, towerR] = map.castleTowers;
     const floor = map.platforms[2];
-    flag(ctx, towerL.x + 10, towerL.y - 20, time, 1);
-    flag(ctx, towerR.x + towerR.w - 10, towerR.y - 20, time + 1, -1);
+    flag(ctx, towerL.x + 2, towerL.y - 22, time, 1);
+    flag(ctx, towerR.x + towerR.w - 2, towerR.y - 22, time + 1, -1);
     // bandeira no alto do telhado da sala do trono
     flag(ctx, floor.x + floor.w / 2, 70 - 16 - 196, time + 0.5, 1);
     torchXs(map).forEach((x, i) => torchFire(ctx, x, yard.y + 36, time + i));
+    torchFire(ctx, towerL.x + towerL.w - 18, towerL.y + 258, time + 0.7);
+    torchFire(ctx, towerR.x + 18, towerR.y + 258, time + 1.9);
     // braseiros dos lados do trono
     for (const [k, x] of [[0, floor.x + 40], [1, floor.x + floor.w - 40]]) torchFire(ctx, x, floor.y - 2, time + k * 1.3);
   },
   // pedaço do mundo guardado em imagem (as torres ficam fora da área padrão)
-  terrainRect: { x: -520, y: -420, w: 2320, h: 1600 },
+  terrainRect: { x: -420, y: -420, w: 2120, h: 1600 },
   haze: ['rgba(255,170,120,0)', 'rgba(255,150,110,0.22)'],
   vignette: 0.4,
 };

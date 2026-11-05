@@ -33,7 +33,7 @@ export function rampSteps(x0, y0, x1, y1, bottom, stepH = 4) {
 export const HILL_MAPS = {
   // Castelo ao entardecer: pátio largo e liso dos lados (dá para cair), a
   // sala do trono lá no alto (onde fica a área da coroa), duas pontes de
-  // madeira penduradas nos lados e as torres bem longe, quase na borda.
+  // madeira penduradas nos lados e as torres bem longe (dá para pisar nelas).
   castelo: {
     id: 'castelo',
     name: 'Castelo do Rei',
@@ -41,12 +41,15 @@ export const HILL_MAPS = {
     hillOnly: true,
     width: 1280,
     height: 720,
-    blast: BLAST,
+    // a linha de eliminação dos lados fica depois das torres
+    blast: { left: -480, right: 1760, top: -560, bottom: 1000 },
     solids: [
       { x: 150, y: 560, w: 980, h: 200 },   // pátio
+      { x: -345, y: 330, w: 200, h: 430 },  // torre da esquerda (bem longe, dá para pisar)
+      { x: 1425, y: 330, w: 200, h: 430 },  // torre da direita (bem longe, dá para pisar)
     ],
-    // torres bem longe, depois da borda (só cenário: não dá para pisar)
-    castleTowers: [{ x: -440, y: 300, w: 140 }, { x: 1580, y: 300, w: 140 }],
+    // torres desenhadas (as mesmas dos blocos acima)
+    castleTowers: [{ x: -345, y: 330, w: 200 }, { x: 1425, y: 330, w: 200 }],
     platforms: [
       { x: 40, y: 345, w: 250 },            // ponte de madeira da esquerda
       { x: 990, y: 345, w: 250 },           // ponte de madeira da direita
