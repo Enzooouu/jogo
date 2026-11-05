@@ -31,8 +31,9 @@ export function rampSteps(x0, y0, x1, y1, bottom, stepH = 4) {
 }
 
 export const HILL_MAPS = {
-  // Pátio de um castelo ao entardecer: duas torres com passarelas nas
-  // ameias, o trono no meio do pátio e a sacada lá no alto.
+  // Castelo ao entardecer: pátio largo e liso dos lados (dá para cair), a
+  // sala do trono lá no alto (onde fica a área da coroa) e duas torres bem
+  // afastadas, uma em cada ponta, com um vão até o pátio.
   castelo: {
     id: 'castelo',
     name: 'Castelo do Rei',
@@ -43,23 +44,22 @@ export const HILL_MAPS = {
     blast: BLAST,
     solids: [
       { x: 150, y: 560, w: 980, h: 200 },   // pátio
-      { x: 150, y: 410, w: 170, h: 150 },   // torre da esquerda
-      { x: 960, y: 410, w: 170, h: 150 },   // torre da direita
-      { x: 550, y: 530, w: 180, h: 30 },    // degrau do trono
+      { x: -90, y: 330, w: 150, h: 430 },   // torre da esquerda (longe)
+      { x: 1220, y: 330, w: 150, h: 430 },  // torre da direita (longe)
     ],
     platforms: [
-      { x: 320, y: 410, w: 190 },           // passarela da esquerda
-      { x: 770, y: 410, w: 190 },           // passarela da direita
-      { x: 545, y: 285, w: 190 },           // sacada do rei
+      { x: 290, y: 410, w: 200 },           // andaime da esquerda
+      { x: 790, y: 410, w: 200 },           // andaime da direita
+      { x: 450, y: 255, w: 380 },           // sala do trono
     ],
     hazards: [],
-    // a área do rei fica sempre no trono (não muda de lugar)
-    hillSpots: [{ x: 640, y: 530 }],
+    // a área do rei fica sempre na sala do trono, lá em cima
+    hillSpots: [{ plat: 2 }],
     spawns: [
       { x: 380, y: 560 }, { x: 900, y: 560 }, { x: 460, y: 560 }, { x: 820, y: 560 },
-      { x: 300, y: 560 }, { x: 980, y: 560 }, { x: 240, y: 410 }, { x: 1040, y: 410 },
+      { x: 300, y: 560 }, { x: 980, y: 560 }, { x: 240, y: 560 }, { x: 1040, y: 560 },
     ],
-    respawns: [{ x: 640, y: 150 }, { x: 480, y: 150 }, { x: 800, y: 150 }],
+    respawns: [{ x: 640, y: 120 }, { x: 420, y: 150 }, { x: 860, y: 150 }],
     itemSpawn: { minX: 220, maxX: 1060, y: -40 },
     decor: [],
     theme: { skyTop: '#2a3a7a', skyBottom: '#ffb46a', haze: '#ffd2a0' },
