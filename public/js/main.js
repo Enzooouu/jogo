@@ -564,6 +564,53 @@ const TRAINING_WEAPONS = { Digit1: 'espada', Digit2: 'cajado', Digit3: 'lanca', 
 const COMBO_GAP = 1;  // segundos sem acertar que encerram o combo
 let training = null;
 
+// botões de trocar de personagem no painel do treino
+const TRAINING_ELEMENTS = () => Object.values(ELEMENTS).filter((e) => e.enabled).map((e) => e.id);
+
+function buildElementButtons() {
+  const row = $('#th-el .th-el-row');
+  row.innerHTML = '';
+  for (const id of TRAINING_ELEMENTS()) {
+    const el = ELEMENTS[id];
+    const b = document.createElement('button');
+    b.type = 'button';
+    b.className = 'th-el-btn';
+    b.dataset.element = id;
+    b.title = el.name;
+    b.setAttribute('aria-label', el.name);
+    b.style.setProperty('--c', el.color);
+    b.innerHTML = '<canvas aria-hidden="true"></canvas>';
+    b.addEventListener('click', (e) => {
+      swapTrainingElement(id);
+      e.currentTarget.blur();
+    });
+    row.appendChild(b);
+  }
+  requestAnimationFrame(() => {
+    for (const b of row.querySelectorAll('.th-el-btn')) {
+      const { ctx, w, h } = fitCanvas(b.querySelector('canvas'));
+      drawPortrait(ctx, b.dataset.element, w / 2, h - 3, h / 78, { facing: 1 });
+    }
+  });
+}
+
+function markTrainingElement() {
+  const me = training?.runner.game.playerById(1);
+  for (const b of document.querySelectorAll('#th-el .th-el-btn')) b.classList.toggle('on', b.dataset.element === me?.element);
+}
+
+function swapTrainingElement(id) {
+  if (!training) return;
+  if (training.runner.game.setElement(1, id)) markTrainingElement();
+}
+
+function nextTrainingElement() {
+  const me = training?.runner.game.playerById(1);
+  if (!me) return;
+  const list = TRAINING_ELEMENTS();
+  swapTrainingElement(list[(list.indexOf(me.element) + 1) % list.length]);
+}
+
 function startTraining(runner) {
   const g = runner.game;
   // cada um reaparece onde começou
@@ -574,6 +621,8 @@ function startTraining(runner) {
   $('#quit-hint').textContent = 'O treino não conta nas estatísticas.';
   updateTrainingHud();
   updateDummyButton();
+  buildElementButtons();
+  markTrainingElement();
   runner.onEvents = (events) => {
     for (const e of events) {
       if (e.type !== 'hit' || e.target !== 2) continue;
@@ -669,6 +718,9 @@ window.addEventListener('keydown', (e) => {
   } else if (e.code === 'KeyT') {
     e.preventDefault();
     toggleDummy();
+  } else if (e.code === 'KeyC') {
+    e.preventDefault();
+    nextTrainingElement();
   } else if (TRAINING_WEAPONS[e.code]) {
     e.preventDefault();
     const g = training.runner.game;

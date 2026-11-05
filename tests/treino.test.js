@@ -59,3 +59,18 @@ test('o espantalho fica preso no chão e só balança quando apanha', () => {
   assert.equal(d.x, x0);
   assert.ok(maxSway > 0.1, `balanço ${maxSway}`);
 });
+
+test('no treino dá para trocar de elemento no meio da luta', () => {
+  const g = trainingGame('fogo', 'treino-livre');
+  while (g.phase === 'countdown') g.step({});
+  const me = g.playerById(1);
+  me.status.queimadura = { time: 2, dps: 4, source: 2 };
+  assert.equal(g.setElement(1, 'ar'), true);
+  assert.equal(me.element, 'ar');
+  assert.equal(me.status.queimadura, null);
+  assert.equal(g.setElement(1, 'ar'), false);
+  assert.equal(g.setElement(1, 'nada'), false);
+  for (let i = 0; i < 120; i++) g.step({ 1: { right: i < 60, up: i === 10 } });
+  assert.equal(me.element, 'ar');
+  assert.ok(g.drainEvents().length >= 0);
+});

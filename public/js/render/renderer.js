@@ -291,6 +291,14 @@ export class Renderer {
         case 'respawn':
           P.add({ type: 'ring', x: e.x, y: e.y - 33, size: 50, grow: -60, life: 0.6, color: '#ffffff' });
           break;
+        // treino livre: trocou de elemento
+        case 'elementSwap': {
+          const el = ELEMENTS[e.element];
+          P.add({ type: 'ring', x: e.x, y: e.y, size: 12, grow: 260, life: 0.45, color: el.light ?? el.color });
+          P.burst(e.x, e.y, { type: 'spark', count: 22, speed: 420, life: 0.5, size: 3, color: el.color, drag: 3 });
+          P.add({ type: 'text', text: el.name.toUpperCase(), x: e.x, y: e.y - 60, vy: -30, life: 0.9, size: 26, color: el.light ?? '#ffffff' });
+          break;
+        }
         case 'matchEnd': {
           const winner = e.winnerTeam !== null ? g.players.find((p) => p.team === e.winnerTeam) : null;
           if (winner) {

@@ -1197,6 +1197,20 @@ export class Game {
     this.projectiles = keep;
   }
 
+  // Treino livre: troca o elemento do jogador no meio da luta (os números
+  // do elemento são lidos na hora, então só precisa ajustar o que fica
+  // guardado: dashes no ar e efeitos que o novo elemento não sofre)
+  setElement(id, element) {
+    const p = this.playerById(id);
+    if (!p || !ELEMENTS[element] || p.element === element) return false;
+    p.element = element;
+    p.airDashes = statsOf(p).airDashes;
+    p.status = { queimadura: null, encharcado: null, atordoado: null };
+    p.inHazard = null;
+    this.emit('elementSwap', { id, element, x: p.x + p.w / 2, y: p.y + p.h / 2 });
+    return true;
+  }
+
   // Treino livre: cria uma arma caindo em (x, y), pronta para pegar
   spawnWeaponAt(weapon, x, y) {
     const item = {
