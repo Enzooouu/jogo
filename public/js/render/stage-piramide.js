@@ -91,44 +91,279 @@ function skyAnimated(ctx, t) {
 
 // ================================================================ longe
 
-function dune(ctx, base, amp, color, phase, len = 520) {
+// altura de uma duna em x (a mesma conta serve para desenhar e para a
+// caravana andar em cima dela)
+function duneY(x, base, amp, phase, len) {
+  return base - amp * (0.6 + 0.4 * Math.sin(x / len + phase)) - amp * 0.3 * Math.sin(x / (len * 0.43) + phase * 2);
+}
+
+// duna com o lado do sol mais claro e a crista brilhando
+function dune(ctx, base, amp, color, phase, len = 520, shade = 'rgba(150,100,40,0.18)') {
+  const pts = [];
+  for (let x = -800; x <= 2100; x += 16) pts.push([x, duneY(x, base, amp, phase, len)]);
   ctx.fillStyle = color;
   ctx.beginPath();
   ctx.moveTo(-800, 1500);
-  for (let x = -800; x <= 2100; x += 20) {
-    ctx.lineTo(x, base - amp * (0.6 + 0.4 * Math.sin(x / len + phase)) - amp * 0.3 * Math.sin(x / (len * 0.43) + phase * 2));
-  }
+  for (const [x, y] of pts) ctx.lineTo(x, y);
   ctx.lineTo(2100, 1500);
   ctx.closePath();
   ctx.fill();
+  // sombra do lado contrário ao sol (encostas que descem para a direita)
+  ctx.fillStyle = shade;
+  for (let i = 1; i < pts.length; i++) {
+    const [x0, y0] = pts[i - 1];
+    const [x1, y1] = pts[i];
+    if (y1 <= y0) continue;
+    ctx.beginPath();
+    ctx.moveTo(x0, y0);
+    ctx.lineTo(x1, y1);
+    ctx.lineTo(x1, y1 + 60);
+    ctx.lineTo(x0, y0 + 60);
+    ctx.closePath();
+    ctx.fill();
+  }
+  // crista clara
+  ctx.strokeStyle = 'rgba(255,248,225,0.55)';
+  ctx.lineWidth = 1.5;
+  ctx.beginPath();
+  pts.forEach(([x, y], i) => (i ? ctx.lineTo(x, y) : ctx.moveTo(x, y)));
+  ctx.stroke();
 }
 
-function smallPyramid(ctx, x, base, h, light, dark) {
-  ctx.fillStyle = light;
-  ctx.beginPath();
-  ctx.moveTo(x - h, base);
-  ctx.lineTo(x, base - h);
-  ctx.lineTo(x + h * 0.25, base);
-  ctx.closePath();
-  ctx.fill();
+// pirâmide lisa com o sol batendo do lado direito (o sol fica à direita)
+function bigPyramid(ctx, x, base, h, tone = 0) {
+  const lit = tone ? '#efd29a' : '#f2d8a2';
+  const dark = tone ? '#c09a62' : '#c8a26a';
   ctx.fillStyle = dark;
   ctx.beginPath();
-  ctx.moveTo(x + h * 0.25, base);
+  ctx.moveTo(x - h * 1.05, base);
   ctx.lineTo(x, base - h);
-  ctx.lineTo(x + h, base);
+  ctx.lineTo(x + h * 0.15, base);
   ctx.closePath();
   ctx.fill();
+  ctx.fillStyle = lit;
+  ctx.beginPath();
+  ctx.moveTo(x + h * 0.15, base);
+  ctx.lineTo(x, base - h);
+  ctx.lineTo(x + h * 1.05, base);
+  ctx.closePath();
+  ctx.fill();
+  // linhas das fileiras de blocos
+  ctx.strokeStyle = 'rgba(120,85,40,0.22)';
+  ctx.lineWidth = 1;
+  for (let k = 0.12; k < 1; k += 0.08) {
+    const y = base - h * k;
+    const half = h * 1.05 * (1 - k);
+    ctx.beginPath();
+    ctx.moveTo(x - half, y);
+    ctx.lineTo(x + half, y);
+    ctx.stroke();
+  }
+  // pontinha ainda com o revestimento liso
+  ctx.fillStyle = 'rgba(255,250,235,0.6)';
+  ctx.beginPath();
+  ctx.moveTo(x - h * 0.13, base - h * 0.87);
+  ctx.lineTo(x, base - h);
+  ctx.lineTo(x + h * 0.13, base - h * 0.87);
+  ctx.closePath();
+  ctx.fill();
+}
+
+// esfinge deitada olhando para a esquerda (corpo de leão, cabeça com o lenço listrado)
+function sphinx(ctx, x, base, k) {
+  ctx.save();
+  ctx.translate(x, base);
+  ctx.scale(k, k);
+  const body = '#d9b57a';
+  const shadow = '#b48c52';
+  // pedestal de areia
+  ctx.fillStyle = 'rgba(170,120,60,0.35)';
+  ctx.beginPath();
+  ctx.ellipse(0, 2, 150, 10, 0, 0, Math.PI * 2);
+  ctx.fill();
+  // corpo
+  ctx.fillStyle = body;
+  ctx.beginPath();
+  ctx.moveTo(-120, 0);
+  ctx.lineTo(-120, -22);
+  ctx.quadraticCurveTo(-60, -30, -20, -44);
+  ctx.quadraticCurveTo(60, -58, 110, -42);
+  ctx.quadraticCurveTo(140, -34, 140, 0);
+  ctx.closePath();
+  ctx.fill();
+  // sombra da barriga e da anca
+  ctx.fillStyle = shadow;
+  ctx.beginPath();
+  ctx.moveTo(-60, 0);
+  ctx.quadraticCurveTo(20, -14, 140, -6);
+  ctx.lineTo(140, 0);
+  ctx.closePath();
+  ctx.fill();
+  ctx.beginPath();
+  ctx.ellipse(104, -22, 30, 20, 0, 0, Math.PI * 2);
+  ctx.fill();
+  // patas da frente esticadas
+  ctx.fillStyle = body;
+  ctx.fillRect(-170, -14, 70, 14);
+  ctx.fillRect(-176, -8, 12, 8);
+  ctx.fillStyle = shadow;
+  ctx.fillRect(-170, -4, 70, 4);
+  // peito e pescoço
+  ctx.fillStyle = body;
+  ctx.beginPath();
+  ctx.moveTo(-110, -14);
+  ctx.lineTo(-104, -62);
+  ctx.lineTo(-62, -64);
+  ctx.lineTo(-56, -20);
+  ctx.closePath();
+  ctx.fill();
+  // lenço (nemes) com listras
+  ctx.fillStyle = '#e6c48a';
+  ctx.beginPath();
+  ctx.moveTo(-118, -48);
+  ctx.quadraticCurveTo(-116, -104, -82, -108);
+  ctx.quadraticCurveTo(-48, -104, -48, -48);
+  ctx.lineTo(-62, -44);
+  ctx.lineTo(-66, -70);
+  ctx.lineTo(-100, -70);
+  ctx.lineTo(-104, -44);
+  ctx.closePath();
+  ctx.fill();
+  ctx.strokeStyle = 'rgba(60,90,140,0.55)';
+  ctx.lineWidth = 3;
+  for (let i = 0; i < 4; i++) {
+    ctx.beginPath();
+    ctx.moveTo(-114 + i * 2, -50 - i * 12);
+    ctx.lineTo(-104 + i * 2, -50 - i * 12);
+    ctx.moveTo(-60 - i * 2, -50 - i * 12);
+    ctx.lineTo(-52 - i * 2, -50 - i * 12);
+    ctx.stroke();
+  }
+  // rosto
+  ctx.fillStyle = '#d2a868';
+  ctx.beginPath();
+  ctx.moveTo(-100, -96);
+  ctx.lineTo(-64, -96);
+  ctx.lineTo(-66, -66);
+  ctx.quadraticCurveTo(-82, -58, -98, -66);
+  ctx.closePath();
+  ctx.fill();
+  ctx.fillStyle = 'rgba(70,45,20,0.75)';
+  ctx.fillRect(-94, -86, 9, 3);
+  ctx.fillRect(-78, -86, 9, 3);
+  ctx.fillRect(-84, -80, 3, 8);
+  ctx.fillRect(-90, -70, 14, 2);
+  // barbinha quebrada
+  ctx.fillStyle = '#c49a5a';
+  ctx.fillRect(-86, -60, 8, 8);
+  // rachaduras do tempo
+  ctx.strokeStyle = 'rgba(110,75,35,0.4)';
+  ctx.lineWidth = 1.5;
+  ctx.beginPath();
+  ctx.moveTo(10, -50);
+  ctx.lineTo(20, -36);
+  ctx.lineTo(14, -26);
+  ctx.moveTo(70, -52);
+  ctx.lineTo(64, -40);
+  ctx.stroke();
+  ctx.restore();
 }
 
 function drawFar(ctx) {
-  dune(ctx, 520, 60, '#e8c992', 0.4, 600);
-  smallPyramid(ctx, 140, 478, 90, '#e6c48a', '#c9a46a');
-  smallPyramid(ctx, 300, 486, 56, '#e6c48a', '#c9a46a');
-  smallPyramid(ctx, 1160, 474, 110, '#e6c48a', '#c9a46a');
-  dune(ctx, 560, 50, '#dfb978', 1.7, 420);
+  // névoa quente no horizonte
+  const haze = ctx.createLinearGradient(0, 400, 0, 520);
+  haze.addColorStop(0, 'rgba(255,240,205,0)');
+  haze.addColorStop(1, 'rgba(255,236,196,0.55)');
+  ctx.fillStyle = haze;
+  ctx.fillRect(-800, 400, 2900, 120);
+  // pirâmides bem longe, atrás da duna da caravana
+  bigPyramid(ctx, 1120, 470, 170);
+  bigPyramid(ctx, 1300, 474, 110, 1);
+  bigPyramid(ctx, 330, 470, 120, 1);
+  bigPyramid(ctx, 150, 474, 80);
+  // duna do fundo (a caravana anda em cima dela)
+  dune(ctx, CARAVAN.base, CARAVAN.amp, '#efd8a8', CARAVAN.phase, CARAVAN.len, 'rgba(160,120,60,0.12)');
+  // duna da frente com a esfinge deitada, entre a pirâmide e o bloco da direita
+  dune(ctx, 548, 40, '#e8c992', 0.4, 600, 'rgba(160,110,50,0.14)');
+  sphinx(ctx, 985, 524, 0.74);
 }
 
-function farAnimated() {}
+// caravana de camelos andando devagar por cima da duna do fundo
+const CARAVAN = { base: 478, amp: 30, phase: 1.3, len: 640, speed: 18 };
+function camel(ctx, x, y, step, rider) {
+  ctx.save();
+  ctx.translate(x, y);
+  const legs = [-9, -4, 6, 11];
+  ctx.strokeStyle = '#6a4a2a';
+  ctx.lineWidth = 2;
+  legs.forEach((lx, i) => {
+    const swing = Math.sin(step + i * 1.6) * 2.5;
+    ctx.beginPath();
+    ctx.moveTo(lx, -12);
+    ctx.lineTo(lx + swing, 0);
+    ctx.stroke();
+  });
+  ctx.fillStyle = '#8a6238';
+  ctx.beginPath();
+  ctx.ellipse(1, -15, 14, 6, 0, 0, Math.PI * 2);
+  ctx.fill();
+  // corcova
+  ctx.beginPath();
+  ctx.ellipse(0, -20, 7, 6, 0, Math.PI, 0);
+  ctx.fill();
+  // pescoço e cabeça (olhando para a direita, o lado para onde anda)
+  ctx.strokeStyle = '#8a6238';
+  ctx.lineWidth = 4;
+  ctx.beginPath();
+  ctx.moveTo(12, -16);
+  ctx.quadraticCurveTo(20, -18, 19, -26);
+  ctx.stroke();
+  ctx.fillRect(18, -29, 7, 4);
+  // carga ou pessoa montada
+  if (rider) {
+    ctx.fillStyle = rider;
+    ctx.fillRect(-3, -32, 6, 9);
+    ctx.beginPath();
+    ctx.arc(0, -34, 3.2, 0, Math.PI * 2);
+    ctx.fill();
+  } else {
+    ctx.fillStyle = '#b84a3a';
+    ctx.fillRect(-8, -26, 16, 6);
+    ctx.fillStyle = '#e0c070';
+    ctx.fillRect(-8, -24, 16, 1.5);
+  }
+  ctx.restore();
+}
+
+function farAnimated(ctx, t) {
+  const C = CARAVAN;
+  // a fila inteira atravessa de um lado ao outro e recomeça
+  const lead = ((t * C.speed) % 1900) - 300;
+  const riders = ['#f2ece0', null, '#3a5a9a', null, '#f2ece0', null];
+  riders.forEach((rider, i) => {
+    const x = lead - i * 34;
+    const y = duneY(x, C.base, C.amp, C.phase, C.len) + 1;
+    camel(ctx, x, y, t * 5 + i, rider);
+  });
+  // um homem a pé puxando o primeiro camelo
+  const x = lead + 24;
+  const y = duneY(x, C.base, C.amp, C.phase, C.len) + 1;
+  ctx.fillStyle = '#f2ece0';
+  ctx.fillRect(x - 2, y - 13, 5, 10);
+  ctx.beginPath();
+  ctx.arc(x + 0.5, y - 15, 2.6, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.strokeStyle = '#6a4a2a';
+  ctx.lineWidth = 1.5;
+  ctx.beginPath();
+  ctx.moveTo(x - 2, y - 3);
+  ctx.lineTo(x - 2 + Math.sin(t * 5) * 2, y);
+  ctx.moveTo(x + 2, y - 3);
+  ctx.lineTo(x + 2 - Math.sin(t * 5) * 2, y);
+  ctx.moveTo(x - 2, y - 10);
+  ctx.lineTo(x - 6, y - 22);
+  ctx.stroke();
+}
 
 // ================================================================ meio
 
@@ -183,7 +418,7 @@ function obelisk(ctx, x, base, h) {
   ctx.closePath();
   ctx.fill();
   ctx.fillStyle = 'rgba(120,80,40,0.35)';
-  ctx.fillRect(x, base - h, 10, h);
+  ctx.fillRect(x - 12, base - h, 10, h);
   ctx.fillStyle = GOLD.mid;
   ctx.beginPath();
   ctx.moveTo(x - 8, base - h);
@@ -191,32 +426,188 @@ function obelisk(ctx, x, base, h) {
   ctx.lineTo(x + 8, base - h);
   ctx.closePath();
   ctx.fill();
+  // hieróglifos riscados
+  ctx.strokeStyle = 'rgba(110,75,35,0.5)';
+  ctx.lineWidth = 1.2;
+  for (let y = base - h + 14; y < base - 10; y += 12) {
+    ctx.beginPath();
+    ctx.moveTo(x - 3, y);
+    ctx.lineTo(x + 4, y);
+    ctx.stroke();
+  }
+}
+
+// casinha de barro com porta, janela e escada no telhado
+function mudHouse(ctx, x, base, w, h, rand) {
+  ctx.fillStyle = rand() < 0.5 ? '#d9b07a' : '#cfa46c';
+  ctx.fillRect(x, base - h, w, h);
+  ctx.fillStyle = 'rgba(255,240,210,0.35)';
+  ctx.fillRect(x + w - 8, base - h, 8, h);
+  ctx.fillStyle = 'rgba(120,80,40,0.3)';
+  ctx.fillRect(x, base - h, w, 4);
+  ctx.fillStyle = '#4a2e18';
+  ctx.beginPath();
+  ctx.moveTo(x + w * 0.3, base);
+  ctx.lineTo(x + w * 0.3, base - h * 0.45);
+  ctx.quadraticCurveTo(x + w * 0.4, base - h * 0.58, x + w * 0.5, base - h * 0.45);
+  ctx.lineTo(x + w * 0.5, base);
+  ctx.closePath();
+  ctx.fill();
+  ctx.fillRect(x + w * 0.66, base - h * 0.72, 8, 8);
+  // toldo listrado em algumas
+  if (rand() < 0.5) {
+    ctx.fillStyle = rand() < 0.5 ? '#3a6ab0' : '#b8483a';
+    ctx.fillRect(x + w * 0.2, base - h * 0.62, w * 0.42, 5);
+  }
+}
+
+// templo com portal (pilone), colunas pintadas e bandeiras
+function temple(ctx, x, base) {
+  const stone = '#e4c690';
+  const shade = '#c39f62';
+  // pilone de dois lados
+  for (const dx of [0, 132]) {
+    ctx.fillStyle = stone;
+    ctx.beginPath();
+    ctx.moveTo(x + dx, base);
+    ctx.lineTo(x + dx + 8, base - 110);
+    ctx.lineTo(x + dx + 62, base - 110);
+    ctx.lineTo(x + dx + 70, base);
+    ctx.closePath();
+    ctx.fill();
+    ctx.fillStyle = shade;
+    ctx.fillRect(x + dx + 8, base - 110, 54, 8);
+    // relevo do faraó
+    ctx.strokeStyle = 'rgba(90,60,30,0.45)';
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.arc(x + dx + 35, base - 70, 9, 0, Math.PI * 2);
+    ctx.moveTo(x + dx + 35, base - 61);
+    ctx.lineTo(x + dx + 35, base - 30);
+    ctx.moveTo(x + dx + 24, base - 48);
+    ctx.lineTo(x + dx + 46, base - 48);
+    ctx.stroke();
+    // mastro com flâmula
+    ctx.strokeStyle = '#7a5530';
+    ctx.beginPath();
+    ctx.moveTo(x + dx + (dx ? 66 : 4), base - 110);
+    ctx.lineTo(x + dx + (dx ? 66 : 4), base - 160);
+    ctx.stroke();
+  }
+  // vão do portal com a porta
+  ctx.fillStyle = shade;
+  ctx.fillRect(x + 70, base - 80, 62, 80);
+  ctx.fillStyle = stone;
+  ctx.fillRect(x + 66, base - 92, 70, 14);
+  ctx.fillStyle = '#3a6ab0';
+  ctx.fillRect(x + 66, base - 92, 70, 4);
+  ctx.fillStyle = '#5a3820';
+  ctx.fillRect(x + 84, base - 56, 34, 56);
+  // disco solar com asas em cima da porta
+  ctx.fillStyle = GOLD.mid;
+  ctx.beginPath();
+  ctx.arc(x + 101, base - 85, 5, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.fillRect(x + 82, base - 86, 38, 2);
+  // colunas na frente
+  for (const cx of [x - 26, x + 216]) {
+    ctx.fillStyle = stone;
+    ctx.fillRect(cx, base - 84, 16, 84);
+    ctx.fillStyle = '#4a9a6a';
+    ctx.beginPath();
+    ctx.moveTo(cx - 6, base - 84);
+    ctx.lineTo(cx + 22, base - 84);
+    ctx.lineTo(cx + 16, base - 96);
+    ctx.lineTo(cx, base - 96);
+    ctx.closePath();
+    ctx.fill();
+    ctx.fillStyle = '#3a6ab0';
+    ctx.fillRect(cx, base - 70, 16, 4);
+    ctx.fillStyle = 'rgba(120,80,40,0.25)';
+    ctx.fillRect(cx, base - 84, 5, 84);
+  }
+}
+
+// coluna quebrada caída
+function brokenColumn(ctx, x, base, h) {
+  ctx.fillStyle = '#e0c08a';
+  ctx.beginPath();
+  ctx.moveTo(x, base);
+  ctx.lineTo(x, base - h);
+  ctx.lineTo(x + 6, base - h - 6);
+  ctx.lineTo(x + 12, base - h + 2);
+  ctx.lineTo(x + 18, base - h - 4);
+  ctx.lineTo(x + 18, base);
+  ctx.closePath();
+  ctx.fill();
+  ctx.fillStyle = 'rgba(120,80,40,0.25)';
+  ctx.fillRect(x, base - h, 6, h);
 }
 
 function drawMid(ctx, map, rand) {
-  dune(ctx, 620, 70, '#e9c47e', 2.6, 380);
-  // oásis à esquerda
+  dune(ctx, 628, 62, '#ebc888', 2.6, 380);
+  // ---- cidade antiga perto do oásis (esquerda)
+  for (const [x, w, h] of [[-190, 46, 40], [-140, 38, 52], [-96, 50, 36], [-240, 40, 34], [196, 34, 44], [236, 44, 30]]) mudHouse(ctx, x, 604, w, h, rand);
+  temple(ctx, -10, 600);
+  // muro baixo da vila
+  ctx.fillStyle = '#d2a86e';
+  ctx.fillRect(-260, 598, 560, 10);
+  // oásis com reflexo
   ctx.fillStyle = '#3aa6c8';
   ctx.beginPath();
-  ctx.ellipse(40, 590, 170, 20, 0, 0, Math.PI * 2);
+  ctx.ellipse(40, 632, 190, 18, 0, 0, Math.PI * 2);
   ctx.fill();
-  ctx.fillStyle = 'rgba(255,255,255,0.4)';
-  ctx.fillRect(-60, 586, 120, 2);
+  ctx.fillStyle = 'rgba(255,255,255,0.45)';
+  ctx.fillRect(-90, 628, 120, 2);
+  ctx.fillRect(40, 634, 80, 2);
   ctx.fillStyle = '#5a9a3a';
   ctx.beginPath();
-  ctx.ellipse(40, 604, 200, 14, 0, 0, Math.PI);
+  ctx.ellipse(40, 646, 220, 14, 0, 0, Math.PI);
   ctx.fill();
-  palm(ctx, -60, 594, 150, 30, rand);
-  palm(ctx, 30, 600, 180, -20, rand);
-  palm(ctx, 140, 596, 130, 26, rand);
-  // obeliscos à direita
-  obelisk(ctx, 1150, 612, 150);
-  obelisk(ctx, 1260, 616, 120);
-  palm(ctx, 1360, 610, 160, -28, rand);
-  dune(ctx, 680, 50, '#e2b56a', 4.1, 300);
+  // juncos
+  ctx.strokeStyle = '#4a8a3a';
+  ctx.lineWidth = 2;
+  for (let i = 0; i < 18; i++) {
+    const x = -140 + i * 20 + rand() * 8;
+    ctx.beginPath();
+    ctx.moveTo(x, 640);
+    ctx.lineTo(x + (rand() - 0.5) * 6, 622 - rand() * 10);
+    ctx.stroke();
+  }
+  palm(ctx, -200, 626, 150, 30, rand);
+  palm(ctx, -60, 630, 170, -20, rand);
+  palm(ctx, 300, 630, 140, 26, rand);
+  // ---- ruínas à direita: obeliscos, colunas e um templinho
+  obelisk(ctx, 1150, 652, 150);
+  obelisk(ctx, 1262, 656, 118);
+  for (const [x, h] of [[1190, 70], [1214, 44], [1310, 60]]) brokenColumn(ctx, x, 656, h);
+  palm(ctx, 1360, 650, 160, -28, rand);
+  palm(ctx, 1080, 660, 120, 20, rand);
+  dune(ctx, 720, 46, '#e2b56a', 4.1, 300);
 }
 
-function midAnimated() {}
+// fumacinha das casas e o brilho da água do oásis
+function midAnimated(ctx, t) {
+  for (const [x, y] of [[-120, 548], [214, 556]]) {
+    for (let i = 0; i < 4; i++) {
+      const k = (t * 0.25 + i / 4) % 1;
+      ctx.globalAlpha = (1 - k) * 0.35;
+      ctx.fillStyle = '#ffffff';
+      ctx.beginPath();
+      ctx.arc(x + Math.sin(t + i) * 4 + k * 10, y - k * 60, 4 + k * 8, 0, Math.PI * 2);
+      ctx.fill();
+    }
+  }
+  ctx.globalAlpha = 1;
+  ctx.fillStyle = 'rgba(255,255,255,0.7)';
+  for (let i = 0; i < 5; i++) {
+    const a = Math.max(0, Math.sin(t * 2 + i * 1.7));
+    if (a < 0.3) continue;
+    ctx.globalAlpha = a * 0.8;
+    ctx.fillRect(-100 + i * 50, 628 + (i % 2) * 6, 10, 1.5);
+  }
+  ctx.globalAlpha = 1;
+}
 
 // ================================================================ campo
 
