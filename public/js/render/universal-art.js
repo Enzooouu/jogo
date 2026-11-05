@@ -4,7 +4,15 @@
 // Convenção igual à de weapons-art.js: origem na mão, a arma aponta para -y.
 
 const INK = '#0b0710';
+import { spShaft, spGrip, spButt, spSocket, spBlade } from './weapons-art.js';
+
 const ELEMENT_COLORS = ['#ff7a2a', '#4fb0ff', '#d8b27a', '#9fe9dc'];
+
+function shape(ctx, pts) {
+  ctx.beginPath();
+  pts.forEach(([x, y], i) => (i ? ctx.lineTo(x, y) : ctx.moveTo(x, y)));
+  ctx.closePath();
+}
 
 // Cor que passa pelas cores dos quatro elementos com o tempo
 export function prismColor(t, offset = 0) {
@@ -182,82 +190,44 @@ export function drawUniversalSpear(ctx, t) {
   ctx.lineJoin = 'round';
   ctx.lineCap = 'round';
   const glow = prismColor(t);
-  // haste
-  ctx.strokeStyle = INK;
-  ctx.lineWidth = 6.5;
-  ctx.beginPath(); ctx.moveTo(0, 22); ctx.lineTo(0, -44); ctx.stroke();
-  const shaft = ctx.createLinearGradient(-2, 0, 2, 0);
-  shaft.addColorStop(0, '#5a4a8a');
-  shaft.addColorStop(1, '#2a2048');
-  ctx.strokeStyle = shaft;
-  ctx.lineWidth = 3.6;
-  ctx.stroke();
+  // haste roxa com espiral de ouro
+  spShaft(ctx, '#7a6ab0', '#4a3a7a', '#241a44', 4.8);
   ctx.strokeStyle = '#e8c76a';
-  ctx.lineWidth = 0.9;
+  ctx.lineWidth = 1;
   ctx.beginPath();
-  for (let y = 18; y > -40; y -= 1.5) {
-    const x = Math.sin(y * 0.4) * 1.6;
-    if (y === 18) ctx.moveTo(x, y);
-    else ctx.lineTo(x, y);
+  for (let y = -4; y > -46; y -= 1.4) {
+    const x = Math.sin(y * 0.4) * 1.8;
+    if (y === -4) ctx.moveTo(x, y); else ctx.lineTo(x, y);
   }
   ctx.stroke();
-  // ponteira
-  ctx.fillStyle = '#e8c76a';
-  ctx.strokeStyle = INK;
-  ctx.lineWidth = 1.2;
-  ctx.beginPath(); ctx.moveTo(-3, 18); ctx.lineTo(0, 26); ctx.lineTo(3, 18); ctx.closePath(); ctx.fill(); ctx.stroke();
-  ctx.beginPath(); ctx.rect(-3.2, 14, 6.4, 3); ctx.fill(); ctx.stroke();
-  // colar dourado com as quatro pedrinhas e a joia do meio
-  ctx.beginPath();
-  ctx.moveTo(-4.5, -38); ctx.lineTo(-6.5, -43); ctx.lineTo(-5, -48); ctx.lineTo(5, -48); ctx.lineTo(6.5, -43); ctx.lineTo(4.5, -38);
-  ctx.closePath();
-  const gold = ctx.createLinearGradient(-6, 0, 6, 0);
-  gold.addColorStop(0, '#a87a2a');
-  gold.addColorStop(0.4, '#ffe08a');
-  gold.addColorStop(1, '#a87a2a');
-  ctx.fillStyle = gold;
-  ctx.fill(); ctx.stroke();
+  spGrip(ctx, '#2a2040', '#ffe08a', '#a87a2a', 3.4);
+  spButt(ctx, '#ffe08a', '#a87a2a');
+  spSocket(ctx, '#ffe08a', '#a87a2a', glow, '#ffffff', 8, t);
+  // as quatro pedrinhas dos elementos no alvado
   ELEMENT_COLORS.forEach((c, i) => {
     ctx.fillStyle = c;
-    ctx.beginPath(); ctx.arc(-4.5 + i * 3, -39.6, 1.1, 0, Math.PI * 2); ctx.fill();
+    ctx.beginPath(); ctx.arc(-4.5 + i * 3, -47.4, 1.05, 0, Math.PI * 2); ctx.fill();
   });
-  ctx.fillStyle = glow;
-  ctx.beginPath(); ctx.arc(0, -44.5, 2.2, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
-  // lâmina com nervura
-  const pts = [[0, -48], [-5.5, -55], [-4, -70], [0, -84], [4, -70], [5.5, -55]];
-  ctx.beginPath();
-  pts.forEach(([x, y], i) => (i ? ctx.lineTo(x, y) : ctx.moveTo(x, y)));
-  ctx.closePath();
-  ctx.fillStyle = '#a7b2c8';
+  // lâmina de aço em folha, com sulco no meio e fio dourado
+  const pts = [[0, -57], [-5.5, -62], [-6.5, -72], [-4, -84], [0, -97], [4, -84], [6.5, -72], [5.5, -62]];
+  spBlade(ctx, pts, '#ffffff', '#a7b2c8', 'rgba(255,224,138,0.9)', -60, -93);
+  ctx.fillStyle = 'rgba(80,90,120,0.35)';
+  shape(ctx, [[0, -62], [-1.2, -66], [-0.8, -82], [0, -86], [0.8, -82], [1.2, -66]]);
   ctx.fill();
-  ctx.save();
-  ctx.clip();
-  const face = ctx.createLinearGradient(-5, 0, 0, 0);
-  face.addColorStop(0, '#ffffff');
-  face.addColorStop(1, '#e2e8f4');
-  ctx.fillStyle = face;
-  ctx.fillRect(-6, -86, 6, 40);
-  // brilhinho correndo pela lâmina
-  const run = ((t * 0.6) % 1.6) - 0.3;
-  const shine = ctx.createLinearGradient(0, -84 + run * 40, 0, -78 + run * 40);
-  shine.addColorStop(0, 'rgba(255,255,255,0)');
-  shine.addColorStop(0.5, 'rgba(255,255,255,0.95)');
-  shine.addColorStop(1, 'rgba(255,255,255,0)');
-  ctx.fillStyle = shine;
-  ctx.fillRect(-6, -90, 12, 50);
-  ctx.restore();
-  ctx.strokeStyle = INK;
-  ctx.lineWidth = 2;
-  ctx.beginPath();
-  pts.forEach(([x, y], i) => (i ? ctx.lineTo(x, y) : ctx.moveTo(x, y)));
-  ctx.closePath();
-  ctx.stroke();
-  ctx.save();
-  ctx.shadowColor = glow;
-  ctx.shadowBlur = 6;
-  ctx.strokeStyle = glow;
-  ctx.lineWidth = 1.3;
-  ctx.beginPath(); ctx.moveTo(0, -51); ctx.lineTo(0, -80); ctx.stroke();
-  ctx.restore();
+  // brilho que corre pela lâmina
+  const k = (t % 2.6) / 0.5;
+  if (k < 1) {
+    const y = -60 - 36 * k;
+    ctx.save();
+    shape(ctx, pts);
+    ctx.clip();
+    const g = ctx.createLinearGradient(0, y - 6, 0, y + 6);
+    g.addColorStop(0, 'rgba(255,255,255,0)');
+    g.addColorStop(0.5, 'rgba(255,255,255,0.8)');
+    g.addColorStop(1, 'rgba(255,255,255,0)');
+    ctx.fillStyle = g;
+    ctx.fillRect(-10, y - 6, 20, 12);
+    ctx.restore();
+  }
   ctx.restore();
 }
