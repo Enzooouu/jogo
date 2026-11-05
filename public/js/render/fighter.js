@@ -218,7 +218,7 @@ export function drawFighter(ctx, p, x, y, vis, time, { teamColor, isLocal, showN
   const wind = Math.min(1, Math.abs(p.vx) / 300 + (p.onGround ? 0 : 0.4)) + 0.2;
 
   // Manequim preto (tutorial e o Mortal) e boneco de treino
-  const skin = p.skin ?? (p.element === 'mortal' ? 'manequim' : null);
+  const skin = p.skin ?? (p.element === 'mortal' ? 'mortal' : null);
   if (skin) {
     const weapon = () => {
       if (p.attack?.weapon === 'espada' && pose.weaponAngle !== null && p.attack.t >= p.attack.startup) {

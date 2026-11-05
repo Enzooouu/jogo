@@ -7,10 +7,22 @@
 
 const INK = '#07050a';
 
+// Mortal (sem elemento): o manequim com armadura de aço escuro, frisos de
+// ouro, o símbolo dos 4 elementos no peito, cinto com as 4 pedras, visor que
+// muda de cor e um lenço com as 4 cores
+const ELEM4 = ['#4fd1b8', '#ff6a1f', '#9a6634', '#2f86f0'];
+let TIME = 0;
+const prism = (o = 0) => `hsl(${(TIME * 60 + o) % 360},90%,68%)`;
+const isMan = (skin) => skin === 'manequim' || skin === 'mortal';
+
 const SKINS = {
   manequim: {
     body: '#1c1a22', back: '#121017', hi: 'rgba(190,195,220,0.55)',
     joint: '#26232e', jointHi: 'rgba(230,232,255,0.7)', head: '#1f1d26', rim: 'rgba(160,190,255,0.35)',
+  },
+  mortal: {
+    body: '#363448', back: '#1e1c28', hi: 'rgba(215,220,245,0.65)',
+    joint: '#c9a24a', jointHi: 'rgba(255,245,200,0.85)', head: '#2a2836', rim: 'rgba(255,214,120,0.4)',
   },
   boneco: {
     body: '#c9a46a', back: '#9d7c48', hi: 'rgba(255,240,200,0.6)',
@@ -120,7 +132,7 @@ function body(ctx, skin, k, sh, hip) {
   const g = ctx.createLinearGradient(-9, 0, 9, 0);
   g.addColorStop(0, k.back);
   g.addColorStop(0.55, k.body);
-  g.addColorStop(1, skin === 'manequim' ? '#3a3846' : '#dcbc84');
+  g.addColorStop(1, isMan(skin) ? '#3a3846' : '#dcbc84');
   ctx.fillStyle = g;
   ctx.strokeStyle = INK;
   ctx.lineWidth = 2.2;
@@ -128,7 +140,25 @@ function body(ctx, skin, k, sh, hip) {
   ctx.stroke();
   ctx.save();
   ctx.clip();
-  if (skin === 'manequim') {
+  if (skin === 'mortal') {
+    // placa do peito: friso de ouro em V e o símbolo dos 4 elementos
+    ctx.strokeStyle = '#e8b23a';
+    ctx.lineWidth = 1.4;
+    ctx.beginPath(); ctx.moveTo(-7, 0.5); ctx.lineTo(0.5, chestH * 0.32); ctx.lineTo(8, 0.5); ctx.stroke();
+    const ey = chestH * 0.55;
+    const r = 3.4;
+    [[0, -1, -1], [1, 1, -1], [2, -1, 1], [3, 1, 1]].forEach(([i, sx, sy]) => {
+      ctx.fillStyle = ELEM4[i];
+      ctx.beginPath(); ctx.moveTo(1, ey); ctx.lineTo(1 + sx * r, ey); ctx.lineTo(1, ey + sy * r); ctx.closePath(); ctx.fill();
+    });
+    ctx.strokeStyle = INK;
+    ctx.lineWidth = 1;
+    ctx.beginPath(); ctx.moveTo(1, ey - r); ctx.lineTo(1 + r, ey); ctx.lineTo(1, ey + r); ctx.lineTo(1 - r, ey); ctx.closePath(); ctx.stroke();
+    ctx.fillStyle = '#ffe08a';
+    ctx.beginPath(); ctx.arc(1, ey, 0.9, 0, Math.PI * 2); ctx.fill();
+    ctx.fillStyle = k.hi;
+    ctx.beginPath(); ctx.ellipse(5, 3, 1.4, 3.6, 0.2, 0, Math.PI * 2); ctx.fill();
+  } else if (skin === 'manequim') {
     // linha do peito e brilho
     ctx.strokeStyle = 'rgba(0,0,0,0.5)';
     ctx.lineWidth = 1;
@@ -177,6 +207,18 @@ function body(ctx, skin, k, sh, hip) {
   ctx.lineWidth = 2;
   ctx.fill();
   ctx.stroke();
+  if (skin === 'mortal') {
+    // cinto de ouro com as 4 pedras
+    ctx.fillStyle = '#c9a24a';
+    ctx.fillRect(-6.8, -6.5, 13.6, 3);
+    ctx.strokeStyle = INK;
+    ctx.lineWidth = 1;
+    ctx.strokeRect(-6.8, -6.5, 13.6, 3);
+    ELEM4.forEach((c, i) => {
+      ctx.fillStyle = c;
+      ctx.beginPath(); ctx.arc(-4.5 + i * 3, -5, 0.95, 0, Math.PI * 2); ctx.fill();
+    });
+  }
   if (skin === 'boneco') {
     // cordinha amarrando a cintura
     ctx.strokeStyle = '#6b4a22';
@@ -195,7 +237,7 @@ function headShape(ctx, skin, k, h, neck) {
   bone(ctx, neck, { x: (neck.x + h.x) / 2, y: (neck.y + h.y) / 2 + 3 }, 4, k.body, null);
   ctx.save();
   ctx.translate(h.x, h.y);
-  if (skin === 'manequim') {
+  if (isMan(skin)) {
     // cabeça de ovo, levemente inclinada para a frente
     ctx.rotate(0.18);
     ctx.beginPath();
@@ -226,10 +268,29 @@ function headShape(ctx, skin, k, h, neck) {
     ctx.moveTo(-8, 1);
     ctx.quadraticCurveTo(0, 3, 8.6, 0);
     ctx.stroke();
-    ctx.fillStyle = 'rgba(150,170,255,0.18)';
-    ctx.beginPath();
-    ctx.ellipse(5, -2, 3, 2, 0, 0, Math.PI * 2);
-    ctx.fill();
+    if (skin === 'mortal') {
+      // visor que brilha na cor que vai mudando
+      ctx.save();
+      ctx.shadowColor = prism();
+      ctx.shadowBlur = 7;
+      ctx.fillStyle = prism();
+      ctx.beginPath();
+      ctx.moveTo(0.5, -4.2); ctx.quadraticCurveTo(6, -5.2, 8.6, -3); ctx.lineTo(8.4, -0.8); ctx.quadraticCurveTo(5, -2, 0.8, -1.6);
+      ctx.closePath();
+      ctx.fill();
+      ctx.restore();
+      ctx.fillStyle = 'rgba(255,255,255,0.85)';
+      ctx.fillRect(3, -3.8, 2.4, 0.8);
+      // crista de ouro no alto da cabeça
+      ctx.strokeStyle = '#e8b23a';
+      ctx.lineWidth = 1.6;
+      ctx.beginPath(); ctx.ellipse(0.5, -1, 8.4, 10.4, 0, -2.2, -1.1); ctx.stroke();
+    } else {
+      ctx.fillStyle = 'rgba(150,170,255,0.18)';
+      ctx.beginPath();
+      ctx.ellipse(5, -2, 3, 2, 0, 0, Math.PI * 2);
+      ctx.fill();
+    }
   } else {
     // saco de pano amarrado, olhos de X costurados
     ctx.beginPath();
@@ -273,6 +334,7 @@ function headShape(ctx, skin, k, h, neck) {
 // `drawWeapon` (opcional) desenha a arma entre o corpo e o braço da frente
 export function drawSkin(ctx, skin, { hip, neck, headPos, shoulder, legF, legB, armF, armB }, time, drawWeapon = null) {
   const k = SKINS[skin] ?? SKINS.manequim;
+  TIME = time;
   // sombra de contorno azulada (o manequim brilha um pouco no escuro)
   if (k.rim) {
     const g = ctx.createRadialGradient(0, -34, 4, 0, -34, 46);
@@ -280,6 +342,19 @@ export function drawSkin(ctx, skin, { hip, neck, headPos, shoulder, legF, legB, 
     g.addColorStop(1, 'rgba(140,160,255,0)');
     ctx.fillStyle = g;
     ctx.fillRect(-46, -80, 92, 92);
+  }
+  // Mortal: lenço com as 4 cores voando atrás do pescoço
+  if (skin === 'mortal') {
+    const wave = (i) => Math.sin(time * 8 - i * 0.9) * 2.2;
+    ELEM4.forEach((c, j) => {
+      ctx.strokeStyle = c;
+      ctx.lineWidth = 2.2;
+      ctx.lineCap = 'round';
+      ctx.beginPath();
+      ctx.moveTo(neck.x - 1, neck.y + 1 + j * 1.6);
+      for (let i = 1; i <= 5; i++) ctx.lineTo(neck.x - 1 - i * 3.6, neck.y + 1 + j * 1.6 + i * 1.6 + wave(i));
+      ctx.stroke();
+    });
   }
   // membros de trás
   limb(ctx, hip, legB, 5.5, k.back, null, k, (l) => footShape(ctx, l.end, k.back));
