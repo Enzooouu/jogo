@@ -44,9 +44,9 @@ export const HILL_MAPS = {
     blast: BLAST,
     solids: [
       { x: 150, y: 560, w: 980, h: 200 },   // pátio
-      { x: -245, y: 330, w: 140, h: 430 },  // torre da esquerda (bem longe)
-      { x: 1385, y: 330, w: 140, h: 430 },  // torre da direita (bem longe)
     ],
+    // torres bem longe, depois da borda (só cenário: não dá para pisar)
+    castleTowers: [{ x: -440, y: 300, w: 140 }, { x: 1580, y: 300, w: 140 }],
     platforms: [
       { x: 40, y: 345, w: 250 },            // ponte de madeira da esquerda
       { x: 990, y: 345, w: 250 },           // ponte de madeira da direita

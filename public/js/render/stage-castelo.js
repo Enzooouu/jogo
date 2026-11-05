@@ -633,7 +633,8 @@ function farTower(ctx, s, rand, side) {
 }
 
 function drawTerrain(ctx, map, rand) {
-  const [yard, towerL, towerR] = map.solids;
+  const [yard] = map.solids;
+  const [towerL, towerR] = map.castleTowers;
   const [scL, scR, floor] = map.platforms;
   // sala do trono (atrás de tudo)
   keep(ctx, floor, rand);
@@ -737,7 +738,8 @@ export const CASTELO_ART = {
   terrain: drawTerrain,
   behind() {},
   front(ctx, map, time) {
-    const [yard, towerL, towerR] = map.solids;
+    const [yard] = map.solids;
+    const [towerL, towerR] = map.castleTowers;
     const floor = map.platforms[2];
     flag(ctx, towerL.x + 10, towerL.y - 20, time, 1);
     flag(ctx, towerR.x + towerR.w - 10, towerR.y - 20, time + 1, -1);
@@ -748,7 +750,7 @@ export const CASTELO_ART = {
     for (const [k, x] of [[0, floor.x + 40], [1, floor.x + floor.w - 40]]) torchFire(ctx, x, floor.y - 2, time + k * 1.3);
   },
   // pedaço do mundo guardado em imagem (as torres ficam fora da área padrão)
-  terrainRect: { x: -300, y: -420, w: 1880, h: 1600 },
+  terrainRect: { x: -520, y: -420, w: 2320, h: 1600 },
   haze: ['rgba(255,170,120,0)', 'rgba(255,150,110,0.22)'],
   vignette: 0.4,
 };
