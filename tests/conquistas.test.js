@@ -39,13 +39,37 @@ test('vitória sem perder vida dá Primeira Vitória e Intocável (normais)', ()
   assert.equal(evaluate(t.summary(resultFor(true), setupFor('fogo'), 'vitoria'), p).length, 0);
 });
 
-test('no Difícil a mesma vitória também dá as de ouro', () => {
-  const g = game();
-  const t = new MatchTracker(g, 1);
+test('as de ouro são mais difíceis: Primeira Coroa pede vencer cada modo no Difícil', () => {
   const p = emptyProgress();
-  const got = evaluate(t.summary(resultFor(true), setupFor('fogo', 'dificil'), 'vitoria'), p);
-  assert.ok(got.some((x) => x.id === 'primeira_vitoria' && x.tier === 'ouro'));
-  assert.ok(p.normal.primeira_vitoria && p.ouro.primeira_vitoria);
+  const win = (extra, outcome = 'vitoria') => {
+    const t = new MatchTracker(game(), 1);
+    const setup = { ...setupFor('fogo', 'dificil'), ...extra };
+    return evaluate(t.summary(resultFor(true), setup, outcome), p);
+  };
+  win({});
+  assert.ok(p.normal.primeira_vitoria);
+  assert.ok(!p.ouro.primeira_vitoria, 'uma vitória só não basta');
+  win({ mode: 'ffa' });
+  win({ mode: 'rei' });
+  win({ players: [...setupFor('fogo').players, { id: 3, element: 'fogo', team: 'A', isBot: true }, { id: 4, element: 'agua', team: 'B', isBot: true }] });
+  assert.ok(!p.ouro.primeira_vitoria);
+  win({ players: [...setupFor('fogo').players, ...[3, 5].map((id) => ({ id, element: 'fogo', team: 'A', isBot: true })), ...[4, 6].map((id) => ({ id, element: 'agua', team: 'B', isBot: true }))] });
+  assert.ok(p.ouro.primeira_vitoria);
+});
+
+test('Intocável de Ouro precisa de 3 seguidas (perder zera)', () => {
+  const p = emptyProgress();
+  const play = (deaths) => evaluate(new MatchTracker(game(), 1).summary(resultFor(true, { deaths }), setupFor('fogo', 'dificil'), 'vitoria'), p);
+  play(0); play(0); play(1); play(0); play(0);
+  assert.ok(!p.ouro.intocavel);
+  play(0);
+  assert.ok(p.ouro.intocavel);
+});
+
+test('no Normal as de ouro não avançam', () => {
+  const p = emptyProgress();
+  for (let i = 0; i < 5; i++) evaluate(new MatchTracker(game(), 1).summary(resultFor(true), setupFor('fogo'), 'vitoria'), p);
+  assert.equal(Object.keys(p.ouro).length, 0);
 });
 
 test('modo ADM e treino não contam', () => {
@@ -83,6 +107,7 @@ test('Aprendiz vem do tutorial e não tem versão de ouro', () => {
   const p = emptyProgress();
   assert.equal(unlockSpecial('aprendiz', p).length, 1);
   assert.equal(ACHIEVEMENTS.find((a) => a.id === 'aprendiz').gold, null);
+  for (const a of ACHIEVEMENTS) if (a.gold) assert.ok(a.gold.name && a.gold.desc && (a.gold.check || a.gold.goal), a.id);
   assert.ok(ACHIEVEMENTS.length >= 10);
 });
 

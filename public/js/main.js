@@ -784,7 +784,7 @@ let achProgress = loadAch();
 let achTier = 'normal';
 
 function achName(a, tier) {
-  return tier === 'ouro' ? a.gold : a.name;
+  return tier === 'ouro' ? a.gold.name : a.name;
 }
 
 function checkAchievements(setup, result, outcome) {
@@ -831,7 +831,7 @@ function renderAch() {
   $('#ach-count-ouro').textContent = `${ACHIEVEMENTS.filter((a) => a.gold && achProgress.ouro[a.id]).length}/${ACHIEVEMENTS.filter((a) => a.gold).length}`;
   $('#ach-hint').textContent = tier === 'normal'
     ? `Valem em qualquer dificuldade. Você tem ${done} de ${all.length}.`
-    : 'Só contam no Difícil. Cada uma aparece depois que você completa a normal.';
+    : 'Desafios mais difíceis, que só contam no Difícil. Cada uma aparece depois que você completa a normal.';
   // modo ADM: mostra todas (sem ???), só para ver; não desbloqueia nada
   if (state.admin) $('#ach-hint').textContent += ' Modo ADM ligado: mostrando todas as conquistas.';
   for (const a of all) {
@@ -844,7 +844,7 @@ function renderAch() {
     li.querySelector('b').textContent = hidden ? '???' : achName(a, tier);
     li.querySelector('.ach-t span').textContent = hidden
       ? 'Complete a conquista normal para descobrir.'
-      : tier === 'ouro' ? `${a.desc.replace(/\.$/, '')} no Difícil.` : a.desc;
+      : tier === 'ouro' ? a.gold.desc : a.desc;
     const pr = !hidden && !got ? progressOf(a, tier, achProgress) : null;
     li.querySelector('em').textContent = got ? '✓' : pr ? `${pr.n}/${pr.goal}` : '';
     list.appendChild(li);
