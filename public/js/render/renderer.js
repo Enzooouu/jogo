@@ -3,6 +3,7 @@
 
 import { drawHammerArt } from './hammer-art.js';
 import { HILL } from '/shared/hill.js';
+import { MATCH } from '/shared/constants.js';
 import { ELEMENTS } from '/shared/elements.js';
 import { weaponProfile } from '/shared/weapons.js';
 import { StageRenderer, roundRect } from './stage.js';
@@ -14,6 +15,7 @@ import { drawSwordArt, drawStaffArt, drawSpearArt, drawShot } from './weapons-ar
 import { currentBindings, keyLabel } from '../input/bindings.js';
 import { drawUniversalSword, drawUniversalStaff, drawUniversalSpear, prismColor } from './universal-art.js';
 
+const CLIMB_H = 760;  // quanto a torre sobe entre um andar e outro (Torre)
 export const VIEW_W = 1280;
 export const VIEW_H = 720;
 export const TEAM_COLORS = ['#ffd23f', '#d65bff', '#3fffa2', '#ff5b7a', '#5bd2ff', '#ff9f43', '#a3ff5b', '#ff5bd2'];
@@ -301,7 +303,9 @@ export class Renderer {
         }
         case 'matchEnd': {
           const winner = e.winnerTeam !== null ? g.players.find((p) => p.team === e.winnerTeam) : null;
-          if (winner) {
+          if (e.celebrate === false) {
+            // Torre, andar comum: sem comemoração (a subida já é a festa)
+          } else if (winner) {
             const el = ELEMENTS[winner.element];
             const of = { fogo: 'DO FOGO', agua: 'DA ÁGUA', terra: 'DA TERRA', ar: 'DO AR', mortal: 'DO MORTAL' }[winner.element] ?? el.name.toUpperCase();
             this.banner = { text: `VITÓRIA ${of}!`, time: CELEBRATION_TIME, max: CELEBRATION_TIME, color: el.light };
@@ -512,6 +516,16 @@ export class Renderer {
 
   // ------------------------------------------------------------ desenho
 
+  // Torre: quanto falta subir (em unidades do mundo) durante a subida do
+  // elevador no começo do andar; 0 quando não está subindo
+  climbShift() {
+    const g = this.game;
+    if (!g.climb || g.phase !== 'countdown' || g.phaseTimer <= MATCH.countdown) return 0;
+    const u = Math.min(1, Math.max(0, 1 - (g.phaseTimer - MATCH.countdown) / g.climb));
+    const e = u < 0.5 ? 4 * u * u * u : 1 - (-2 * u + 2) ** 3 / 2;
+    return CLIMB_H * (1 - e);
+  }
+
   frame(dt, alpha) {
     // a área do jogo mudou de tamanho (ex.: painel arrastado) sem aviso de
     // "resize": ajusta antes de desenhar, senão o jogo fica pequeno num canto
@@ -548,9 +562,24 @@ export class Renderer {
     }
 
     const cam = this.camera;
-    cam.update(dt, this.game.players.filter((p) => p.state === 'alive').map((p) => ({
+    const climb = this.climbShift();
+    const climbing = climb > 0;
+    // terminou a subida: os inimigos chegam com um clarão
+    if (this.wasClimbing && !climbing) {
+      for (const p of this.game.players) {
+        if (p.id === this.localId) continue;
+        const el = ELEMENTS[p.element];
+        this.particles.add({ type: 'ring', x: p.x + p.w / 2, y: p.y + p.h / 2, size: 14, grow: 260, life: 0.5, color: el.light ?? el.color });
+        this.particles.burst(p.x + p.w / 2, p.y + p.h / 2, { type: 'spark', count: 18, speed: 360, life: 0.5, size: 3, color: el.color, drag: 3 });
+      }
+    }
+    this.wasClimbing = climbing;
+    cam.update(dt, this.game.players.filter((p) => p.state === 'alive' && (!climbing || p.id === this.localId)).map((p) => ({
       x: p.px + (p.x - p.px) * alpha, y: p.py + (p.y - p.py) * alpha, w: p.w, h: p.h,
     })));
+    // subindo: o mundo do andar novo começa mais alto e desce até o lugar
+    const camY = cam.y;
+    if (climbing) cam.y += climb;
     this.stage.drawBackground(ctx, cam, this.time, { x: sx, y: sy });
 
     // Mundo: a câmera decide o centro e o zoom
@@ -562,6 +591,7 @@ export class Renderer {
     }
     this.stage.art.setGame?.(this.game);
     this.stage.drawTerrain(ctx, this.time, this.game.platforms, alpha);
+    if (climbing) this.drawClimb(ctx, climb, alpha);
     const hazards = this.game.hazardsNow?.() ?? this.game.map.hazards;
     this.stage.drawHazards(ctx, this.time, false, hazards);
     this.drawHill(ctx);
@@ -571,7 +601,7 @@ export class Renderer {
     drawCelebration(ctx, this.celebration, 'mid');
     this.drawItems(ctx);
     this.drawProjectiles(ctx);
-    this.drawPlayers(ctx, alpha);
+    if (!climbing) this.drawPlayers(ctx, alpha);
     this.particles.draw(ctx);
     // por cima dos lutadores (ex.: nevasca e pingentes do Lago Congelado)
     this.stage.art.overlay?.(ctx, this.time, this.game, alpha);
@@ -581,7 +611,9 @@ export class Renderer {
     if (this.debug) this.drawDebug(ctx);
     this.stage.drawVignette(ctx);
 
+    cam.y = camY;
     ctx.setTransform(this.scale, 0, 0, this.scale, 0, 0);
+    if (climbing) this.drawClimbText(ctx, climb);
     this.drawOffscreen(ctx, alpha);
     // no treino do tutorial os cartões ficam na tela do tutorial (HTML)
     if (!this.game.practice) this.drawHud(ctx);
@@ -705,6 +737,46 @@ export class Renderer {
         P.add({ x: pr.x + (Math.random() - 0.5) * 30, y: pr.y + 20, vx: -pr.vx * 0.2, vy: -40, life: 0.6, size: 1.8, color: Math.random() < 0.5 ? '#a8d86a' : 'rgba(230,255,250,0.9)', drag: 1 });
       }
     }
+  }
+
+  // Subida do elevador: o andar de baixo (que você acabou de vencer) passa
+  // para baixo e você fica parado na tela, em pé no elevador
+  drawClimb(ctx, climb, alpha) {
+    const g = this.game;
+    const art = this.stage.art;
+    ctx.save();
+    ctx.translate(0, CLIMB_H);
+    this.stage.drawTerrain(ctx, this.time, g.platforms, alpha);
+    art.banner?.(ctx, g.map, Math.max(0, (g.towerFloor ?? 1) - 1));
+    ctx.restore();
+    const me = g.playerById(this.localId);
+    if (!me) return;
+    ctx.save();
+    ctx.translate(0, climb);
+    art.elevator?.(ctx, me.x + me.w / 2, me.y + me.h, this.time);
+    drawFighter(ctx, me, me.x, me.y, this.vis.get(me.id), this.time, { teamColor: this.teamColor.get(me.team), isLocal: true });
+    ctx.restore();
+  }
+
+  drawClimbText(ctx, climb) {
+    const info = this.game.climbInfo;
+    if (!info) return;
+    const k = Math.min(1, climb / (CLIMB_H * 0.25));
+    ctx.save();
+    ctx.globalAlpha = k;
+    ctx.textAlign = 'center';
+    ctx.fillStyle = 'rgba(10,6,20,0.55)';
+    roundRect(ctx, VIEW_W / 2 - 230, 104, 460, info.extra ? 92 : 66, 14);
+    ctx.fill();
+    ctx.fillStyle = '#ffd25a';
+    ctx.font = 'italic 900 34px system-ui, sans-serif';
+    ctx.fillText(info.title, VIEW_W / 2, 148);
+    if (info.extra) {
+      ctx.fillStyle = '#7dffb8';
+      ctx.font = '700 17px system-ui, sans-serif';
+      ctx.fillText(info.extra, VIEW_W / 2, 178);
+    }
+    ctx.restore();
   }
 
   drawPlayers(ctx, alpha) {
@@ -1259,7 +1331,9 @@ export class Renderer {
     ctx.globalAlpha = 1;
 
     // Contagem regressiva / faixas
-    if (g.phase === 'countdown') {
+    if (g.phase === 'countdown' && g.phaseTimer > MATCH.countdown) {
+      // subindo de elevador (Torre): ainda sem contagem
+    } else if (g.phase === 'countdown') {
       const n = Math.ceil(g.phaseTimer);
       const frac = g.phaseTimer - Math.floor(g.phaseTimer);
       this.drawBigText(ctx, String(n), 1 + frac * 0.5, '#ffffff', 0.35 + frac);

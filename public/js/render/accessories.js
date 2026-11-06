@@ -72,4 +72,75 @@ export function drawHelmet(ctx, h, time = 0) {
   ctx.restore();
 }
 
-export const ACCESSORY_ART = { capacete: drawHelmet };
+// Coroa de chifres do Guardião da Torre (não é colecionável: é do chefe)
+export function drawGuardianCrown(ctx, h, time = 0) {
+  const cx = h.x;
+  const cy = h.y - 9;
+  ctx.save();
+  ctx.lineJoin = 'round';
+  // chifres curvos dos lados
+  for (const s of [-1, 1]) {
+    ctx.fillStyle = INK;
+    ctx.beginPath();
+    ctx.moveTo(cx + s * 7, cy + 2);
+    ctx.quadraticCurveTo(cx + s * 20, cy - 2, cx + s * 19, cy - 19);
+    ctx.quadraticCurveTo(cx + s * 15, cy - 8, cx + s * 4, cy - 2);
+    ctx.closePath();
+    ctx.fill();
+    ctx.fillStyle = '#e8dcc0';
+    ctx.beginPath();
+    ctx.moveTo(cx + s * 7, cy);
+    ctx.quadraticCurveTo(cx + s * 17, cy - 3, cx + s * 17.5, cy - 15);
+    ctx.quadraticCurveTo(cx + s * 13, cy - 7, cx + s * 5, cy - 2);
+    ctx.closePath();
+    ctx.fill();
+  }
+  // aro dourado com 3 pontas e uma pedra que brilha
+  ctx.fillStyle = INK;
+  ctx.beginPath();
+  ctx.moveTo(cx - 11, cy + 3);
+  ctx.lineTo(cx - 12, cy - 7);
+  ctx.lineTo(cx - 6, cy - 2);
+  ctx.lineTo(cx, cy - 13);
+  ctx.lineTo(cx + 6, cy - 2);
+  ctx.lineTo(cx + 12, cy - 7);
+  ctx.lineTo(cx + 11, cy + 3);
+  ctx.closePath();
+  ctx.fill();
+  const gold = ctx.createLinearGradient(0, cy - 12, 0, cy + 3);
+  gold.addColorStop(0, '#fff1b8');
+  gold.addColorStop(0.5, '#f0c04a');
+  gold.addColorStop(1, '#a8701c');
+  ctx.fillStyle = gold;
+  ctx.beginPath();
+  ctx.moveTo(cx - 9.5, cy + 1.5);
+  ctx.lineTo(cx - 10, cy - 4.5);
+  ctx.lineTo(cx - 5.5, cy - 0.5);
+  ctx.lineTo(cx, cy - 10.5);
+  ctx.lineTo(cx + 5.5, cy - 0.5);
+  ctx.lineTo(cx + 10, cy - 4.5);
+  ctx.lineTo(cx + 9.5, cy + 1.5);
+  ctx.closePath();
+  ctx.fill();
+  const pulse = 0.6 + 0.4 * Math.sin(time * 4);
+  ctx.fillStyle = `rgba(255,70,90,${0.5 + 0.5 * pulse})`;
+  ctx.beginPath();
+  ctx.arc(cx, cy - 1, 2.4, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.restore();
+}
+
+// Aura escura com brilho dourado em volta do Guardião (atrás do corpo)
+export function drawGuardianAura(ctx, time = 0) {
+  const pulse = 0.75 + 0.25 * Math.sin(time * 3);
+  const g = ctx.createRadialGradient(0, -36, 6, 0, -36, 58);
+  g.addColorStop(0, `rgba(255,200,90,${0.28 * pulse})`);
+  g.addColorStop(0.55, `rgba(150,60,200,${0.18 * pulse})`);
+  g.addColorStop(1, 'rgba(120,40,180,0)');
+  ctx.fillStyle = g;
+  ctx.beginPath();
+  ctx.ellipse(0, -36, 46, 60, 0, 0, Math.PI * 2);
+  ctx.fill();
+}
+
+export const ACCESSORY_ART = { capacete: drawHelmet, guardiao: drawGuardianCrown };

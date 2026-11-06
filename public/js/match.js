@@ -7,6 +7,7 @@
 
 import { Game } from '/shared/game.js';
 import { BotController } from '/shared/ai.js';
+import { MATCH } from '/shared/constants.js';
 import { DT } from '/shared/constants.js';
 import { Renderer } from './render/renderer.js';
 import { KeyboardController } from './input/keyboard.js';
@@ -28,7 +29,8 @@ export class MatchRunner {
       // treino livre: ninguém perde vida, sem tempo e contagem curta
       ...(setup.practice ? { practice: true, timeLimit: 0, countdown: 1, items: false } : {}),
       // modo Torre: o andar muda o céu e cada andar tem um tempo
-      ...(setup.tower ? { towerFloor: setup.tower.floor, timeLimit: setup.tower.timeLimit, lives: setup.tower.maxLives, gravityScale: setup.tower.gravity ?? 1 } : {}),
+      ...(setup.tower ? { towerFloor: setup.tower.floor, timeLimit: setup.tower.timeLimit, lives: setup.tower.maxLives, gravityScale: setup.tower.gravity ?? 1,
+        climb: setup.tower.climb ?? 0, climbInfo: setup.tower.climbInfo ?? null, celebrate: setup.tower.celebrate ?? true, endDelay: setup.tower.endDelay } : {}),
     });
     this.localId = setup.localPlayerId;
 
@@ -128,7 +130,8 @@ export class MatchRunner {
 
     if (g.phase === 'countdown') {
       const n = Math.ceil(g.phaseTimer);
-      if (n !== this.lastCount) {
+      // (na subida do elevador da Torre ainda não bipa)
+      if (n !== this.lastCount && n <= MATCH.countdown) {
         this.lastCount = n;
         beep();
       }

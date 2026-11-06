@@ -654,7 +654,57 @@ function runeGlow(ctx, p, time) {
   ctx.globalAlpha = 1;
 }
 
+// Elevador de pedra da subida entre os andares (desenhado embaixo do seu
+// boneco enquanto a torre passa para baixo)
+function elevator(ctx, x, y, time) {
+  const w = 120;
+  // feixe de luz saindo de baixo
+  const beam = ctx.createLinearGradient(0, y, 0, y + 260);
+  beam.addColorStop(0, 'rgba(255,220,140,0.45)');
+  beam.addColorStop(1, 'rgba(255,220,140,0)');
+  ctx.fillStyle = beam;
+  ctx.beginPath();
+  ctx.moveTo(x - w / 2 + 10, y + 18);
+  ctx.lineTo(x + w / 2 - 10, y + 18);
+  ctx.lineTo(x + w / 2 + 30, y + 260);
+  ctx.lineTo(x - w / 2 - 30, y + 260);
+  ctx.fill();
+  // laje
+  ctx.fillStyle = INK;
+  roundRect(ctx, x - w / 2 - 3, y - 3, w + 6, 24, 6);
+  ctx.fill();
+  ctx.fillStyle = STONE.dark;
+  roundRect(ctx, x - w / 2, y, w, 18, 5);
+  ctx.fill();
+  ctx.fillStyle = STONE.top;
+  ctx.fillRect(x - w / 2 + 4, y + 1, w - 8, 5);
+  // runas dos 4 elementos acendendo em roda
+  ['fogo', 'agua', 'terra', 'ar'].forEach((e, i) => {
+    const on = 0.5 + 0.5 * Math.sin(time * 6 - i * 1.4);
+    ctx.globalAlpha = 0.45 + 0.55 * on;
+    ctx.fillStyle = EL[e];
+    ctx.beginPath();
+    ctx.arc(x - 39 + i * 26, y + 12, 4.2, 0, Math.PI * 2);
+    ctx.fill();
+  });
+  ctx.globalAlpha = 1;
+  // faíscas subindo
+  for (let i = 0; i < 8; i++) {
+    const k = (time * 1.6 + i / 8) % 1;
+    ctx.globalAlpha = 1 - k;
+    ctx.fillStyle = '#ffe2a0';
+    ctx.fillRect(x - w / 2 + ((i * 37) % w), y + 20 + k * 120, 2.4, 2.4);
+  }
+  ctx.globalAlpha = 1;
+}
+
 export const TORRE_ART = {
+  // usados pela subida entre os andares (renderer.js)
+  banner(ctx, map, n) {
+    const [top] = map.solids;
+    floorBanner(ctx, top.x + top.w / 2, top.y + 24 + 40, n);
+  },
+  elevator,
   sky(ctx, theme) {
     skyFloor = floorOf(theme);
     paintSky(ctx, theme);
@@ -676,7 +726,7 @@ export const TORRE_ART = {
     const slab = platforms?.[2] ?? map.platforms[2];
     runeGlow(ctx, { x: slab.px ?? slab.x, y: slab.py ?? slab.y, w: slab.w }, time);
   },
-  terrainRect: { x: -200, y: -200, w: 1680, h: 1300 },
+  terrainRect: { x: -200, y: -200, w: 1680, h: 1700 },
   haze: ['rgba(255,255,255,0)', 'rgba(220,235,255,0.12)'],
   vignette: 0.35,
 };

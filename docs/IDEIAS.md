@@ -48,7 +48,9 @@ Ideias aprovadas pelo Enzo que ainda não foram feitas.
 - **Rei da Ilha** (área com coroa que dá pontos, muda de lugar a cada 25 s).
 - **Torre** (sobrevivência): ciclos de 10 andares, os bots começam burros e
   terminam gênios (1 bot nos andares 0–10, 2 no 11–20, 3 do 21 em diante, e
-  do 31 em diante eles ganham mais vidas). Céu: dia (0–10), entardecer (11–20),
+  do 31 em diante eles ganham mais vidas); os andares 10, 20, 30… são de
+  Guardião (chefe 1,3x maior, com mais vidas; só ele tem comemoração). Entre
+  os andares, subida de elevador com a torre passando para baixo. Céu: dia (0–10), entardecer (11–20),
   noite (21–40), quase no espaço (41–50), espaço (51+). Vidas e dano
   continuam; perdeu, volta para o andar 0. Recorde no perfil.
 - **Versão para celular**: joystick na esquerda e botões de pular, bater, dash e arma na direita.

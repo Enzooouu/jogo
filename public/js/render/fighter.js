@@ -2,7 +2,7 @@
 // armas na mão. A pose é calculada a partir do estado do jogador; nada
 // aqui altera a simulação.
 
-import { ACCESSORY_ART } from './accessories.js';
+import { ACCESSORY_ART, drawGuardianAura } from './accessories.js';
 import { drawHammerArt, drawHammerSmear } from './hammer-art.js';
 import { ELEMENTS } from '/shared/elements.js';
 import { drawSwordArt, drawStaffArt, drawSpearArt, drawSlash } from './weapons-art.js';
@@ -198,7 +198,10 @@ export function drawFighter(ctx, p, x, y, vis, time, { teamColor, isLocal, showN
   if (p.invuln > 0 && Math.floor(time * 14) % 2 === 0) ctx.globalAlpha = 0.35;
 
   ctx.translate(cx, footY);
-  ctx.scale(dir, 1);
+  // Guardião da Torre: o desenho todo cresce junto com a caixa de colisão
+  const size = p.size ?? 1;
+  ctx.scale(dir * size, size);
+  if (p.guardian) drawGuardianAura(ctx, time);
   if (p.skin === 'espantalho') {
     drawScarecrow(ctx, p, time);
     ctx.restore();

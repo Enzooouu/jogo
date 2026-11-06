@@ -4,6 +4,8 @@
 //   andares 11–20  2 bots  (burros no 11 → gênios no 20)
 //   andares 21–30  3 bots  (burros no 21 → gênios no 30)
 //   andares 31+    3 bots, e a cada ciclo eles ganham mais 1 vida (até 3)
+// Os andares de gênio (10, 20, 30…) são de GUARDIÃO: um chefe só, 1,3x maior,
+// mais pesado, com mais vidas e que bate mais forte (mais a cada ciclo).
 // Suas vidas e seu dano continuam de um andar para o outro; perdeu, a torre
 // acaba e o recorde fica guardado.
 
@@ -57,9 +59,27 @@ export function brainName(floor) {
 }
 
 // Quantos bots e quantas vidas cada um tem
+export const GUARDIAN = { size: 1.3 };
+
+export const isGuardianFloor = (floor) => floor > 0 && floor % TOWER.geniusFloor === 0;
+
+// O Guardião de cada andar: 2 vidas no 10, 3 do 20 em diante, e bate um
+// pouco mais forte a cada ciclo (até +50%)
+export function guardianOf(floor) {
+  const n = floor / TOWER.geniusFloor;
+  const titles = ['Guardião', 'Guardião Ancião', 'Guardião Supremo', 'Guardião Celestial', 'Guardião Estelar', 'Guardião Cósmico'];
+  return {
+    name: titles[Math.min(n, titles.length) - 1],
+    lives: Math.min(3, 1 + n),
+    power: Math.min(1.5, 1 + 0.1 * (n - 1)),
+    size: GUARDIAN.size,
+  };
+}
+
 export function floorFoes(floor) {
+  if (isGuardianFloor(floor)) return { bots: 1, lives: guardianOf(floor).lives, guardian: true };
   const { cycle } = floorStep(floor);
-  return { bots: Math.min(3, cycle + 1), lives: Math.min(3, 1 + Math.max(0, cycle - 2)) };
+  return { bots: Math.min(3, cycle + 1), lives: Math.min(3, 1 + Math.max(0, cycle - 2)), guardian: false };
 }
 
 // Como você começa o próximo andar depois de vencer o andar `floor`

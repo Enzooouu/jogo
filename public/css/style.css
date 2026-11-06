@@ -1319,3 +1319,9 @@ body.has-touch .training-hud { z-index: 25; }
 .pcol small { display: block; font-size: 12px; color: var(--muted); margin-top: 2px; }
 .pcol.locked b { color: rgba(255,255,255,.6); }
 .pcol-more { grid-column: 1 / -1; margin: 4px 0 0; }
+
+/* andar do Guardião (chefe) */
+.tower-hud.boss { border-color: rgba(255,90,110,.6); box-shadow: 0 0 18px rgba(255,90,110,.25); }
+.tower-hud.boss span { color: #ff9aa8; font-weight: 800; }
+.tower-banner.boss small { color: #ff7a8a; }
+.tower-banner.boss b { color: #ffd25a; text-shadow: 0 4px 0 rgba(0,0,0,.4), 0 0 34px rgba(255,80,100,.55); }

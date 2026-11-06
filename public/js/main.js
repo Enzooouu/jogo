@@ -13,7 +13,7 @@ import { buildLocalSetup, outcomeFor } from './setup.js';
 import { api } from './api.js';
 import { renderAccountBox, initAuthScreen, setAuthMode, focusAuth } from './screens/account.js';
 import { recordProfileMatch, recordTowerRun, renderLocalProfile, renderProfileChip } from './screens/profile.js';
-import { TOWER, botBrain, brainName, floorFoes, floorStep, carryAfterWin, towerXp, gravityFor } from '/shared/tower.js';
+import { TOWER, botBrain, brainName, floorFoes, floorStep, carryAfterWin, towerXp, gravityFor, isGuardianFloor, guardianOf } from '/shared/tower.js';
 import { ACCESSORIES, grantAccessory, equippedAccessory } from './collection.js';
 import { FRAMES } from '/shared/profile-stats.js';
 import { DemoArena } from './screens/demo.js';
@@ -804,21 +804,37 @@ function startTower() {
 const TOWER_NAMES = ['Zé Tonto', 'Bobão', 'Lerdo', 'Novato', 'Aprendiz', 'Espertinho', 'Sabido', 'Astuto', 'Estrategista', 'Mestre', 'Gênio'];
 
 // Monta o andar atual: você (com as vidas e o dano que sobraram) e os bots
+const CLIMB_TIME = 2.6;   // segundos da subida do elevador entre os andares
+
 function towerSetup() {
   const t = state.tower;
   const others = Object.values(ELEMENTS).filter((e) => e.enabled && e.id !== t.element).map((e) => e.id);
   const enemy = others[Math.floor(Math.random() * others.length)];
-  const { bots, lives } = floorFoes(t.floor);
+  const { bots, lives, guardian } = floorFoes(t.floor);
   const brain = botBrain(t.floor);
   const base = TOWER_NAMES[Math.min(floorStep(t.floor).step, TOWER_NAMES.length - 1)];
   const players = [{ id: 1, name: playerName(), element: t.element, team: 'A', isBot: false, admin: state.admin, lives: t.lives, maxLives: TOWER.maxLives, damage: t.damage }];
-  for (let i = 0; i < bots; i++) {
-    players.push({ id: 2 + i, name: bots > 1 ? `${base} ${i + 1}` : base, element: enemy, team: 'B', isBot: true, brain, lives });
+  if (guardian) {
+    // andar de Guardião: um chefe só, 1,3x maior, com coroa de chifres
+    const g = guardianOf(t.floor);
+    players.push({ id: 2, name: g.name, element: enemy, team: 'B', isBot: true, brain, lives, size: g.size, power: g.power, guardian: true, hat: 'guardiao' });
+  } else {
+    for (let i = 0; i < bots; i++) {
+      players.push({ id: 2 + i, name: bots > 1 ? `${base} ${i + 1}` : base, element: enemy, team: 'B', isBot: true, brain, lives });
+    }
   }
   return {
     players, mode: 'times', mapId: 'torre', localPlayerId: 1, difficulty: 'torre',
     seed: (Math.random() * 2 ** 31) | 0,
-    tower: { floor: t.floor, timeLimit: TOWER.timeLimit, maxLives: TOWER.maxLives, gravity: gravityFor(t.floor) },
+    tower: {
+      floor: t.floor, timeLimit: TOWER.timeLimit, maxLives: TOWER.maxLives, gravity: gravityFor(t.floor),
+      // do andar 1 em diante começa subindo de elevador
+      climb: t.floor > 0 ? CLIMB_TIME : 0,
+      climbInfo: t.climbInfo ?? null,
+      // comemoração de vitória só quando vence um Guardião
+      celebrate: guardian,
+      endDelay: guardian ? undefined : 0.9,
+    },
   };
 }
 
@@ -832,20 +848,31 @@ function showTowerHud(setup) {
     return;
   }
   const f = setup.tower.floor;
-  const { bots } = floorFoes(f);
+  const { bots, guardian } = floorFoes(f);
+  const boss = guardian ? guardianOf(f) : null;
   hud.hidden = false;
   hud.querySelector('b').textContent = f;
-  hud.querySelector('span').textContent = `bot ${brainName(f).toLowerCase()}${bots > 1 ? ` ×${bots}` : ''}`;
+  hud.querySelector('span').textContent = boss ? `${boss.name.toLowerCase()}` : `bot ${brainName(f).toLowerCase()}${bots > 1 ? ` ×${bots}` : ''}`;
+  hud.classList.toggle('boss', !!boss);
+  banner.hidden = true;
   const extra = f === 0 ? 'Vença para subir. Suas vidas e seu dano continuam no próximo andar.'
+    : boss ? `Chefe 1,3x maior, com ${boss.lives} vidas. Vença para comemorar!`
     : f === TOWER.spaceFloor ? 'Você chegou ao espaço! A gravidade aqui é mais leve.'
     : f > TOWER.spaceFloor ? 'Espaço: gravidade leve.' : '';
-  towerBanner('', `ANDAR ${f}`, `${bots > 1 ? `${bots} bots` : 'Bot'}: ${brainName(f)}`, extra);
-  state.towerBannerTimer = setTimeout(() => { banner.hidden = true; }, 2600);
+  const show = () => {
+    towerBanner(boss ? 'ANDAR DO CHEFE' : '', `ANDAR ${f}`, boss ? boss.name.toUpperCase() : `${bots > 1 ? `${bots} bots` : 'Bot'}: ${brainName(f)}`, extra, false, !!boss);
+    state.towerBannerTimer = setTimeout(() => { banner.hidden = true; }, 2400);
+  };
+  // depois da subida do elevador (o aviso não cobre a animação)
+  const wait = (setup.tower.climb ?? 0) * 1000;
+  if (wait) state.towerBannerTimer = setTimeout(show, wait);
+  else show();
 }
 
-function towerBanner(kicker, title, line, extra, win = false) {
+function towerBanner(kicker, title, line, extra, win = false, boss = false) {
   const banner = $('#tower-banner');
   banner.classList.toggle('win', win);
+  banner.classList.toggle('boss', boss);
   banner.querySelector('small').textContent = kicker;
   banner.querySelector('b').textContent = title;
   banner.querySelector('span').textContent = line;
@@ -895,14 +922,16 @@ function towerEnd(setup, result) {
     const carry = carryAfterWin(t.floor, { lives: me.livesLeft, damage: me.damage });
     t.lives = carry.lives;
     t.damage = carry.damage;
+    const beatBoss = isGuardianFloor(t.floor);
     t.floor++;
     towerAchievements(setup, t.floor);
-    towerBanner(`ANDAR ${t.floor - 1} VENCIDO!`, 'SUBINDO…', `Próximo: andar ${t.floor} · bot ${brainName(t.floor).toLowerCase()}`,
-      carry.gotLife ? '+1 vida! ' : `Dano curado: ${me.damage}% → ${carry.damage}%`, true);
-    clearTimeout(state.towerNextTimer);
-    state.towerNextTimer = setTimeout(() => {
-      if (state.screen === 'game' && state.tower === t) startMatch(towerSetup());
-    }, 2600);
+    // o texto que aparece durante a subida do elevador
+    t.climbInfo = {
+      title: beatBoss ? `${guardianOf(t.floor - 1).name.toUpperCase()} DERROTADO!` : `ANDAR ${t.floor - 1} VENCIDO!`,
+      extra: carry.gotLife ? '+1 vida!' : me.damage > 0 ? `Dano curado: ${me.damage}% → ${carry.damage}%` : '',
+    };
+    // já começa o próximo andar (ele abre com a subida do elevador)
+    startMatch(towerSetup());
     return;
   }
   // perdeu (ou desistiu, ou o tempo acabou sem vencer): a subida acaba

@@ -37,7 +37,13 @@ const COMBO_STATUS = {
 // Espinhos espetam em "pancadas" a cada meio segundo (fica fácil de perceber)
 const SPIKE_TICK = 0.5;
 const NO_STATS = { speed: 1, jump: 1, weight: 1, damage: 1, airDashes: PHYS.airDashes };
-const statsOf = (p) => ({ ...NO_STATS, ...ELEMENTS[p.element].stats });
+const statsOf = (p) => {
+  const st = { ...NO_STATS, ...ELEMENTS[p.element].stats };
+  // Guardião da Torre: maior = mais pesado (voa menos) e bate mais forte
+  if (p.size !== 1) st.weight *= 1 + (p.size - 1) * 0.8;
+  if (p.power !== 1) st.damage *= p.power;
+  return st;
+};
 // Quanto cada elemento sente o vento (Ar é imune pela tabela de perigos)
 const WIND_FACTOR = { terra: 0.5 };
 
@@ -70,8 +76,9 @@ export class Game {
   constructor(config) {
     const {
       players, mode = 'times', mapId, seed = 1, lives = PLAYER.lives, timeLimit = MATCH.timeLimit,
-      practice = false, items = true, countdown = MATCH.countdown,
+      practice = false, items = true, countdown: baseCountdown = MATCH.countdown,
     } = config;
+    const countdown = baseCountdown + (config.climb ?? 0);
     if (!MODES[mode]) throw new Error(`Modo desconhecido: ${mode}`);
     if (!Array.isArray(players) || players.length < 2) throw new Error('A partida precisa de pelo menos 2 jogadores');
 
@@ -91,6 +98,12 @@ export class Game {
     this.itemsEnabled = items;
     // gravidade mais leve (Torre, no espaço): pula mais alto e voa mais longe
     this.gravity = config.gravityScale ?? 1;
+    // fim da partida: tempo antes do resultado e se tem a comemoração de vitória
+    this.endDelay = config.endDelay ?? MATCH.endDelay;
+    this.celebrate = config.celebrate ?? true;
+    // Torre: segundos de subida do elevador no começo (antes da contagem)
+    this.climb = config.climb ?? 0;
+    this.climbInfo = config.climbInfo ?? null;   // texto da subida ("ANDAR 3 VENCIDO!")
 
     this.tick = 0;
     this.time = 0;               // tempo de luta (sem contar a contagem regressiva)
@@ -176,7 +189,7 @@ export class Game {
       phaseTimer: this.phaseTimer,
       players: this.players.map((p) => ({
         id: p.id, x: p.x, y: p.y, vx: p.vx, vy: p.vy, facing: p.facing,
-        damage: p.damage, lives: p.lives, state: p.state, invuln: p.invuln, hat: p.hat,
+        damage: p.damage, lives: p.lives, state: p.state, invuln: p.invuln, hat: p.hat, size: p.size,
         hitstun: p.hitstun, onGround: p.onGround, onWall: p.onWall, windVx: p.windVx,
         dashTime: p.dashTime, airDashes: p.airDashes, lungeTime: p.lungeTime,
         weapon: p.weapon ? { ...p.weapon } : null, snowballs: p.snowballs,
@@ -977,11 +990,12 @@ export class Game {
       }
       this.lungeHits(p, profile);
     } else if (profile.kind === 'melee') {
+      const reach = profile.reach * p.size;
       const box = {
-        x: p.facing > 0 ? p.x + p.w - 6 : p.x + 6 - profile.reach,
-        y: p.y + p.h * 0.42 - profile.height / 2,
-        w: profile.reach,
-        h: profile.height,
+        x: p.facing > 0 ? p.x + p.w - 6 : p.x + 6 - reach,
+        y: p.y + p.h * 0.42 - (profile.height * p.size) / 2,
+        w: reach,
+        h: profile.height * p.size,
       };
       p.attack.box = box;
       for (const t of this.players) {
@@ -1023,11 +1037,12 @@ export class Game {
   // Ponta da lança: acerta quem estiver na frente (cada um uma vez por golpe);
   // acertou alguém, a investida para ali
   lungeHits(p, profile) {
+    const reach = profile.reach * p.size;
     const box = {
-      x: p.facing > 0 ? p.x + p.w - 4 : p.x + 4 - profile.reach,
-      y: p.y + p.h * 0.45 - profile.height / 2,
-      w: profile.reach,
-      h: profile.height,
+      x: p.facing > 0 ? p.x + p.w - 4 : p.x + 4 - reach,
+      y: p.y + p.h * 0.45 - (profile.height * p.size) / 2,
+      w: reach,
+      h: profile.height * p.size,
     };
     p.attack.box = box;
     for (const t of this.players) {
@@ -1461,7 +1476,7 @@ export class Game {
   finish(winnerTeam, reason) {
     if (this.phase !== 'playing') return;
     this.phase = 'ending';
-    this.phaseTimer = MATCH.endDelay;
+    this.phaseTimer = this.endDelay;
     this.result = {
       winnerTeam,
       reason,
@@ -1479,7 +1494,7 @@ export class Game {
       })),
     };
     const winnerElement = winnerTeam !== null ? this.players.find((p) => p.team === winnerTeam)?.element ?? null : null;
-    this.emit('matchEnd', { winnerTeam, reason, winnerElement });
+    this.emit('matchEnd', { winnerTeam, reason, winnerElement, celebrate: this.celebrate });
   }
 }
 
@@ -1493,13 +1508,17 @@ function createPlayer(cfg, index, lives) {
     admin: Boolean(cfg.admin), // modo ADM (testes): cada golpe dá PLAYER.adminDamage
     skin: cfg.skin ?? null,    // visual especial do tutorial ('manequim', 'boneco')
     hat: cfg.hat ?? null,      // acessório na cabeça (colecionável, só visual)
+    guardian: !!cfg.guardian,  // Guardião da Torre (aura e coroa de chifres)
     dummy: !!cfg.dummy,        // boneco de treino: não pega armas
     anchored: !!cfg.anchored,  // espantalho do treino: preso ao chão
     sway: 0, swayV: 0,         // balanço do espantalho na estaca
     checkpoint: null,          // treino: onde reaparece depois de cair
     slot: index,
     x: 0, y: 0, px: 0, py: 0,
-    w: PLAYER.width, h: PLAYER.height,
+    // tamanho (Guardião da Torre é 1,3x maior) e força extra
+    size: cfg.size ?? 1,
+    power: cfg.power ?? 1,
+    w: PLAYER.width * (cfg.size ?? 1), h: PLAYER.height * (cfg.size ?? 1),
     vx: 0, vy: 0,
     facing: 1,
     onGround: false,
