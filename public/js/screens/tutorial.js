@@ -162,6 +162,7 @@ export class TutorialScreen {
 
   finish() {
     markDone();
+    window.dispatchEvent(new CustomEvent('tutorial-complete'));
     this.fade(false);
     this.keyboard?.destroy();
     this.keyboard = null;

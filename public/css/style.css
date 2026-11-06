@@ -1037,3 +1037,43 @@ body.has-touch .training-hud { z-index: 25; }
 .th-el-btn.on { opacity: 1; border-color: #ffd25a; box-shadow: 0 0 0 2px rgba(255,210,90,.3); transform: translateY(-2px); }
 .th-el-btn:focus-visible { outline: 2px solid #ffd25a; outline-offset: 2px; }
 @media (max-height: 520px) { .th-el-btn { height: 34px; } }
+
+/* ---------- conquistas ---------- */
+.ach-panel { width: min(560px, calc(100% - 32px)); }
+.ach-tabs { display: flex; gap: 6px; margin: 4px 0 6px; }
+.ach-tabs button { flex: 1; padding: 8px 10px; border-radius: 10px; border: 1px solid rgba(255,255,255,.15); background: rgba(255,255,255,.04); color: rgba(255,255,255,.75); font: italic 800 14px var(--font); cursor: pointer; }
+.ach-tabs button b { font-style: normal; font-size: 11px; opacity: .7; margin-left: 4px; }
+.ach-tabs button.on { border-color: #ffd25a; color: #fff; background: rgba(255,210,90,.12); }
+.ach-tabs button[data-tier="ouro"].on { background: linear-gradient(90deg, rgba(255,210,90,.28), rgba(232,160,30,.12)); color: #ffe08a; }
+.ach-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
+.ach-item { display: grid; grid-template-columns: 38px 1fr auto; align-items: center; gap: 10px; padding: 8px 10px; border-radius: 10px; background: rgba(255,255,255,.04); border: 1px solid rgba(255,255,255,.08); }
+.ach-i { width: 38px; height: 38px; border-radius: 10px; display: grid; place-items: center; font-size: 20px; background: rgba(0,0,0,.3); filter: grayscale(1); opacity: .6; }
+.ach-t b { display: block; font: italic 800 14px var(--font); color: rgba(255,255,255,.7); }
+.ach-t span { font-size: 12px; color: rgba(255,255,255,.5); }
+.ach-item em { font: 800 12px var(--font); font-style: normal; color: rgba(255,255,255,.5); font-variant-numeric: tabular-nums; }
+.ach-item.got { border-color: rgba(120,220,160,.35); background: rgba(120,220,160,.07); }
+.ach-item.got .ach-i { filter: none; opacity: 1; background: rgba(120,220,160,.15); }
+.ach-item.got .ach-t b { color: #fff; }
+.ach-item.got em { color: #7fe0a8; font-size: 16px; }
+.ach-item.ouro.got { border-color: rgba(255,210,90,.6); background: linear-gradient(90deg, rgba(255,210,90,.16), rgba(255,210,90,.03)); box-shadow: inset 0 0 0 1px rgba(255,240,180,.08); }
+.ach-item.ouro.got .ach-i { background: radial-gradient(circle at 40% 30%, #fff1b8, #e8a520); box-shadow: 0 0 10px rgba(255,200,80,.5); }
+.ach-item.ouro.got .ach-t b, .ach-item.ouro.got em { color: #ffe08a; }
+.ach-item.hidden .ach-i { font: 900 20px var(--font); color: rgba(255,255,255,.4); filter: none; }
+.ach-item.hidden .ach-t b { letter-spacing: .2em; }
+
+.result-ach { display: flex; flex-wrap: wrap; gap: 6px; justify-content: center; align-items: center; margin: 14px 0 0; }
+.result-ach-l { font: 800 11px var(--font); letter-spacing: .25em; color: rgba(255,255,255,.6); margin-right: 4px; }
+.ach-chip { padding: 5px 12px; border-radius: 999px; font: 800 12px var(--font); background: rgba(120,220,160,.15); border: 1px solid rgba(120,220,160,.45); color: #c8ffe0; }
+.ach-chip.ouro { background: linear-gradient(90deg, rgba(255,210,90,.3), rgba(232,160,30,.15)); border-color: #ffd25a; color: #ffe08a; }
+
+.ach-toasts { position: fixed; top: calc(16px + env(safe-area-inset-top, 0px)); right: calc(16px + env(safe-area-inset-right, 0px)); z-index: 60; display: grid; gap: 8px; pointer-events: none; }
+.ach-toast { display: flex; align-items: center; gap: 12px; padding: 10px 18px 10px 10px; border-radius: 14px; background: rgba(14,10,24,.94); border: 1px solid rgba(120,220,160,.5); box-shadow: 0 12px 30px rgba(0,0,0,.45); animation: ach-in .45s cubic-bezier(.2,1.3,.4,1) both; transition: opacity .5s, transform .5s; }
+.ach-toast.ouro { border-color: #ffd25a; box-shadow: 0 0 24px rgba(255,200,80,.35), 0 12px 30px rgba(0,0,0,.45); }
+.ach-toast.out { opacity: 0; transform: translateY(-10px); }
+.ach-toast-i { width: 42px; height: 42px; border-radius: 12px; display: grid; place-items: center; font-size: 22px; background: rgba(120,220,160,.15); }
+.ach-toast.ouro .ach-toast-i { background: radial-gradient(circle at 40% 30%, #fff1b8, #e8a520); }
+.ach-toast small { display: block; font: 800 10px var(--font); letter-spacing: .2em; color: #7fe0a8; }
+.ach-toast.ouro small { color: #ffd25a; }
+.ach-toast b { font: italic 900 17px var(--font); color: #fff; }
+@keyframes ach-in { from { opacity: 0; transform: translateY(-14px) scale(.95); } }
+@media (prefers-reduced-motion: reduce) { .ach-toast { animation: none; } }

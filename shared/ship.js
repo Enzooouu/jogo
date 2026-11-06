@@ -183,6 +183,7 @@ export class Airships {
   // empurrão do canhão (não é golpe de ninguém)
   knock(p, prof, dir) {
     const g = this.game;
+    g.emit('cannonHit', { target: p.id });
     p.damage += prof.damage;
     p.stats.damageTaken += prof.damage;
     const weight = ELEMENTS[p.element].stats?.weight ?? 1;

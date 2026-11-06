@@ -19,6 +19,7 @@ import { initControls } from './screens/controls.js';
 import { TutorialScreen } from './screens/tutorial.js';
 import { currentBindings, actionOf } from './input/bindings.js';
 import { watchGamepad } from './input/gamepad.js';
+import { ACHIEVEMENTS, byId, MatchTracker, evaluate, emptyProgress, progressOf, unlockSpecial } from '/shared/achievements.js';
 import { TouchControls, isTouchDevice } from './input/touch.js';
 import { VersusScreen } from './screens/versus.js';
 
@@ -532,6 +533,9 @@ async function startMatch(setup) {
   runner.start();
   $('#quit-btn').textContent = 'Desistir';
   $('#quit-hint').textContent = 'Desistir conta como derrota.';
+  // conquistas: anota o que acontece na partida (não vale no treino)
+  state.tracker = setup.practice ? null : new MatchTracker(runner.game, setup.localPlayerId);
+  if (state.tracker) runner.onEvents = (events) => state.tracker.onEvents(events);
   if (setup.practice) {
     startTraining(runner);
     if (DEBUG) window.__brawl = { runner, state, training };
@@ -751,7 +755,105 @@ function endMatch(setup, result) {
   state.runner = null;
   const outcome = showResult(setup, result);
   saveResult(setup, result, outcome);
+  checkAchievements(setup, result, outcome);
 }
+
+// ------------------------------------------------------------ conquistas
+
+const ACH_KEY = 'brawl.conquistas';
+
+function loadAch() {
+  try {
+    const v = JSON.parse(localStorage.getItem(ACH_KEY) ?? 'null');
+    if (v && v.normal && v.ouro && v.counters) return v;
+  } catch {
+    // sem armazenamento: começa do zero
+  }
+  return emptyProgress();
+}
+
+function saveAch(p) {
+  try {
+    localStorage.setItem(ACH_KEY, JSON.stringify(p));
+  } catch {
+    // navegação privada: vale só até fechar a página
+  }
+}
+
+let achProgress = loadAch();
+let achTier = 'normal';
+
+function achName(a, tier) {
+  return tier === 'ouro' ? a.gold : a.name;
+}
+
+function checkAchievements(setup, result, outcome) {
+  const tracker = state.tracker;
+  state.tracker = null;
+  const box = $('#result-ach');
+  box.hidden = true;
+  if (!tracker) return;
+  const fresh = evaluate(tracker.summary(result, setup, outcome), achProgress);
+  saveAch(achProgress);
+  if (!fresh.length) return;
+  box.innerHTML = '<span class="result-ach-l">CONQUISTAS NOVAS</span>';
+  for (const f of fresh) {
+    const a = byId[f.id];
+    const chip = document.createElement('span');
+    chip.className = `ach-chip ${f.tier}`;
+    chip.textContent = `${a.icon} ${achName(a, f.tier)}`;
+    box.appendChild(chip);
+  }
+  box.hidden = false;
+  fresh.forEach((f, i) => setTimeout(() => achToast(f), 400 + i * 900));
+}
+
+function achToast({ id, tier }) {
+  const a = byId[id];
+  const t = document.createElement('div');
+  t.className = `ach-toast ${tier}`;
+  t.innerHTML = '<span class="ach-toast-i"></span><div><small></small><b></b></div>';
+  t.querySelector('.ach-toast-i').textContent = a.icon;
+  t.querySelector('small').textContent = tier === 'ouro' ? 'CONQUISTA DE OURO!' : 'CONQUISTA DESBLOQUEADA';
+  t.querySelector('b').textContent = achName(a, tier);
+  $('#ach-toasts').appendChild(t);
+  setTimeout(() => t.classList.add('out'), 3600);
+  setTimeout(() => t.remove(), 4200);
+}
+
+function renderAch() {
+  const list = $('#ach-list');
+  list.innerHTML = '';
+  const tier = achTier;
+  const all = ACHIEVEMENTS.filter((a) => tier === 'normal' || a.gold);
+  const done = all.filter((a) => achProgress[tier][a.id]).length;
+  $('#ach-count-normal').textContent = `${ACHIEVEMENTS.filter((a) => achProgress.normal[a.id]).length}/${ACHIEVEMENTS.length}`;
+  $('#ach-count-ouro').textContent = `${ACHIEVEMENTS.filter((a) => a.gold && achProgress.ouro[a.id]).length}/${ACHIEVEMENTS.filter((a) => a.gold).length}`;
+  $('#ach-hint').textContent = tier === 'normal'
+    ? `Valem em qualquer dificuldade. Você tem ${done} de ${all.length}.`
+    : 'Só contam no Difícil. Cada uma aparece depois que você completa a normal.';
+  for (const a of all) {
+    const got = achProgress[tier][a.id];
+    const hidden = tier === 'ouro' && !achProgress.normal[a.id];
+    const li = document.createElement('li');
+    li.className = `ach-item ${tier}${got ? ' got' : ''}${hidden ? ' hidden' : ''}`;
+    li.innerHTML = '<span class="ach-i"></span><div class="ach-t"><b></b><span></span></div><em></em>';
+    li.querySelector('.ach-i').textContent = hidden ? '?' : got ? a.icon : '🔒';
+    li.querySelector('b').textContent = hidden ? '???' : achName(a, tier);
+    li.querySelector('.ach-t span').textContent = hidden
+      ? 'Complete a conquista normal para descobrir.'
+      : tier === 'ouro' ? `${a.desc.replace(/\.$/, '')} no Difícil.` : a.desc;
+    const pr = !hidden && !got ? progressOf(a, tier, achProgress) : null;
+    li.querySelector('em').textContent = got ? '✓' : pr ? `${pr.n}/${pr.goal}` : '';
+    list.appendChild(li);
+  }
+}
+
+window.addEventListener('tutorial-complete', () => {
+  const fresh = unlockSpecial('aprendiz', achProgress);
+  saveAch(achProgress);
+  fresh.forEach(achToast);
+});
 
 async function saveResult(setup, result, outcome) {
   const note = $('#result-save');
@@ -1240,6 +1342,17 @@ function init() {
   $('#home-controls').addEventListener('click', () => togglePanel('#controls-panel'));
   $('#panel-backdrop').addEventListener('click', closePanels);
   $('#home-settings').addEventListener('click', () => togglePanel('#settings-panel'));
+  $('#home-ach').addEventListener('click', () => {
+    renderAch();
+    togglePanel('#ach-panel');
+  });
+  for (const b of document.querySelectorAll('.ach-tabs button')) {
+    b.addEventListener('click', () => {
+      achTier = b.dataset.tier;
+      for (const o of document.querySelectorAll('.ach-tabs button')) o.classList.toggle('on', o === b);
+      renderAch();
+    });
+  }
   $('#opt-sound').addEventListener('change', (e) => {
     if (e.target.checked === isMuted()) toggleMute();
   });

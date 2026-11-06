@@ -123,6 +123,7 @@
         <button type="button" class="home-item on" id="home-play">JOGAR</button>
         <button type="button" class="home-item" id="home-tutorial">TUTORIAL</button>
         <button type="button" class="home-item" id="home-profile">PERFIL</button>
+        <button type="button" class="home-item" id="home-ach">CONQUISTAS</button>
         <button type="button" class="home-item" id="home-controls">CONTROLES</button>
         <button type="button" class="home-item" id="home-settings">CONFIGURAÇÕES</button>
       </nav>
@@ -179,6 +180,17 @@
         <label class="toggle"><input type="checkbox" id="opt-demo"> Partida de demonstração no fundo</label>
         <label class="toggle"><input type="checkbox" id="opt-admin"> Modo ADM (testes)</label>
         <p class="hint">No modo ADM cada golpe seu dá 999% de dano, nada te acerta (nem lava, água, espinhos ou vento) e você tem pulos e dashes infinitos. As partidas não contam nas estatísticas.</p>
+        <div class="panel-actions"><button type="button" class="btn ghost small" data-close>Fechar</button></div>
+      </div>
+
+      <div id="ach-panel" class="side-panel ach-panel" hidden>
+        <h2>Conquistas</h2>
+        <div class="ach-tabs" role="tablist">
+          <button type="button" role="tab" data-tier="normal" class="on">Normais <b id="ach-count-normal"></b></button>
+          <button type="button" role="tab" data-tier="ouro">De ouro <b id="ach-count-ouro"></b></button>
+        </div>
+        <p class="hint" id="ach-hint"></p>
+        <ul id="ach-list" class="ach-list"></ul>
         <div class="panel-actions"><button type="button" class="btn ghost small" data-close>Fechar</button></div>
       </div>
     </section>
@@ -359,6 +371,7 @@
         <h1 id="result-title" class="result-title">VITÓRIA!</h1>
         <p id="result-sub" class="result-sub"></p>
         <div id="result-cards" class="result-cards"></div>
+        <div id="result-ach" class="result-ach" hidden></div>
         <p id="result-save" class="hint"></p>
         <div class="result-actions">
           <button id="again-btn" type="button" class="result-btn primary">JOGAR DE NOVO</button>
@@ -418,6 +431,7 @@
 
   </div>
   <div id="pad-toast" class="pad-toast" role="status" hidden></div>
+  <div id="ach-toasts" class="ach-toasts" aria-live="polite"></div>
   <!-- controles de toque (celular): joystick à esquerda, botões à direita -->
   <div id="touch-controls" class="touch-controls" hidden>
     <div class="tc-zone" aria-label="Joystick: encoste e arraste">

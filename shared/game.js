@@ -788,6 +788,7 @@ export class Game {
   }
 
   checkHazards(p) {
+    const wasIn = p.inHazard;
     p.inHazard = null;
     if (p.admin) return; // modo ADM: atravessa lava, água e espinhos
     for (const h of this.hazardsNow()) {
@@ -810,6 +811,7 @@ export class Game {
       }
       if (reaction === 'imune') {
         p.inHazard = h.type;
+        if (wasIn !== h.type) this.emit('hazardEnter', { id: p.id, hazard: h.type });
         // Elemento imune "lava" o status contrário (fogo na lava não fica encharcado).
         if (h.type === 'lava') p.status.encharcado = null;
         if (h.type === 'agua') p.status.queimadura = null;
@@ -1104,7 +1106,8 @@ export class Game {
 
     this.emit('hit', {
       attacker: attacker.id, target: target.id, damage, kb,
-      element: attacker.element, weapon: profile.id,
+      element: attacker.element, weapon: profile.id, src: profile.src ?? 'golpe',
+      stun: profile.status?.type === 'atordoado' && target.status.atordoado != null,
       x: target.x + target.w / 2, y: target.y + target.h * 0.4,
     });
   }
@@ -1163,10 +1166,10 @@ export class Game {
           if (pr.kind === 'neve') {
             this.lake?.snowHit(owner, t, dir);
           } else if (pr.kind === 'arremesso') {
-            this.applyHit(owner, t, { id: pr.weapon, ...THROWN, damage: WEAPONS[pr.weapon].throwDamage }, dir);
+            this.applyHit(owner, t, { id: pr.weapon, ...THROWN, damage: WEAPONS[pr.weapon].throwDamage, src: 'arremesso' }, dir);
           } else {
             const profile = weaponProfile(pr.weapon, pr.element);
-            this.applyHit(owner, t, profile, dir);
+            this.applyHit(owner, t, { ...profile, src: 'magia' }, dir);
             // disparo combinado: também aplica o efeito do outro elemento
             if (pr.combo) this.applyStatus(t, COMBO_STATUS[pr.combo], owner.id);
           }
@@ -1261,7 +1264,7 @@ export class Game {
       if (pr.hitIds.includes(t.id) || !this.canHit(owner, t)) continue;
       if (!circleRectOverlap(pr.x, pr.y, radius, t)) continue;
       const dir = Math.sign(t.x + t.w / 2 - pr.x) || 1;
-      this.applyHit(owner, t, { ...profile, ...EXPLOSION_KB, damage }, dir);
+      this.applyHit(owner, t, { ...profile, ...EXPLOSION_KB, damage, src: 'magia' }, dir);
     }
   }
 
