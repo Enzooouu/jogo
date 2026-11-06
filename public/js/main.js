@@ -19,6 +19,7 @@ import { initControls } from './screens/controls.js';
 import { TutorialScreen } from './screens/tutorial.js';
 import { currentBindings, actionOf } from './input/bindings.js';
 import { watchGamepad } from './input/gamepad.js';
+import { isDeveloper } from '/shared/dev.js';
 import { ACHIEVEMENTS, byId, MatchTracker, evaluate, emptyProgress, progressOf, unlockSpecial } from '/shared/achievements.js';
 import { TouchControls, isTouchDevice } from './input/touch.js';
 import { VersusScreen } from './screens/versus.js';
@@ -35,7 +36,7 @@ const state = {
   mapChoice: loadPref('mapa', RANDOM_MAP), // id do mapa ou 'aleatorio'
   mapChoiceRei: loadPref('mapa-rei', RANDOM_MAP), // o Rei da Ilha tem mapas só dele
   demo: loadPref('demo', '1') === '1',
-  admin: loadPref('adm', '0') === '1', // modo ADM (testes): golpes dão 999%
+  admin: false, // modo ADM (testes): golpes dão 999% (liberado em updateAdminAccess)
   runner: null,
   pendingSetup: null,  // times montados na tela Versus
   lastSetup: null,
@@ -121,7 +122,17 @@ function setUser(user) {
     },
   });
   if (state.offline) setOfflineMode();
+  updateAdminAccess();
   homeMenu?.refresh();
+}
+
+// Modo ADM: na versão sem servidor fica liberado; com servidor e contas, só
+// a conta de desenvolvedor (enzoofoda) vê
+function updateAdminAccess() {
+  const allowed = state.offline || isDeveloper(state.user?.username);
+  $('#adm-box').hidden = !allowed;
+  if (!allowed && state.admin) state.admin = false;
+  if (allowed) state.admin = loadPref('adm', '0') === '1';
 }
 
 function setOfflineMode() {
@@ -130,6 +141,7 @@ function setOfflineMode() {
   $('#account-box').hidden = true;
   $('#home-profile').hidden = true;
   $('#save-hint').textContent = 'Versão sem servidor: dá para jogar, mas contas e estatísticas ficam desligadas.';
+  updateAdminAccess();
 }
 
 function openAuth(mode) {

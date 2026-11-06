@@ -167,3 +167,5 @@ docs/          Arquitetura e plano do multiplayer online
 
 Detalhes da arquitetura e o passo a passo para o modo online com WebSocket
 estão em [docs/ARQUITETURA.md](docs/ARQUITETURA.md).
+
+**Modo ADM:** na versão sem servidor fica liberado em Configurações. Com servidor e contas, só a conta de desenvolvedor (**enzoofoda**, em `shared/dev.js`) vê a opção.

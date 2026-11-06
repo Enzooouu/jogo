@@ -4,6 +4,8 @@ Ideias aprovadas pelo Enzo que ainda não foram feitas.
 
 ## Para testar em casa
 
+- **Criar a conta enzoofoda** logo que o site estiver no ar (antes que outra pessoa pegue o nome). Ela é a única que vê o modo ADM quando tem servidor.
+
 - **Controle de verdade** (Xbox/PlayStation): ver se os botões estão certos na luta, nos menus, na pausa e no treino livre (Select = arma, L3 = trocar alvo, R3 = zerar). Se algum botão estiver trocado, anotar qual controle é.
 - **Celular de verdade** (deixar para quando o jogo for publicado num site de verdade; hoje no celular só dá para abrir pela página do Claude, e assim fica difícil de jogar):
   - ver se o joystick e os botões estão num tamanho bom para os dedos e no lugar certo;
@@ -48,6 +50,7 @@ Ideias aprovadas pelo Enzo que ainda não foram feitas.
 - Torneio em chave de 8 lutadores
 - Dois jogadores no mesmo teclado
 - Online de verdade com código de sala
+  - Conquista secreta **"Derrubei o Criador"** (ouro: **"Lenda Viva"**, vencer o Enzo num 1×1): vencer uma partida online contra a conta de desenvolvedor (enzoofoda); não vale se ele estiver com o ADM ligado; dá um selo no perfil.
 - Elemento novo: Raio ou Gelo
 - Música para o menu e para as lutas
 - Publicar o jogo num site de verdade (Cloudflare Pages) — também libera testar e arrumar a versão de celular. **Domínio escolhido: jogaelementum.com.br** (comprar quando o dinheiro cair).
