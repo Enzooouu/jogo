@@ -894,9 +894,14 @@ function towerAchievements(setup, floorsCleared) {
   if (!fresh.length) return;
   saveAch(achProgress);
   fresh.forEach((f, i) => setTimeout(() => achToast(f), 300 + i * 900));
+  grantRewards(fresh);
+}
+
+// Conquistas de ouro com prêmio (acessório para a coleção)
+function grantRewards(fresh) {
   for (const f of fresh) {
-    const reward = f.tier === 'ouro' ? byId[f.id].gold.reward : null;
-    if (reward && grantAccessory(reward)) setTimeout(() => accessoryToast(reward), 300 + fresh.length * 900);
+    const reward = f.tier === 'ouro' ? byId[f.id].gold?.reward : null;
+    if (reward && grantAccessory(reward)) setTimeout(() => accessoryToast(reward), 400 + fresh.length * 900);
   }
 }
 
@@ -1010,6 +1015,9 @@ function saveAch(p) {
 }
 
 let achProgress = loadAch();
+// quem já tinha uma conquista de ouro com prêmio antes do prêmio existir
+// ganha o acessório agora (sem trocar o que está usando)
+for (const a of ACHIEVEMENTS) if (a.gold?.reward && achProgress.ouro[a.id]) grantAccessory(a.gold.reward, false);
 let achTier = 'normal';
 
 function achName(a, tier) {
@@ -1045,6 +1053,7 @@ function checkAchievements(setup, result, outcome) {
   }
   box.hidden = false;
   fresh.forEach((f, i) => setTimeout(() => achToast(f), 400 + i * 900));
+  grantRewards(fresh);
 }
 
 // XP ganho na tela de resultado: a barra enche e mostra se subiu de nível

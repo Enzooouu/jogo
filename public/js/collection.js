@@ -11,6 +11,12 @@ export const ACCESSORIES = {
     icon: '👨‍🚀',
     how: 'Conquista de ouro "Astronauta": passe do andar 50 da Torre.',
   },
+  coroa: {
+    id: 'coroa',
+    name: 'Coroa do Imperador',
+    icon: '👑',
+    how: 'Conquista de ouro "Imperador": no Difícil, vença o Rei da Ilha no Castelo e na Pirâmide sem o outro time marcar ponto.',
+  },
 };
 
 export function loadCollection() {
@@ -31,12 +37,12 @@ function saveCollection(c) {
   }
 }
 
-// Ganha um acessório (já fica equipado). Devolve true se era novo.
-export function grantAccessory(id) {
+// Ganha um acessório (já fica equipado, se `equip`). Devolve true se era novo.
+export function grantAccessory(id, equip = true) {
   const c = loadCollection();
   if (!ACCESSORIES[id] || c.owned.includes(id)) return false;
   c.owned.push(id);
-  c.equipped = id;
+  if (equip) c.equipped = id;
   saveCollection(c);
   return true;
 }

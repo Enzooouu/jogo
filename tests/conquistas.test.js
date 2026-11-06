@@ -122,6 +122,12 @@ test('Alpinista (Torre): a de ouro libera a normal junto e dá o capacete', () =
   assert.equal(q.ouro.alpinista, undefined);
 });
 
+test('Imperador (ouro do Rei Absoluto) dá a coroa', () => {
+  const a = ACHIEVEMENTS.find((x) => x.id === 'rei_absoluto');
+  assert.equal(a.gold.name, 'Imperador');
+  assert.equal(a.gold.reward, 'coroa');
+});
+
 test('o jogo marca de onde veio o golpe (golpe, magia, arremesso)', () => {
   const g = game('agua');
   const me = g.playerById(1);

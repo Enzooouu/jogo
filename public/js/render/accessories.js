@@ -143,4 +143,61 @@ export function drawGuardianAura(ctx, time = 0) {
   ctx.fill();
 }
 
-export const ACCESSORY_ART = { capacete: drawHelmet, guardiao: drawGuardianCrown };
+// Coroa do Imperador (prêmio da conquista de ouro "Imperador"): ouro com
+// 5 pontas, pedras dos 4 elementos e borda de pele branca com pintinhas
+export function drawEmperorCrown(ctx, h, time = 0) {
+  const cx = h.x;
+  const base = h.y - 11;
+  ctx.save();
+  ctx.lineJoin = 'round';
+  const pts = [[-12, 0], [-13, -12], [-7, -6], [-4, -16], [0, -8], [4, -16], [7, -6], [13, -12], [12, 0]];
+  ctx.fillStyle = INK;
+  ctx.beginPath();
+  pts.forEach(([x, y], i) => (i ? ctx.lineTo(cx + x * 1.12, base + y * 1.12 + 1) : ctx.moveTo(cx + x * 1.12, base + y * 1.12 + 1)));
+  ctx.closePath();
+  ctx.fill();
+  const gold = ctx.createLinearGradient(0, base - 16, 0, base);
+  gold.addColorStop(0, '#fff3c0');
+  gold.addColorStop(0.45, '#f6c843');
+  gold.addColorStop(1, '#b07a18');
+  ctx.fillStyle = gold;
+  ctx.beginPath();
+  pts.forEach(([x, y], i) => (i ? ctx.lineTo(cx + x, base + y) : ctx.moveTo(cx + x, base + y)));
+  ctx.closePath();
+  ctx.fill();
+  // bolinhas nas pontas
+  ctx.fillStyle = '#fff6d0';
+  for (const [x, y] of [[-13, -12], [-4, -16], [4, -16], [13, -12]]) {
+    ctx.beginPath();
+    ctx.arc(cx + x, base + y - 1.2, 1.8, 0, Math.PI * 2);
+    ctx.fill();
+  }
+  // pedras dos 4 elementos (brilham uma de cada vez)
+  ['#ff6a1f', '#2f8cff', '#b07a40', '#4fd1b8'].forEach((c, i) => {
+    const on = 0.55 + 0.45 * Math.max(0, Math.sin(time * 3 - i * 1.3));
+    ctx.fillStyle = INK;
+    ctx.beginPath();
+    ctx.arc(cx - 7.5 + i * 5, base - 4, 2.4, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.globalAlpha = on;
+    ctx.fillStyle = c;
+    ctx.beginPath();
+    ctx.arc(cx - 7.5 + i * 5, base - 4, 1.7, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.globalAlpha = 1;
+  });
+  // borda de pele branca
+  ctx.fillStyle = INK;
+  ctx.beginPath();
+  ctx.ellipse(cx, base + 1, 14, 4.2, 0, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.fillStyle = '#f5f1ea';
+  ctx.beginPath();
+  ctx.ellipse(cx, base + 0.6, 12.8, 3.2, 0, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.fillStyle = INK;
+  for (const x of [-8, -3, 2, 7]) ctx.fillRect(cx + x, base, 1.4, 1.4);
+  ctx.restore();
+}
+
+export const ACCESSORY_ART = { capacete: drawHelmet, coroa: drawEmperorCrown, guardiao: drawGuardianCrown };
