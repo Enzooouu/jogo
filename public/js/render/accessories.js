@@ -4,71 +4,89 @@
 
 const INK = '#1a1222';
 
-// Capacete de astronauta: bolha de vidro em volta da cabeça, anel de metal
-// no pescoço, uma antena com luz e o reflexo no vidro.
+// Capacete de astronauta: casco branco em volta da cabeça com um visor
+// grande de vidro azulado na frente (dá para ver o rosto), reflexo dourado,
+// lanterna do lado e o anel de metal no pescoço.
 export function drawHelmet(ctx, h, time = 0) {
   const cx = h.x;
   const cy = h.y - 2;
   const R = 17;
   ctx.save();
-  // antena com luzinha piscando
-  ctx.strokeStyle = INK;
-  ctx.lineWidth = 3;
+  ctx.lineJoin = 'round';
+  // casco branco com o buraco do visor (o rosto aparece pelo vidro)
+  const vx = cx + 2.5;
+  const vy = cy + 0.5;
+  const shellPath = (r, vw, vh) => {
+    ctx.beginPath();
+    ctx.arc(cx, cy, r, 0, Math.PI * 2);
+    ctx.ellipse(vx, vy, vw, vh, 0, 0, Math.PI * 2, true);
+  };
+  ctx.fillStyle = INK;
+  shellPath(R + 1.6, 11.4, 9.9);
+  ctx.fill('evenodd');
+  const shell = ctx.createRadialGradient(cx - 6, cy - 8, 2, cx, cy, R + 2);
+  shell.addColorStop(0, '#ffffff');
+  shell.addColorStop(0.6, '#e6ebf3');
+  shell.addColorStop(1, '#a9b3c4');
+  ctx.fillStyle = shell;
+  shellPath(R, 13, 11.5);
+  ctx.fill('evenodd');
+  // vidro do visor: azulado e transparente, com reflexo dourado embaixo
+  ctx.save();
   ctx.beginPath();
-  ctx.moveTo(cx + 9, cy - 13);
-  ctx.lineTo(cx + 14, cy - 25);
-  ctx.stroke();
-  ctx.strokeStyle = '#c9d2e0';
-  ctx.lineWidth = 1.5;
-  ctx.stroke();
-  const blink = 0.5 + 0.5 * Math.sin(time * 5);
-  ctx.fillStyle = `rgba(255,${Math.round(70 + 60 * blink)},80,1)`;
-  ctx.beginPath();
-  ctx.arc(cx + 14, cy - 26, 2.6, 0, Math.PI * 2);
-  ctx.fill();
-  // vidro (transparente: dá para ver a cabeça dentro)
-  const glass = ctx.createRadialGradient(cx - 6, cy - 7, 2, cx, cy, R);
-  glass.addColorStop(0, 'rgba(255,255,255,0.28)');
-  glass.addColorStop(0.6, 'rgba(170,215,255,0.12)');
-  glass.addColorStop(1, 'rgba(120,180,255,0.3)');
+  ctx.ellipse(vx, vy, 11.4, 9.9, 0, 0, Math.PI * 2);
+  ctx.clip();
+  const glass = ctx.createLinearGradient(vx - 12, vy - 10, vx + 12, vy + 10);
+  glass.addColorStop(0, 'rgba(140,200,255,0.28)');
+  glass.addColorStop(0.6, 'rgba(60,110,210,0.12)');
+  glass.addColorStop(1, 'rgba(255,190,90,0.3)');
   ctx.fillStyle = glass;
+  ctx.fillRect(vx - 13, vy - 12, 26, 24);
+  ctx.fillStyle = 'rgba(255,205,110,0.35)';
   ctx.beginPath();
-  ctx.arc(cx, cy, R, 0, Math.PI * 2);
+  ctx.ellipse(vx + 4, vy + 9.5, 11, 3.6, -0.2, 0, Math.PI * 2);
   ctx.fill();
-  ctx.strokeStyle = INK;
-  ctx.lineWidth = 2.6;
-  ctx.stroke();
-  ctx.strokeStyle = 'rgba(220,240,255,0.85)';
-  ctx.lineWidth = 1.2;
-  ctx.beginPath();
-  ctx.arc(cx, cy, R - 1.6, 0, Math.PI * 2);
-  ctx.stroke();
-  // reflexo
   ctx.strokeStyle = 'rgba(255,255,255,0.85)';
-  ctx.lineWidth = 2.4;
+  ctx.lineWidth = 2;
   ctx.lineCap = 'round';
   ctx.beginPath();
-  ctx.arc(cx, cy, R - 5, -2.6, -1.9);
+  ctx.arc(vx, vy, 8, -2.6, -1.85);
   ctx.stroke();
-  ctx.fillStyle = 'rgba(255,255,255,0.8)';
+  ctx.restore();
+  // borda do visor
+  ctx.strokeStyle = INK;
+  ctx.lineWidth = 2.2;
   ctx.beginPath();
-  ctx.arc(cx + 7, cy - 9, 1.6, 0, Math.PI * 2);
-  ctx.fill();
-  // anel de metal no pescoço
+  ctx.ellipse(vx, vy, 12.2, 10.7, 0, 0, Math.PI * 2);
+  ctx.stroke();
+  ctx.strokeStyle = '#8e99ad';
+  ctx.lineWidth = 1;
+  ctx.beginPath();
+  ctx.ellipse(vx, vy, 13.4, 11.9, 0, 0, Math.PI * 2);
+  ctx.stroke();
+  // lanterna do lado (acende e apaga devagar)
+  const glow = 0.55 + 0.45 * Math.sin(time * 2.5);
+  ctx.fillStyle = INK;
+  ctx.fillRect(cx - 17.5, cy - 6, 6, 9);
+  ctx.fillStyle = '#c9d2e0';
+  ctx.fillRect(cx - 16.5, cy - 5, 4, 7);
+  ctx.fillStyle = `rgba(255,236,150,${0.6 + 0.4 * glow})`;
+  ctx.fillRect(cx - 16, cy - 4, 3, 2.5);
+  // anel do pescoço
   ctx.fillStyle = INK;
   ctx.beginPath();
-  ctx.ellipse(cx, cy + R - 2, 12, 5.5, 0, 0, Math.PI * 2);
+  ctx.ellipse(cx, cy + R - 1, 12.5, 5, 0, 0, Math.PI * 2);
   ctx.fill();
-  const ring = ctx.createLinearGradient(cx - 11, 0, cx + 11, 0);
+  const ring = ctx.createLinearGradient(cx - 12, 0, cx + 12, 0);
   ring.addColorStop(0, '#8a94a8');
-  ring.addColorStop(0.45, '#f2f5fa');
+  ring.addColorStop(0.45, '#f4f6fa');
   ring.addColorStop(1, '#7a8498');
   ctx.fillStyle = ring;
   ctx.beginPath();
-  ctx.ellipse(cx, cy + R - 2.5, 10.5, 4, 0, 0, Math.PI * 2);
+  ctx.ellipse(cx, cy + R - 1.5, 11, 3.6, 0, 0, Math.PI * 2);
   ctx.fill();
-  ctx.fillStyle = '#ff8a3d';
-  ctx.fillRect(cx - 1.5, cy + R - 4.5, 3, 3);
+  ctx.fillStyle = '#ff7a2f';
+  ctx.fillRect(cx - 6, cy + R - 2.6, 12, 2);
   ctx.restore();
 }
 
@@ -143,60 +161,107 @@ export function drawGuardianAura(ctx, time = 0) {
   ctx.fill();
 }
 
-// Coroa do Imperador (prêmio da conquista de ouro "Imperador"): ouro com
-// 5 pontas, pedras dos 4 elementos e borda de pele branca com pintinhas
+// Coroa do Imperador (prêmio da conquista de ouro "Imperador"): aro de ouro
+// com 5 pontas (a do meio mais alta) terminando em losangos, veludo vermelho
+// por dentro e uma pedra vermelha no meio do aro.
 export function drawEmperorCrown(ctx, h, time = 0) {
   const cx = h.x;
-  const base = h.y - 11;
+  const base = h.y - 10;
   ctx.save();
   ctx.lineJoin = 'round';
-  const pts = [[-12, 0], [-13, -12], [-7, -6], [-4, -16], [0, -8], [4, -16], [7, -6], [13, -12], [12, 0]];
+  // veludo por dentro (aparece entre as pontas)
   ctx.fillStyle = INK;
   ctx.beginPath();
-  pts.forEach(([x, y], i) => (i ? ctx.lineTo(cx + x * 1.12, base + y * 1.12 + 1) : ctx.moveTo(cx + x * 1.12, base + y * 1.12 + 1)));
-  ctx.closePath();
+  ctx.ellipse(cx, base - 7, 12.5, 8, 0, Math.PI, 0);
   ctx.fill();
-  const gold = ctx.createLinearGradient(0, base - 16, 0, base);
-  gold.addColorStop(0, '#fff3c0');
-  gold.addColorStop(0.45, '#f6c843');
-  gold.addColorStop(1, '#b07a18');
-  ctx.fillStyle = gold;
+  ctx.fillStyle = '#9c1830';
   ctx.beginPath();
-  pts.forEach(([x, y], i) => (i ? ctx.lineTo(cx + x, base + y) : ctx.moveTo(cx + x, base + y)));
-  ctx.closePath();
+  ctx.ellipse(cx, base - 7, 11, 6.8, 0, Math.PI, 0);
   ctx.fill();
-  // bolinhas nas pontas
-  ctx.fillStyle = '#fff6d0';
-  for (const [x, y] of [[-13, -12], [-4, -16], [4, -16], [13, -12]]) {
+  ctx.fillStyle = 'rgba(255,120,140,0.35)';
+  ctx.beginPath();
+  ctx.ellipse(cx - 3, base - 10, 4, 2.2, -0.3, 0, Math.PI * 2);
+  ctx.fill();
+  // pontas: [x da base esquerda, x do topo, altura]
+  const spikes = [[-13, -12.5, 10], [-7.5, -6.5, 14], [-3, 0, 19], [3, 6.5, 14], [7.5, 12.5, 10]];
+  const gold = ctx.createLinearGradient(0, base - 22, 0, base + 4);
+  gold.addColorStop(0, '#fff4c4');
+  gold.addColorStop(0.4, '#f6c843');
+  gold.addColorStop(1, '#a8701c');
+  const spikePath = (grow) => {
     ctx.beginPath();
-    ctx.arc(cx + x, base + y - 1.2, 1.8, 0, Math.PI * 2);
-    ctx.fill();
-  }
-  // pedras dos 4 elementos (brilham uma de cada vez)
-  ['#ff6a1f', '#2f8cff', '#b07a40', '#4fd1b8'].forEach((c, i) => {
-    const on = 0.55 + 0.45 * Math.max(0, Math.sin(time * 3 - i * 1.3));
+    ctx.moveTo(cx - 13 - grow, base + 1);
+    for (const [x0, tip, hgt] of spikes) {
+      const w = x0 < 0 && tip < 0 ? 2.5 : 2.5;
+      ctx.lineTo(cx + tip - w - grow * 0.3, base - hgt + 3);
+      ctx.lineTo(cx + tip, base - hgt - grow);
+      ctx.lineTo(cx + tip + w + grow * 0.3, base - hgt + 3);
+    }
+    ctx.lineTo(cx + 13 + grow, base + 1);
+    ctx.closePath();
+  };
+  ctx.fillStyle = INK;
+  spikePath(1.4);
+  ctx.fill();
+  ctx.fillStyle = gold;
+  spikePath(0);
+  ctx.fill();
+  // losangos nas pontas
+  for (const [, tip, hgt] of spikes) {
+    const y = base - hgt - 1.5;
     ctx.fillStyle = INK;
     ctx.beginPath();
-    ctx.arc(cx - 7.5 + i * 5, base - 4, 2.4, 0, Math.PI * 2);
+    ctx.moveTo(cx + tip, y - 3.6);
+    ctx.lineTo(cx + tip + 2.8, y);
+    ctx.lineTo(cx + tip, y + 3.6);
+    ctx.lineTo(cx + tip - 2.8, y);
+    ctx.closePath();
     ctx.fill();
-    ctx.globalAlpha = on;
-    ctx.fillStyle = c;
+    ctx.fillStyle = '#fff1b0';
     ctx.beginPath();
-    ctx.arc(cx - 7.5 + i * 5, base - 4, 1.7, 0, Math.PI * 2);
+    ctx.moveTo(cx + tip, y - 2.3);
+    ctx.lineTo(cx + tip + 1.7, y);
+    ctx.lineTo(cx + tip, y + 2.3);
+    ctx.lineTo(cx + tip - 1.7, y);
+    ctx.closePath();
     ctx.fill();
-    ctx.globalAlpha = 1;
-  });
-  // borda de pele branca
+  }
+  // aro (faixa grossa com brilho em cima e sombra embaixo)
   ctx.fillStyle = INK;
   ctx.beginPath();
-  ctx.ellipse(cx, base + 1, 14, 4.2, 0, 0, Math.PI * 2);
+  ctx.moveTo(cx - 14.5, base - 4.5);
+  ctx.quadraticCurveTo(cx, base - 7.5, cx + 14.5, base - 4.5);
+  ctx.lineTo(cx + 14.5, base + 3.5);
+  ctx.quadraticCurveTo(cx, base + 0.5, cx - 14.5, base + 3.5);
+  ctx.closePath();
   ctx.fill();
-  ctx.fillStyle = '#f5f1ea';
+  const band = ctx.createLinearGradient(0, base - 6, 0, base + 3);
+  band.addColorStop(0, '#fff0b0');
+  band.addColorStop(0.5, '#e9b432');
+  band.addColorStop(1, '#9a6414');
+  ctx.fillStyle = band;
   ctx.beginPath();
-  ctx.ellipse(cx, base + 0.6, 12.8, 3.2, 0, 0, Math.PI * 2);
+  ctx.moveTo(cx - 13, base - 3.6);
+  ctx.quadraticCurveTo(cx, base - 6.4, cx + 13, base - 3.6);
+  ctx.lineTo(cx + 13, base + 2);
+  ctx.quadraticCurveTo(cx, base - 0.8, cx - 13, base + 2);
+  ctx.closePath();
   ctx.fill();
+  // pedra vermelha no meio do aro, com brilho que pulsa
+  const pulse = 0.7 + 0.3 * Math.sin(time * 3);
   ctx.fillStyle = INK;
-  for (const x of [-8, -3, 2, 7]) ctx.fillRect(cx + x, base, 1.4, 1.4);
+  ctx.beginPath();
+  ctx.ellipse(cx, base - 1.6, 3.6, 4, 0, 0, Math.PI * 2);
+  ctx.fill();
+  const gem = ctx.createRadialGradient(cx - 1, base - 3, 0.5, cx, base - 1.6, 3.4);
+  gem.addColorStop(0, '#ffd0d8');
+  gem.addColorStop(0.4, '#ff3b5c');
+  gem.addColorStop(1, '#8a0f24');
+  ctx.globalAlpha = 0.75 + 0.25 * pulse;
+  ctx.fillStyle = gem;
+  ctx.beginPath();
+  ctx.ellipse(cx, base - 1.6, 2.6, 3, 0, 0, Math.PI * 2);
+  ctx.fill();
   ctx.restore();
 }
 
