@@ -832,9 +832,11 @@ function renderAch() {
   $('#ach-hint').textContent = tier === 'normal'
     ? `Valem em qualquer dificuldade. Você tem ${done} de ${all.length}.`
     : 'Só contam no Difícil. Cada uma aparece depois que você completa a normal.';
+  // modo ADM: mostra todas (sem ???), só para ver; não desbloqueia nada
+  if (state.admin) $('#ach-hint').textContent += ' Modo ADM ligado: mostrando todas as conquistas.';
   for (const a of all) {
     const got = achProgress[tier][a.id];
-    const hidden = tier === 'ouro' && !achProgress.normal[a.id];
+    const hidden = tier === 'ouro' && !achProgress.normal[a.id] && !state.admin;
     const li = document.createElement('li');
     li.className = `ach-item ${tier}${got ? ' got' : ''}${hidden ? ' hidden' : ''}`;
     li.innerHTML = '<span class="ach-i"></span><div class="ach-t"><b></b><span></span></div><em></em>';
