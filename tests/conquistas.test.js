@@ -107,8 +107,19 @@ test('Aprendiz vem do tutorial e não tem versão de ouro', () => {
   const p = emptyProgress();
   assert.equal(unlockSpecial('aprendiz', p).length, 1);
   assert.equal(ACHIEVEMENTS.find((a) => a.id === 'aprendiz').gold, null);
-  for (const a of ACHIEVEMENTS) if (a.gold) assert.ok(a.gold.name && a.gold.desc && (a.gold.check || a.gold.goal), a.id);
+  for (const a of ACHIEVEMENTS) if (a.gold) assert.ok(a.gold.name && a.gold.desc && (a.gold.check || a.gold.goal || a.special), a.id);
   assert.ok(ACHIEVEMENTS.length >= 10);
+});
+
+test('Alpinista (Torre): a de ouro libera a normal junto e dá o capacete', () => {
+  const p = emptyProgress();
+  const a = ACHIEVEMENTS.find((x) => x.id === 'alpinista');
+  assert.equal(a.gold.reward, 'capacete');
+  assert.deepEqual(unlockSpecial('alpinista', p, 'ouro'), [{ id: 'alpinista', tier: 'normal' }, { id: 'alpinista', tier: 'ouro' }]);
+  assert.deepEqual(unlockSpecial('alpinista', p, 'ouro'), []);
+  const q = emptyProgress();
+  assert.deepEqual(unlockSpecial('alpinista', q), [{ id: 'alpinista', tier: 'normal' }]);
+  assert.equal(q.ouro.alpinista, undefined);
 });
 
 test('o jogo marca de onde veio o golpe (golpe, magia, arremesso)', () => {

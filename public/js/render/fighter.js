@@ -2,6 +2,7 @@
 // armas na mão. A pose é calculada a partir do estado do jogador; nada
 // aqui altera a simulação.
 
+import { ACCESSORY_ART } from './accessories.js';
 import { drawHammerArt, drawHammerSmear } from './hammer-art.js';
 import { ELEMENTS } from '/shared/elements.js';
 import { drawSwordArt, drawStaffArt, drawSpearArt, drawSlash } from './weapons-art.js';
@@ -233,6 +234,7 @@ export function drawFighter(ctx, p, x, y, vis, time, { teamColor, isLocal, showN
       drawHeldWeapon(ctx, weaponId, p.element, hand, angle, time, weaponId === 'lanca' ? 16 : pose.weaponSlide);
     };
     drawSkin(ctx, skin, { hip, neck, headPos, shoulder, legF, legB, armF, armB }, time, weapon);
+    ACCESSORY_ART[p.hat]?.(ctx, headPos, time);
     ctx.restore();
     if (showName) drawTag(ctx, cx, y - 16, p, teamColor, isLocal);
     return;
@@ -271,6 +273,8 @@ export function drawFighter(ctx, p, x, y, vis, time, { teamColor, isLocal, showN
   if (p.element === 'terra') pauldron(ctx, k, shoulder);
 
   head(ctx, p.element, k, headPos, time);
+  // acessório (colecionável) na cabeça
+  ACCESSORY_ART[p.hat]?.(ctx, headPos, time);
   ctx.restore();
 
   // Marcadores acima da cabeça (não espelhados)

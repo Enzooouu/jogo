@@ -89,6 +89,8 @@ export class Game {
     this.timeLimit = this.mode.hill && config.timeLimit === undefined ? HILL.timeLimit : timeLimit;
     this.practice = practice;
     this.itemsEnabled = items;
+    // gravidade mais leve (Torre, no espaço): pula mais alto e voa mais longe
+    this.gravity = config.gravityScale ?? 1;
 
     this.tick = 0;
     this.time = 0;               // tempo de luta (sem contar a contagem regressiva)
@@ -174,7 +176,7 @@ export class Game {
       phaseTimer: this.phaseTimer,
       players: this.players.map((p) => ({
         id: p.id, x: p.x, y: p.y, vx: p.vx, vy: p.vy, facing: p.facing,
-        damage: p.damage, lives: p.lives, state: p.state, invuln: p.invuln,
+        damage: p.damage, lives: p.lives, state: p.state, invuln: p.invuln, hat: p.hat,
         hitstun: p.hitstun, onGround: p.onGround, onWall: p.onWall, windVx: p.windVx,
         dashTime: p.dashTime, airDashes: p.airDashes, lungeTime: p.lungeTime,
         weapon: p.weapon ? { ...p.weapon } : null, snowballs: p.snowballs,
@@ -533,14 +535,14 @@ export class Game {
         p.wallHang -= DT;
         p.vy = 0;
       } else {
-        p.vy = Math.min(p.vy + PHYS.gravity * DT, PHYS.wallSlideSpeed);
+        p.vy = Math.min(p.vy + PHYS.gravity * this.gravity * DT, PHYS.wallSlideSpeed);
       }
     } else {
       // logo depois de descer de uma plataforma não acelera a queda (senão
       // atravessa também a plataforma de baixo)
       const fastFalling = control && input.down && !p.onGround && p.vy > 0 && p.dropTimer <= 0;
-      p.vy = Math.min(p.vy + PHYS.gravity * DT, fastFalling ? PHYS.fastFall : PHYS.maxFall);
-      if (fastFalling) p.vy = Math.max(p.vy, PHYS.maxFall * 0.8);
+      p.vy = Math.min(p.vy + PHYS.gravity * this.gravity * DT, (fastFalling ? PHYS.fastFall : PHYS.maxFall) * Math.sqrt(this.gravity));
+      if (fastFalling) p.vy = Math.max(p.vy, PHYS.maxFall * 0.8 * Math.sqrt(this.gravity));
     }
 
     this.applyWind(p);
@@ -1490,6 +1492,7 @@ function createPlayer(cfg, index, lives) {
     isBot: Boolean(cfg.isBot),
     admin: Boolean(cfg.admin), // modo ADM (testes): cada golpe dá PLAYER.adminDamage
     skin: cfg.skin ?? null,    // visual especial do tutorial ('manequim', 'boneco')
+    hat: cfg.hat ?? null,      // acessório na cabeça (colecionável, só visual)
     dummy: !!cfg.dummy,        // boneco de treino: não pega armas
     anchored: !!cfg.anchored,  // espantalho do treino: preso ao chão
     sway: 0, swayV: 0,         // balanço do espantalho na estaca

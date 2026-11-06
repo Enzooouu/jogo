@@ -13,7 +13,8 @@ import { buildLocalSetup, outcomeFor } from './setup.js';
 import { api } from './api.js';
 import { renderAccountBox, initAuthScreen, setAuthMode, focusAuth } from './screens/account.js';
 import { recordProfileMatch, recordTowerRun, renderLocalProfile, renderProfileChip } from './screens/profile.js';
-import { TOWER, botBrain, brainName, floorFoes, floorStep, carryAfterWin, towerXp } from '/shared/tower.js';
+import { TOWER, botBrain, brainName, floorFoes, floorStep, carryAfterWin, towerXp, gravityFor } from '/shared/tower.js';
+import { ACCESSORIES, grantAccessory, equippedAccessory } from './collection.js';
 import { FRAMES } from '/shared/profile-stats.js';
 import { DemoArena } from './screens/demo.js';
 import { initHomeMenu } from './screens/home-menu.js';
@@ -561,6 +562,9 @@ function newSetup() {
 
 async function startMatch(setup) {
   state.lastSetup = setup;
+  // acessório escolhido na coleção (só visual) vai na cabeça do seu boneco
+  const me = setup.players.find((p) => p.id === setup.localPlayerId);
+  if (me && me.hat === undefined) me.hat = equippedAccessory();
   unlockAudio();
   goFullscreen();
   // Tira o foco do botão clicado para Enter/Espaço não "clicarem" nele durante a luta.
@@ -814,7 +818,7 @@ function towerSetup() {
   return {
     players, mode: 'times', mapId: 'torre', localPlayerId: 1, difficulty: 'torre',
     seed: (Math.random() * 2 ** 31) | 0,
-    tower: { floor: t.floor, timeLimit: TOWER.timeLimit, maxLives: TOWER.maxLives },
+    tower: { floor: t.floor, timeLimit: TOWER.timeLimit, maxLives: TOWER.maxLives, gravity: gravityFor(t.floor) },
   };
 }
 
@@ -832,7 +836,10 @@ function showTowerHud(setup) {
   hud.hidden = false;
   hud.querySelector('b').textContent = f;
   hud.querySelector('span').textContent = `bot ${brainName(f).toLowerCase()}${bots > 1 ? ` ×${bots}` : ''}`;
-  towerBanner('', `ANDAR ${f}`, `${bots > 1 ? `${bots} bots` : 'Bot'}: ${brainName(f)}`, f === 0 ? 'Vença para subir. Suas vidas e seu dano continuam no próximo andar.' : '');
+  const extra = f === 0 ? 'Vença para subir. Suas vidas e seu dano continuam no próximo andar.'
+    : f === TOWER.spaceFloor ? 'Você chegou ao espaço! A gravidade aqui é mais leve.'
+    : f > TOWER.spaceFloor ? 'Espaço: gravidade leve.' : '';
+  towerBanner('', `ANDAR ${f}`, `${bots > 1 ? `${bots} bots` : 'Bot'}: ${brainName(f)}`, extra);
   state.towerBannerTimer = setTimeout(() => { banner.hidden = true; }, 2600);
 }
 
@@ -850,6 +857,34 @@ function towerBanner(kicker, title, line, extra, win = false) {
   banner.style.animation = '';
 }
 
+// Conquista da Torre: Alpinista (vencer o andar 10) e, de ouro, Astronauta
+// (passar do andar 50), que dá o capacete de astronauta
+function towerAchievements(setup, floorsCleared) {
+  if (setup.players.some((p) => p.admin)) return;
+  let fresh = [];
+  if (floorsCleared > TOWER.spaceFloor - 1) fresh = unlockSpecial('alpinista', achProgress, 'ouro');
+  else if (floorsCleared > TOWER.geniusFloor) fresh = unlockSpecial('alpinista', achProgress);
+  if (!fresh.length) return;
+  saveAch(achProgress);
+  fresh.forEach((f, i) => setTimeout(() => achToast(f), 300 + i * 900));
+  for (const f of fresh) {
+    const reward = f.tier === 'ouro' ? byId[f.id].gold.reward : null;
+    if (reward && grantAccessory(reward)) setTimeout(() => accessoryToast(reward), 300 + fresh.length * 900);
+  }
+}
+
+function accessoryToast(id) {
+  const a = ACCESSORIES[id];
+  const t = document.createElement('div');
+  t.className = 'ach-toast ouro';
+  t.innerHTML = '<span class="ach-toast-i"></span><div><small>NOVO ACESSÓRIO!</small><b></b></div>';
+  t.querySelector('.ach-toast-i').textContent = a.icon;
+  t.querySelector('b').textContent = a.name;
+  $('#ach-toasts').appendChild(t);
+  setTimeout(() => t.classList.add('out'), 4200);
+  setTimeout(() => t.remove(), 4800);
+}
+
 function towerEnd(setup, result) {
   const t = state.tower;
   const me = result.players.find((p) => p.id === setup.localPlayerId);
@@ -861,6 +896,7 @@ function towerEnd(setup, result) {
     t.lives = carry.lives;
     t.damage = carry.damage;
     t.floor++;
+    towerAchievements(setup, t.floor);
     towerBanner(`ANDAR ${t.floor - 1} VENCIDO!`, 'SUBINDO…', `Próximo: andar ${t.floor} · bot ${brainName(t.floor).toLowerCase()}`,
       carry.gotLife ? '+1 vida! ' : `Dano curado: ${me.damage}% → ${carry.damage}%`, true);
     clearTimeout(state.towerNextTimer);

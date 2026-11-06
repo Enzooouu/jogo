@@ -14,7 +14,11 @@ export const TOWER = {
   lifeEvery: 5,        // a cada 5 andares vencidos ganha 1 vida (até o máximo)
   heal: 0.5,           // ao vencer um andar, recupera metade do dano
   timeLimit: 180,      // segundos por andar
+  spaceFloor: 51,      // do andar 51 em diante é o espaço...
+  spaceGravity: 0.78,  // ...com a gravidade mais leve
 };
+
+export const gravityFor = (floor) => (floor >= TOWER.spaceFloor ? TOWER.spaceGravity : 1);
 
 // Cérebro do bot: do "muito burro" (t = 0) ao gênio (t = 1)
 const DUMB = { thinkEvery: 30, attackChance: 0.08, reflex: 0.45, itemGreed: 0.1 };

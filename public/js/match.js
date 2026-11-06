@@ -28,7 +28,7 @@ export class MatchRunner {
       // treino livre: ninguém perde vida, sem tempo e contagem curta
       ...(setup.practice ? { practice: true, timeLimit: 0, countdown: 1, items: false } : {}),
       // modo Torre: o andar muda o céu e cada andar tem um tempo
-      ...(setup.tower ? { towerFloor: setup.tower.floor, timeLimit: setup.tower.timeLimit, lives: setup.tower.maxLives } : {}),
+      ...(setup.tower ? { towerFloor: setup.tower.floor, timeLimit: setup.tower.timeLimit, lives: setup.tower.maxLives, gravityScale: setup.tower.gravity ?? 1 } : {}),
     });
     this.localId = setup.localPlayerId;
 

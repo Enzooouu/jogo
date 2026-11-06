@@ -1307,3 +1307,15 @@ body.has-touch .training-hud { z-index: 25; }
   .tower-banner span { font-size: 16px; }
   .tower-banner em { font-size: 12px; max-width: 60vw; }
 }
+
+/* coleção de acessórios no perfil */
+.profile-collection { margin-top: 16px; }
+#profile-collection { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 10px; }
+.pcol { display: grid; grid-template-columns: 72px 1fr auto; gap: 12px; align-items: center; padding: 10px 12px; border-radius: 12px; background: rgba(255,255,255,.05); border: 1px solid transparent; }
+.pcol.on { border-color: #ffd25a; background: rgba(255,210,90,.1); }
+.pcol canvas, .pcol-q { width: 72px; height: 72px; border-radius: 50%; background: radial-gradient(circle at 50% 60%, rgba(120,170,255,.35), rgba(255,255,255,.04)); }
+.pcol-q { display: grid; place-items: center; font-size: 30px; filter: grayscale(1); opacity: .5; }
+.pcol b { display: block; font-size: 15px; }
+.pcol small { display: block; font-size: 12px; color: var(--muted); margin-top: 2px; }
+.pcol.locked b { color: rgba(255,255,255,.6); }
+.pcol-more { grid-column: 1 / -1; margin: 4px 0 0; }

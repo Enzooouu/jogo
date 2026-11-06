@@ -4,7 +4,8 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { Game } from '../shared/game.js';
 import { BotController, DIFFICULTIES } from '../shared/ai.js';
-import { botBrain, brainName, floorFoes, floorStep, carryAfterWin, towerXp, TOWER } from '../shared/tower.js';
+import { botBrain, brainName, floorFoes, floorStep, carryAfterWin, towerXp, gravityFor, TOWER } from '../shared/tower.js';
+import { PHYS } from '../shared/constants.js';
 
 test('torre: o bot fica mais esperto a cada andar até o gênio no 10', () => {
   const b0 = botBrain(0);
@@ -61,4 +62,25 @@ test('torre: o jogo começa com as vidas e o dano que vieram do andar anterior',
   assert.equal(g.map.towerFloor, 3);
   const bot = new BotController(2, { brain: botBrain(0) });
   assert.equal(bot.cfg.thinkEvery, botBrain(0).thinkEvery);
+});
+
+test('torre: no espaço (51+) a gravidade é mais leve e o pulo vai mais alto', () => {
+  assert.equal(gravityFor(50), 1);
+  assert.ok(gravityFor(51) < 1);
+  const jumpTop = (gravityScale) => {
+    const g = new Game({ mode: 'times', mapId: 'torre', towerFloor: 51, gravityScale, countdown: 0,
+      players: [{ id: 1, element: 'fogo', team: 'A' }, { id: 2, element: 'agua', team: 'B', isBot: true }] });
+    const me = g.playerById(1);
+    for (let i = 0; i < 30; i++) g.step({});
+    const y0 = me.y;
+    me.vy = -PHYS.jumpSpeed;
+    me.onGround = false;
+    let top = y0;
+    for (let i = 0; i < 90; i++) {
+      g.step({});
+      top = Math.min(top, me.y);
+    }
+    return y0 - top;
+  };
+  assert.ok(jumpTop(gravityFor(51)) > jumpTop(1) * 1.15);
 });

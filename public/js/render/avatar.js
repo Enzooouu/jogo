@@ -15,7 +15,8 @@ export function parsePic(pic) {
   return { kind: 'el', element: 'fogo' };
 }
 
-export function drawAvatar(ctx, w, h, pic, time = 0) {
+// `hat`: acessório na cabeça (só aparece nas fotos de personagem)
+export function drawAvatar(ctx, w, h, pic, time = 0, hat = null) {
   const p = parsePic(pic);
   const el = ELEMENTS[p.element];
   ctx.clearRect(0, 0, w, h);
@@ -27,7 +28,7 @@ export function drawAvatar(ctx, w, h, pic, time = 0) {
   ctx.fillStyle = g;
   ctx.fillRect(0, 0, w, h);
   if (p.kind === 'el') {
-    drawPortrait(ctx, p.element, w / 2, h * 1.55, (h / 150) * 3, { facing: 1, time });
+    drawPortrait(ctx, p.element, w / 2, h * 1.55, (h / 150) * 3, { facing: 1, time, extra: hat ? { hat } : {} });
     return;
   }
   // arma na diagonal, apontando para cima e para a direita

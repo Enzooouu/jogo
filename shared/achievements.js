@@ -87,6 +87,9 @@ export const ACHIEVEMENTS = [
     gold: { name: 'Punhos de Ferro', desc: 'No Difícil, vença 3 partidas seguidas sem pegar nenhuma arma.',
       goal: 3, progress: (m, c) => c.streak('maos_limpas', m.won && m.pickups === 0) } },
   { id: 'aprendiz', name: 'Aprendiz', desc: 'Termine o tutorial.', icon: '📜', special: true, gold: null },
+  // Torre: dada pelo próprio modo (ver towerEnd em main.js)
+  { id: 'alpinista', name: 'Alpinista', desc: 'Na Torre, vença o andar 10 (o primeiro Gênio).', icon: '🗼', special: true,
+    gold: { name: 'Astronauta', desc: 'Na Torre, passe do andar 50 e chegue ao espaço. Prêmio: capacete de astronauta.', reward: 'capacete' } },
 ];
 
 export const byId = Object.fromEntries(ACHIEVEMENTS.map((a) => [a.id, a]));
@@ -233,9 +236,17 @@ export function progressOf(a, tier, progress) {
   return { n: Math.min(n, rule.goal), goal: rule.goal };
 }
 
-// Conquista especial (ex.: tutorial)
-export function unlockSpecial(id, progress) {
-  if (progress.normal[id]) return [];
-  progress.normal[id] = true;
-  return [{ id, tier: 'normal' }];
+// Conquista especial (ex.: tutorial, Torre). A de ouro também libera a
+// normal, se ainda não tinha.
+export function unlockSpecial(id, progress, tier = 'normal') {
+  const out = [];
+  if (!progress.normal[id]) {
+    progress.normal[id] = true;
+    out.push({ id, tier: 'normal' });
+  }
+  if (tier === 'ouro' && !progress.ouro[id]) {
+    progress.ouro[id] = true;
+    out.push({ id, tier: 'ouro' });
+  }
+  return out;
 }

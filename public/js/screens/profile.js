@@ -7,6 +7,7 @@ import { getMap } from '/shared/maps.js';
 import { emptyStats, recordMatch, summarize, matchXp, levelInfo, estimateXp, FRAMES } from '/shared/profile-stats.js';
 import { drawPortrait, fitCanvas } from '../render/portrait.js';
 import { drawAvatar } from '../render/avatar.js';
+import { ACCESSORIES, loadCollection, equipAccessory } from '../collection.js';
 
 const KEY = 'brawl.perfil';
 const $ = (sel) => document.querySelector(sel);
@@ -157,9 +158,9 @@ function portrait(canvas, element, { scale = 1, facing = 1, foot = 0.94 } = {}) 
   portraits.push({ canvas, draw: (ctx, w, h, t) => drawPortrait(ctx, element, w / 2, h * foot, (h / 150) * scale, { facing, time: t }) });
 }
 
-function avatarCanvas(canvas, pic) {
+function avatarCanvas(canvas, pic, hat = null) {
   portraits = portraits.filter((p) => p.canvas !== canvas);
-  portraits.push({ canvas, draw: (ctx, w, h, t) => drawAvatar(ctx, w, h, pic, t) });
+  portraits.push({ canvas, draw: (ctx, w, h, t) => drawAvatar(ctx, w, h, pic, t, hat) });
 }
 
 function drawPortraits(time) {
@@ -195,7 +196,7 @@ export function renderProfileChip(username) {
   chip.querySelector('.pc-xp i').style.width = `${(lv.into / lv.need) * 100}%`;
   chip.querySelector('.pc-badge').textContent = lv.level;
   chip.querySelector('.pc-av').dataset.frame = resolveFrame(look, lv.level);
-  avatarCanvas(chip.querySelector('canvas'), resolvePic(look, s));
+  avatarCanvas(chip.querySelector('canvas'), resolvePic(look, s), loadCollection().equipped);
   startPortraits();
 }
 
@@ -213,7 +214,7 @@ export function renderLocalProfile({ username, achievements, onReset }) {
   // foto + nível
   const av = $('#profile-avatar');
   av.dataset.frame = resolveFrame(look, lv.level);
-  avatarCanvas(av.querySelector('canvas'), resolvePic(look, s));
+  avatarCanvas(av.querySelector('canvas'), resolvePic(look, s), loadCollection().equipped);
   av.querySelector('.pc-badge').textContent = lv.level;
   av.onclick = () => openPicker(s, lv.level, () => renderLocalProfile({ username, achievements, onReset }));
   $('#profile-level').textContent = `NÍVEL ${lv.level}`;
@@ -362,6 +363,36 @@ export function renderLocalProfile({ username, achievements, onReset }) {
     }
     hist.appendChild(ul);
   }
+
+  // coleção de acessórios
+  const col = $('#profile-collection');
+  col.innerHTML = '';
+  const owned = loadCollection();
+  const favEl = fav ?? 'fogo';
+  for (const a of Object.values(ACCESSORIES)) {
+    const has = owned.owned.includes(a.id);
+    const on = owned.equipped === a.id;
+    const card = el('div', `pcol${has ? '' : ' locked'}${on ? ' on' : ''}`);
+    const c = el('canvas');
+    card.appendChild(c);
+    if (has) portraits.push({ canvas: c, draw: (ctx, w, h, t) => drawPortrait(ctx, favEl, w / 2, h * 1.3, (h / 150) * 2.3, { facing: 1, time: t, extra: { hat: a.id } }) });
+    const info = el('div');
+    info.append(el('b', '', has ? a.name : `🔒 ${a.name}`), el('small', '', has ? (on ? 'Usando agora' : 'Na sua coleção') : a.how));
+    card.appendChild(info);
+    if (has) {
+      const btn = el('button', `btn small${on ? ' ghost' : ''}`, on ? 'Tirar' : 'Usar');
+      btn.type = 'button';
+      btn.onclick = () => {
+        equipAccessory(on ? null : a.id);
+        renderLocalProfile({ username, achievements, onReset });
+      };
+      card.appendChild(btn);
+    } else {
+      c.replaceWith(el('span', 'pcol-q', a.icon));
+    }
+    col.appendChild(card);
+  }
+  col.appendChild(el('p', 'hint pcol-more', 'Mais acessórios vão chegar: alguns por conquista e outros na loja (em breve).'));
 
   const reset = $('#profile-reset');
   reset.hidden = !s.matches;
