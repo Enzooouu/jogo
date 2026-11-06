@@ -46,9 +46,11 @@ Ideias aprovadas pelo Enzo que ainda não foram feitas.
 - **Controle (gamepad)** de Xbox, PlayStation ou parecido, na luta e nos menus.
 - **Conquistas** (19 normais + 18 de ouro no Difícil, as de ouro escondidas até fazer a normal).
 - **Rei da Ilha** (área com coroa que dá pontos, muda de lugar a cada 25 s).
-- **Torre** (sobrevivência): andar 0 com bot muito burro até o gênio no andar 10;
-  depois infinita, com mais bots e mais vidas. Vidas e dano continuam; perdeu,
-  volta para o andar 0. Recorde no perfil.
+- **Torre** (sobrevivência): ciclos de 10 andares, os bots começam burros e
+  terminam gênios (1 bot nos andares 0–10, 2 no 11–20, 3 do 21 em diante, e
+  do 31 em diante eles ganham mais vidas). Céu: dia (0–10), entardecer (11–20),
+  noite (21–40), quase no espaço (41–50), espaço (51+). Vidas e dano
+  continuam; perdeu, volta para o andar 0. Recorde no perfil.
 - **Versão para celular**: joystick na esquerda e botões de pular, bater, dash e arma na direita.
 
 ## Outras ideias (ainda não escolhidas)

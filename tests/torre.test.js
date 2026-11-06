@@ -4,7 +4,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { Game } from '../shared/game.js';
 import { BotController, DIFFICULTIES } from '../shared/ai.js';
-import { botBrain, brainName, floorFoes, carryAfterWin, towerXp, TOWER } from '../shared/tower.js';
+import { botBrain, brainName, floorFoes, floorStep, carryAfterWin, towerXp, TOWER } from '../shared/tower.js';
 
 test('torre: o bot fica mais esperto a cada andar até o gênio no 10', () => {
   const b0 = botBrain(0);
@@ -17,16 +17,26 @@ test('torre: o bot fica mais esperto a cada andar até o gênio no 10', () => {
   assert.deepEqual(botBrain(40), b10);
   assert.equal(brainName(0), 'Muito burro');
   assert.equal(brainName(10), 'Gênio');
-  assert.equal(brainName(99), 'Gênio');
 });
 
-test('torre: depois do gênio vêm mais bots e mais vidas', () => {
+test('torre: depois do gênio volta a ser burro, com mais bots, e sobe de novo', () => {
   assert.deepEqual(floorFoes(0), { bots: 1, lives: 1 });
   assert.deepEqual(floorFoes(10), { bots: 1, lives: 1 });
   assert.deepEqual(floorFoes(11), { bots: 2, lives: 1 });
+  assert.deepEqual(floorFoes(20), { bots: 2, lives: 1 });
   assert.deepEqual(floorFoes(21), { bots: 3, lives: 1 });
-  assert.equal(floorFoes(26).lives, 2);
-  assert.equal(floorFoes(60).lives, 3);
+  assert.deepEqual(floorFoes(30), { bots: 3, lives: 1 });
+  assert.deepEqual(floorFoes(31), { bots: 3, lives: 2 });
+  assert.deepEqual(floorFoes(41), { bots: 3, lives: 3 });
+  assert.deepEqual(floorFoes(99), { bots: 3, lives: 3 });
+  assert.deepEqual(floorStep(11), { cycle: 1, step: 1 });
+  assert.deepEqual(floorStep(20), { cycle: 1, step: 10 });
+  assert.equal(brainName(10), 'Gênio');
+  assert.equal(brainName(11), 'Burro');
+  assert.equal(brainName(20), 'Gênio');
+  assert.equal(brainName(21), 'Burro');
+  assert.deepEqual(botBrain(15), botBrain(5));
+  assert.deepEqual(botBrain(30), botBrain(10));
 });
 
 test('torre: vidas e dano continuam, cura metade e ganha vida a cada 5', () => {

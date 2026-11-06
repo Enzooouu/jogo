@@ -1,11 +1,7 @@
 // Cenário da Torre dos Elementos (modo Torre). O andar (map.towerFloor) muda
-// a vista: no andar 0 o chão, os campos e a vila estão logo ali; subindo, o
-// chão vai ficando lá embaixo, as nuvens chegam, o céu fica de pôr do sol e,
-// lá no alto, vira noite estrelada com a lua.
+// a vista em 5 fases: dia (0–10), entardecer (11–20), noite (21–40), quase
+// no espaço (41–50) e espaço (51+). Ver "fases do céu" abaixo.
 //
-//   céu      cor conforme a altura; estrelas e lua nos andares altos
-//   longe    morros, vila e campos (descem com o andar) e o mar de nuvens
-//   meio     árvores perto da torre (só embaixo) e nuvens passando
 //   campo    o topo da torre com ameias, sacadas de madeira, o patamar de
 //            pedra com a runa dos 4 elementos e uma faixa com o número do andar
 //
@@ -20,16 +16,24 @@ const EL = { fogo: '#ff6a1f', agua: '#2f8cff', terra: '#b07a40', ar: '#4fd1b8' }
 
 const floorOf = (o) => Math.max(0, o?.towerFloor ?? o?.floor ?? 0);
 
-// ================================================================ céu
+// ================================================================ fases do céu
+//
+//   0–10   dia        campos, vila e árvores; o chão vai descendo e as
+//                     nuvens chegam perto do andar 10
+//   11–20  entardecer sol baixo e laranja, mar de nuvens cor-de-rosa
+//   21–40  noite      lua, estrelas e o mar de nuvens escuro lá embaixo
+//   41–50  borda      quase no espaço: o céu fica preto, a Terra aparece
+//                     curvada lá embaixo com a faixa azul da atmosfera
+//   51+    espaço     preto com nebulosa, a Terra redonda bem longe, um
+//                     planeta com anéis e um satélite passando
 
-// Cores do céu por andar (em cima, no meio, embaixo)
-const SKY_KEYS = [
-  [0, ['#4f9ff0', '#8cc8f7', '#d8f1ff']],
-  [6, ['#2f78d8', '#78b6f2', '#c6e6ff']],
-  [12, ['#2b3f9a', '#9a6bb0', '#ffc28a']],
-  [20, ['#141a55', '#4a2f7a', '#c4607e']],
-  [30, ['#050720', '#141246', '#3a2466']],
-];
+export function phaseOf(f) {
+  if (f <= 10) return 'dia';
+  if (f <= 20) return 'tarde';
+  if (f <= 40) return 'noite';
+  if (f <= 50) return 'borda';
+  return 'espaco';
+}
 
 function mixHex(a, b, t) {
   const pa = parseInt(a.slice(1), 16);
@@ -38,82 +42,94 @@ function mixHex(a, b, t) {
   return `rgb(${c(16)},${c(8)},${c(0)})`;
 }
 
-function skyColors(f) {
-  for (let i = 0; i < SKY_KEYS.length - 1; i++) {
-    const [f0, c0] = SKY_KEYS[i];
-    const [f1, c1] = SKY_KEYS[i + 1];
-    if (f <= f1) {
-      const t = Math.max(0, (f - f0) / (f1 - f0));
-      return c0.map((c, k) => mixHex(c, c1[k], t));
-    }
+// cores do céu (em cima, no meio, embaixo) de cada fase
+const SKY = {
+  dia: ['#4f9ff0', '#8cc8f7', '#d8f1ff'],
+  tarde: ['#2b3f9a', '#b06a98', '#ffb46e'],
+  noite: ['#060a2a', '#141a4e', '#2c2a66'],
+  borda: ['#000006', '#050a24', '#0e2a6a'],
+  espaco: ['#000000', '#05030f', '#0b0820'],
+};
+
+function stars(ctx, n, seed, alpha, maxY = 720) {
+  const rand = seeded(seed);
+  for (let i = 0; i < n; i++) {
+    const x = rand() * 1280;
+    const y = rand() * maxY;
+    const big = rand() < 0.07;
+    ctx.globalAlpha = alpha * (0.3 + rand() * 0.7);
+    ctx.fillStyle = rand() < 0.15 ? '#ffe9b8' : rand() < 0.2 ? '#bcd4ff' : '#ffffff';
+    ctx.fillRect(x, y, big ? 2 : 1.1, big ? 2 : 1.1);
   }
-  return SKY_KEYS[SKY_KEYS.length - 1][1].map((c) => mixHex(c, c, 0));
+  ctx.globalAlpha = 1;
 }
 
-// 0 = dia; 1 = noite (estrelas aparecem)
-const nightOf = (f) => Math.min(1, Math.max(0, (f - 14) / 14));
+function sun(ctx, x, y, r, core, glow, a = 1) {
+  const g = ctx.createRadialGradient(x, y, r * 0.2, x, y, r * 6);
+  g.addColorStop(0, `rgba(${glow},${0.9 * a})`);
+  g.addColorStop(0.2, `rgba(${glow},${0.35 * a})`);
+  g.addColorStop(1, `rgba(${glow},0)`);
+  ctx.fillStyle = g;
+  ctx.fillRect(0, 0, 1280, 720);
+  ctx.fillStyle = core;
+  ctx.beginPath();
+  ctx.arc(x, y, r, 0, Math.PI * 2);
+  ctx.fill();
+}
+
+function moon(ctx, x, y, r) {
+  const halo = ctx.createRadialGradient(x, y, r * 0.5, x, y, r * 4);
+  halo.addColorStop(0, 'rgba(220,230,255,0.35)');
+  halo.addColorStop(1, 'rgba(220,230,255,0)');
+  ctx.fillStyle = halo;
+  ctx.fillRect(x - r * 4, y - r * 4, r * 8, r * 8);
+  ctx.fillStyle = '#eef0ff';
+  ctx.beginPath();
+  ctx.arc(x, y, r, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.fillStyle = '#c9cde8';
+  for (const [dx, dy, k] of [[-0.3, -0.2, 0.22], [0.35, 0.15, 0.17], [-0.1, 0.4, 0.12], [0.4, -0.4, 0.1]]) {
+    ctx.beginPath();
+    ctx.arc(x + dx * r, y + dy * r, k * r, 0, Math.PI * 2);
+    ctx.fill();
+  }
+}
+
+function nebula(ctx) {
+  for (const [x, y, r, rgb, a] of [[300, 220, 380, '150,70,220', 0.22], [980, 160, 320, '60,120,255', 0.18], [760, 420, 260, '255,80,160', 0.12]]) {
+    const g = ctx.createRadialGradient(x, y, 0, x, y, r);
+    g.addColorStop(0, `rgba(${rgb},${a})`);
+    g.addColorStop(1, `rgba(${rgb},0)`);
+    ctx.fillStyle = g;
+    ctx.fillRect(x - r, y - r, r * 2, r * 2);
+  }
+}
 
 function paintSky(ctx, theme) {
   const f = floorOf(theme);
-  const [top, mid, bottom] = skyColors(f);
+  const phase = phaseOf(f);
+  const [top, mid, bottom] = SKY[phase];
   const sky = ctx.createLinearGradient(0, 0, 0, 720);
   sky.addColorStop(0, top);
   sky.addColorStop(0.55, mid);
   sky.addColorStop(1, bottom);
   ctx.fillStyle = sky;
   ctx.fillRect(0, 0, 1280, 720);
-  const night = nightOf(f);
-  // sol (de dia, alto; no pôr do sol, baixo e laranja)
-  if (night < 1) {
-    const sy = 120 + Math.min(1, f / 16) * 330;
-    const sun = ctx.createRadialGradient(1010, sy, 6, 1010, sy, 300);
-    sun.addColorStop(0, `rgba(255,248,215,${0.95 * (1 - night)})`);
-    sun.addColorStop(0.15, `rgba(255,220,150,${0.55 * (1 - night)})`);
-    sun.addColorStop(1, 'rgba(255,190,120,0)');
-    ctx.fillStyle = sun;
-    ctx.fillRect(0, 0, 1280, 720);
-    ctx.fillStyle = `rgba(255,246,214,${1 - night})`;
-    ctx.beginPath();
-    ctx.arc(1010, sy, 44, 0, Math.PI * 2);
-    ctx.fill();
-  }
-  if (night > 0) {
-    // estrelas
-    const rand = seeded(77);
-    for (let i = 0; i < 180; i++) {
-      const x = rand() * 1280;
-      const y = rand() * 620;
-      const r = rand() < 0.08 ? 1.9 : 1.1;
-      ctx.globalAlpha = night * (0.3 + rand() * 0.7);
-      ctx.fillStyle = rand() < 0.15 ? '#ffe9b8' : '#ffffff';
-      ctx.fillRect(x, y, r, r);
-    }
-    ctx.globalAlpha = 1;
-    // lua com crateras
-    const mx = 250;
-    const my = 150;
-    const halo = ctx.createRadialGradient(mx, my, 20, mx, my, 170);
-    halo.addColorStop(0, `rgba(220,230,255,${0.35 * night})`);
-    halo.addColorStop(1, 'rgba(220,230,255,0)');
-    ctx.fillStyle = halo;
-    ctx.fillRect(0, 0, 600, 400);
-    ctx.globalAlpha = night;
-    ctx.fillStyle = '#eef0ff';
-    ctx.beginPath();
-    ctx.arc(mx, my, 40, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.fillStyle = '#c9cde8';
-    for (const [dx, dy, r] of [[-12, -8, 9], [14, 6, 7], [-4, 16, 5], [16, -16, 4]]) {
-      ctx.beginPath();
-      ctx.arc(mx + dx, my + dy, r, 0, Math.PI * 2);
-      ctx.fill();
-    }
-    ctx.globalAlpha = 1;
-    // faixa da via láctea lá no alto
-    if (f >= 26) {
+  if (phase === 'dia') {
+    // o sol vai baixando um pouco até o andar 10
+    sun(ctx, 1010, 110 + f * 8, 44, '#fff6d6', '255,238,190');
+  } else if (phase === 'tarde') {
+    // pôr do sol: cada andar o sol desce mais
+    sun(ctx, 1000, 330 + (f - 11) * 14, 56, '#ffe6a8', '255,170,90');
+    stars(ctx, 40, 21, 0.4, 200);
+  } else if (phase === 'noite') {
+    stars(ctx, 200, 77, 1, 640);
+    moon(ctx, 250, 150, 40);
+    if (f >= 30) {
+      // via láctea
       const band = ctx.createLinearGradient(0, 40, 1280, 380);
       band.addColorStop(0, 'rgba(180,150,255,0)');
-      band.addColorStop(0.5, `rgba(190,160,255,${0.16 * night})`);
+      band.addColorStop(0.5, 'rgba(190,160,255,0.16)');
       band.addColorStop(1, 'rgba(180,150,255,0)');
       ctx.fillStyle = band;
       ctx.beginPath();
@@ -123,16 +139,53 @@ function paintSky(ctx, theme) {
       ctx.lineTo(0, 230);
       ctx.fill();
     }
+  } else if (phase === 'borda') {
+    stars(ctx, 320, 91, 1);
+    // o sol branco e forte (sem ar, ele não fica amarelo)
+    sun(ctx, 1080, 140, 30, '#ffffff', '220,235,255', 0.8);
+    moon(ctx, 220, 130, 30);
+  } else {
+    nebula(ctx);
+    stars(ctx, 420, 5, 1);
+    sun(ctx, 1120, 110, 26, '#ffffff', '210,230,255', 0.7);
+    // planeta com anéis
+    const px = 260;
+    const py = 190;
+    ctx.save();
+    ctx.translate(px, py);
+    ctx.rotate(-0.35);
+    ctx.strokeStyle = 'rgba(230,200,150,0.55)';
+    ctx.lineWidth = 7;
+    ctx.beginPath();
+    ctx.ellipse(0, 0, 110, 26, 0, Math.PI, Math.PI * 2);
+    ctx.stroke();
+    const pg = ctx.createRadialGradient(-18, -18, 6, 0, 0, 58);
+    pg.addColorStop(0, '#f4d9a8');
+    pg.addColorStop(0.6, '#c98f5a');
+    pg.addColorStop(1, '#5a3a2a');
+    ctx.fillStyle = pg;
+    ctx.beginPath();
+    ctx.arc(0, 0, 56, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = 'rgba(120,70,40,0.35)';
+    ctx.fillRect(-56, -10, 112, 8);
+    ctx.fillRect(-52, 12, 104, 6);
+    ctx.strokeStyle = 'rgba(240,215,170,0.75)';
+    ctx.beginPath();
+    ctx.ellipse(0, 0, 110, 26, 0, 0, Math.PI);
+    ctx.stroke();
+    ctx.restore();
   }
 }
 
 let skyFloor = 0;
 function skyAnimated(ctx, t) {
-  // estrelas cadentes nos andares altos; pássaros embaixo
-  if (skyFloor >= 18) {
-    const k = (t * 0.25) % 1;
-    if (k < 0.18) {
-      const p = k / 0.18;
+  const phase = phaseOf(skyFloor);
+  if (phase === 'noite' || phase === 'borda') {
+    // estrela cadente de vez em quando
+    const k = (t * 0.22) % 1;
+    if (k < 0.16) {
+      const p = k / 0.16;
       const x = 200 + p * 520;
       const y = 60 + p * 160;
       const g = ctx.createLinearGradient(x - 90, y - 28, x, y);
@@ -147,7 +200,23 @@ function skyAnimated(ctx, t) {
     }
     return;
   }
-  ctx.strokeStyle = skyFloor > 10 ? 'rgba(60,30,60,0.6)' : 'rgba(30,40,70,0.55)';
+  if (phase === 'espaco') {
+    // satélite cruzando o céu devagar, com a luz piscando
+    const x = ((t * 18) % 1700) - 200;
+    const y = 300 - x * 0.08;
+    ctx.fillStyle = '#c8cfdc';
+    ctx.fillRect(x - 4, y - 3, 8, 6);
+    ctx.fillStyle = '#3a6fd8';
+    ctx.fillRect(x - 18, y - 2, 12, 4);
+    ctx.fillRect(x + 6, y - 2, 12, 4);
+    if (Math.sin(t * 6) > 0.6) {
+      ctx.fillStyle = '#ff4a4a';
+      ctx.fillRect(x - 1, y - 6, 2, 2);
+    }
+    return;
+  }
+  // pássaros (de dia e no entardecer)
+  ctx.strokeStyle = phase === 'tarde' ? 'rgba(60,30,60,0.6)' : 'rgba(30,40,70,0.55)';
   ctx.lineWidth = 1.6;
   for (let i = 0; i < 4; i++) {
     const x = ((t * 26 + i * 330) % 1600) - 160;
@@ -182,79 +251,138 @@ function cloud(ctx, x, y, w, color, shade) {
   ctx.fill();
 }
 
+// chão do andar 0 ao 10: morros, campos, vila e pinheiros (vai descendo)
+function landscape(ctx, f, rand) {
+  const ground = 470 + f * 48;
+  const tint = (a, b) => mixHex(a, b, (f / 10) * 0.35);
+  const hills = ridgeLine([[-760, ground - 40], [-200, ground - 150], [300, ground - 90], [900, ground - 190], [1500, ground - 70], [2040, ground - 130]], rand, 0.22);
+  ctx.fillStyle = tint('#8fb3d6', '#6f86b0');
+  ctx.beginPath();
+  ctx.moveTo(-760, 1400);
+  for (const [x, y] of hills) ctx.lineTo(x, y);
+  ctx.lineTo(2040, 1400);
+  ctx.fill();
+  const green = ridgeLine([[-760, ground + 10], [-100, ground - 50], [500, ground - 10], [1100, ground - 60], [1700, ground], [2040, ground - 30]], rand, 0.12);
+  ctx.fillStyle = tint('#6fae5a', '#5a8a6a');
+  ctx.beginPath();
+  ctx.moveTo(-760, 1400);
+  for (const [x, y] of green) ctx.lineTo(x, y);
+  ctx.lineTo(2040, 1400);
+  ctx.fill();
+  for (let i = 0; i < 9; i++) {
+    ctx.fillStyle = tint(['#8cc06a', '#a9c96a', '#c9c86a'][i % 3], '#7a9a7a');
+    ctx.beginPath();
+    ctx.ellipse(-700 + i * 300 + rand() * 60, ground + 40 + rand() * 30, 150, 18, 0, 0, Math.PI * 2);
+    ctx.fill();
+  }
+  for (let i = 0; i < 16; i++) {
+    const x = 80 + i * 70 + rand() * 30 + (i > 7 ? 700 : 0);
+    const y = ground + 5 + rand() * 20;
+    const w = 26 + rand() * 14;
+    ctx.fillStyle = '#efe2c8';
+    ctx.fillRect(x, y - 18, w, 18);
+    ctx.fillStyle = '#c4473a';
+    ctx.beginPath();
+    ctx.moveTo(x - 4, y - 18);
+    ctx.lineTo(x + w / 2, y - 32);
+    ctx.lineTo(x + w + 4, y - 18);
+    ctx.fill();
+  }
+  for (let i = 0; i < 30; i++) {
+    const x = -700 + rand() * 2700;
+    const y = ground + 8 + rand() * 40;
+    const h = 22 + rand() * 18;
+    ctx.fillStyle = '#2f6b3f';
+    ctx.beginPath();
+    ctx.moveTo(x, y - h);
+    ctx.lineTo(x + h * 0.35, y);
+    ctx.lineTo(x - h * 0.35, y);
+    ctx.fill();
+  }
+}
+
+// mar de nuvens logo abaixo da torre
+function cloudSea(ctx, top, light, dark, rand) {
+  ctx.fillStyle = dark;
+  ctx.fillRect(-760, top + 30, 2800, 1400);
+  for (let i = 0; i < 22; i++) cloud(ctx, -760 + i * 135 + rand() * 40, top + 30 + rand() * 30, 200 + rand() * 120, light, dark);
+}
+
+// a Terra curvada lá embaixo; `r` maior = mais perto (borda), menor = espaço
+function planetEarth(ctx, cx, cy, r) {
+  // atmosfera (faixa azul brilhando na borda)
+  const atm = ctx.createRadialGradient(cx, cy, r * 0.97, cx, cy, r * 1.06);
+  atm.addColorStop(0, 'rgba(120,190,255,0.95)');
+  atm.addColorStop(0.4, 'rgba(70,140,255,0.45)');
+  atm.addColorStop(1, 'rgba(60,120,255,0)');
+  ctx.fillStyle = atm;
+  ctx.beginPath();
+  ctx.arc(cx, cy, r * 1.06, 0, Math.PI * 2);
+  ctx.fill();
+  // oceano
+  const sea = ctx.createRadialGradient(cx - r * 0.3, cy - r * 0.6, r * 0.1, cx, cy, r);
+  sea.addColorStop(0, '#4aa3ff');
+  sea.addColorStop(0.7, '#1f5fc4');
+  sea.addColorStop(1, '#0c2a6a');
+  ctx.fillStyle = sea;
+  ctx.beginPath();
+  ctx.arc(cx, cy, r, 0, Math.PI * 2);
+  ctx.fill();
+  // continentes e nuvens (só na parte que aparece)
+  ctx.save();
+  ctx.beginPath();
+  ctx.arc(cx, cy, r, 0, Math.PI * 2);
+  ctx.clip();
+  const rand = seeded(404);
+  for (let i = 0; i < 14; i++) {
+    const a = -Math.PI / 2 + (rand() - 0.5) * 1.6;
+    const d = r * (0.55 + rand() * 0.4);
+    ctx.fillStyle = rand() < 0.5 ? '#3f8a4a' : '#8a7a4a';
+    ctx.beginPath();
+    ctx.ellipse(cx + Math.cos(a) * d, cy + Math.sin(a) * d, r * (0.05 + rand() * 0.09), r * (0.02 + rand() * 0.04), a, 0, Math.PI * 2);
+    ctx.fill();
+  }
+  ctx.fillStyle = 'rgba(255,255,255,0.55)';
+  for (let i = 0; i < 20; i++) {
+    const a = -Math.PI / 2 + (rand() - 0.5) * 1.8;
+    const d = r * (0.5 + rand() * 0.48);
+    ctx.beginPath();
+    ctx.ellipse(cx + Math.cos(a) * d, cy + Math.sin(a) * d, r * (0.04 + rand() * 0.07), r * 0.012, a + 1.2, 0, Math.PI * 2);
+    ctx.fill();
+  }
+  // lado da noite (sombra)
+  const night = ctx.createLinearGradient(cx - r, 0, cx + r, 0);
+  night.addColorStop(0, 'rgba(0,0,20,0.55)');
+  night.addColorStop(0.45, 'rgba(0,0,20,0)');
+  ctx.fillStyle = night;
+  ctx.fillRect(cx - r, cy - r, r * 2, r * 2);
+  ctx.restore();
+}
+
 function drawFar(ctx, map, rand) {
   const f = floorOf(map);
-  const night = nightOf(f);
-  // o chão desce conforme a torre sobe
-  const ground = 470 + f * 48;
-  if (ground < 1500) {
-    const tint = (a, b) => mixHex(a, b, Math.min(1, f / 14) * 0.55 + night * 0.35);
-    // montanhas azuladas lá no fundo
-    const hills = ridgeLine([[-760, ground - 40], [-200, ground - 150], [300, ground - 90], [900, ground - 190], [1500, ground - 70], [2040, ground - 130]], rand, 0.22);
-    ctx.fillStyle = tint('#8fb3d6', '#4a4f7a');
-    ctx.beginPath();
-    ctx.moveTo(-760, 1400);
-    for (const [x, y] of hills) ctx.lineTo(x, y);
-    ctx.lineTo(2040, 1400);
-    ctx.fill();
-    // morros verdes
-    const green = ridgeLine([[-760, ground + 10], [-100, ground - 50], [500, ground - 10], [1100, ground - 60], [1700, ground], [2040, ground - 30]], rand, 0.12);
-    ctx.fillStyle = tint('#6fae5a', '#3a4a4a');
-    ctx.beginPath();
-    ctx.moveTo(-760, 1400);
-    for (const [x, y] of green) ctx.lineTo(x, y);
-    ctx.lineTo(2040, 1400);
-    ctx.fill();
-    // campos em faixas
-    for (let i = 0; i < 9; i++) {
-      ctx.fillStyle = tint(['#8cc06a', '#a9c96a', '#c9c86a'][i % 3], '#3c4848');
-      const x = -700 + i * 300 + rand() * 60;
-      ctx.beginPath();
-      ctx.ellipse(x, ground + 40 + rand() * 30, 150, 18, 0, 0, Math.PI * 2);
-      ctx.fill();
-    }
-    // vila: casinhas com telhado vermelho e janelas acesas à noite
-    for (let i = 0; i < 16; i++) {
-      const x = 80 + i * 70 + rand() * 30 + (i > 7 ? 700 : 0);
-      const y = ground + 5 + rand() * 20;
-      const w = 26 + rand() * 14;
-      ctx.fillStyle = tint('#efe2c8', '#5a5070');
-      ctx.fillRect(x, y - 18, w, 18);
-      ctx.fillStyle = tint('#c4473a', '#4a2a40');
-      ctx.beginPath();
-      ctx.moveTo(x - 4, y - 18);
-      ctx.lineTo(x + w / 2, y - 32);
-      ctx.lineTo(x + w + 4, y - 18);
-      ctx.fill();
-      if (night > 0.2 || f > 12) {
-        ctx.fillStyle = 'rgba(255,214,120,0.9)';
-        ctx.fillRect(x + 5, y - 12, 5, 5);
-      }
-    }
-    // pinheiros
-    for (let i = 0; i < 30; i++) {
-      const x = -700 + rand() * 2700;
-      const y = ground + 8 + rand() * 40;
-      const h = 22 + rand() * 18;
-      ctx.fillStyle = tint('#2f6b3f', '#1f2c34');
-      ctx.beginPath();
-      ctx.moveTo(x, y - h);
-      ctx.lineTo(x + h * 0.35, y);
-      ctx.lineTo(x - h * 0.35, y);
-      ctx.fill();
-    }
+  const phase = phaseOf(f);
+  if (phase === 'dia') {
+    landscape(ctx, f, rand);
+    // as nuvens chegam perto do andar 10
+    if (f >= 5) cloudSea(ctx, Math.max(640, 1000 - (f - 5) * 70), '#ffffff', 'rgba(170,200,235,0.95)', rand);
+    for (let i = 0; i < 7; i++) cloud(ctx, -600 + i * 420 + rand() * 120, 80 + rand() * 260, 160 + rand() * 140, 'rgba(255,255,255,0.92)', 'rgba(180,205,235,0.7)');
+  } else if (phase === 'tarde') {
+    cloudSea(ctx, 640, '#ffd2bf', 'rgba(190,110,140,0.95)', rand);
+    for (let i = 0; i < 6; i++) cloud(ctx, -600 + i * 470 + rand() * 120, 100 + rand() * 240, 180 + rand() * 140, 'rgba(255,200,180,0.8)', 'rgba(170,100,140,0.55)');
+  } else if (phase === 'noite') {
+    cloudSea(ctx, 660, '#4a4f8a', 'rgba(24,26,64,0.97)', rand);
+    for (let i = 0; i < 4; i++) cloud(ctx, -600 + i * 700 + rand() * 120, 160 + rand() * 200, 200 + rand() * 120, 'rgba(110,110,180,0.35)', 'rgba(40,40,90,0.3)');
+  } else if (phase === 'borda') {
+    // a Terra bem grande e curvada lá embaixo (cada andar mais longe)
+    // (o topo da Terra fica logo abaixo da torre e vai descendo um pouco)
+    const r = 3400 - (f - 41) * 150;
+    planetEarth(ctx, 640, 560 + (f - 41) * 12 + r, r);
+  } else {
+    // espaço: a Terra pequena e redonda lá longe
+    const r = Math.max(320, 760 - (f - 51) * 30);
+    planetEarth(ctx, 720, 520 + r, r);
   }
-  // mar de nuvens: chega a partir do andar 5 e fica logo abaixo da torre
-  if (f >= 4) {
-    const top = Math.max(600, 1000 - (f - 4) * 60);
-    const lit = f < 14 ? ['#ffffff', 'rgba(170,200,235,0.9)'] : f < 24 ? ['#ffd8c8', 'rgba(170,110,150,0.9)'] : ['#8a86c8', 'rgba(50,40,100,0.9)'];
-    ctx.fillStyle = lit[1];
-    ctx.fillRect(-760, top + 30, 2800, 1400);
-    for (let i = 0; i < 22; i++) cloud(ctx, -760 + i * 135 + rand() * 40, top + 30 + rand() * 30, 200 + rand() * 120, lit[0], lit[1]);
-  }
-  // nuvens soltas
-  const puff = f < 14 ? ['rgba(255,255,255,0.92)', 'rgba(180,205,235,0.7)'] : f < 24 ? ['rgba(255,214,200,0.8)', 'rgba(170,110,150,0.6)'] : ['rgba(140,130,200,0.5)', 'rgba(60,50,110,0.5)'];
-  for (let i = 0; i < 7; i++) cloud(ctx, -600 + i * 420 + rand() * 120, 80 + rand() * 260, 160 + rand() * 140, puff[0], puff[1]);
 }
 
 function farAnimated() {}
@@ -280,13 +408,13 @@ function drawMid(ctx, map, rand) {
     }
     return;
   }
-  // mais alto: torres vizinhas mais baixas (vão sumindo lá embaixo)
+  // andares baixos: torres vizinhas mais baixas (vão sumindo lá embaixo)
   if (f <= 8) {
     for (const [x, w] of [[-380, 140], [1650, 160]]) {
       const y = 620 + f * 70;
-      ctx.fillStyle = mixHex('#8d8296', '#4a4466', f / 10);
+      ctx.fillStyle = '#8d8296';
       ctx.fillRect(x, y, w, 1400);
-      ctx.fillStyle = mixHex('#6f3a4a', '#3a2440', f / 10);
+      ctx.fillStyle = '#6f3a4a';
       ctx.beginPath();
       ctx.moveTo(x - 14, y);
       ctx.lineTo(x + w / 2, y - 110);
@@ -298,9 +426,10 @@ function drawMid(ctx, map, rand) {
 
 let midFloor = 0;
 function midAnimated(ctx, t) {
-  // nuvenzinhas passando na frente do fundo (só durante o dia)
-  if (midFloor === 0 || midFloor >= 24) return;
-  const color = midFloor < 14 ? 'rgba(255,255,255,0.55)' : 'rgba(255,210,200,0.4)';
+  // nuvenzinhas passando (de dia e no entardecer)
+  const phase = phaseOf(midFloor);
+  if (midFloor === 0 || (phase !== 'dia' && phase !== 'tarde')) return;
+  const color = phase === 'dia' ? 'rgba(255,255,255,0.55)' : 'rgba(255,210,200,0.4)';
   for (let i = 0; i < 3; i++) {
     const x = ((t * (10 + i * 4) + i * 900) % 2800) - 600;
     cloud(ctx, x, 100 + i * 140, 220, color, 'rgba(0,0,0,0)');
@@ -451,7 +580,7 @@ function drawTerrain(ctx, map, rand) {
     ctx.fillStyle = INK;
     roundRect(ctx, x - 4, bodyY + 86, 48, 78, 22);
     ctx.fill();
-    ctx.fillStyle = f >= 14 ? '#ffcf6a' : '#3a3050';
+    ctx.fillStyle = f > 10 ? '#ffcf6a' : '#3a3050';
     roundRect(ctx, x, bodyY + 90, 40, 70, 19);
     ctx.fill();
     ctx.fillStyle = INK;

@@ -13,7 +13,7 @@ import { buildLocalSetup, outcomeFor } from './setup.js';
 import { api } from './api.js';
 import { renderAccountBox, initAuthScreen, setAuthMode, focusAuth } from './screens/account.js';
 import { recordProfileMatch, recordTowerRun, renderLocalProfile, renderProfileChip } from './screens/profile.js';
-import { TOWER, botBrain, brainName, floorFoes, carryAfterWin, towerXp } from '/shared/tower.js';
+import { TOWER, botBrain, brainName, floorFoes, floorStep, carryAfterWin, towerXp } from '/shared/tower.js';
 import { FRAMES } from '/shared/profile-stats.js';
 import { DemoArena } from './screens/demo.js';
 import { initHomeMenu } from './screens/home-menu.js';
@@ -806,7 +806,7 @@ function towerSetup() {
   const enemy = others[Math.floor(Math.random() * others.length)];
   const { bots, lives } = floorFoes(t.floor);
   const brain = botBrain(t.floor);
-  const base = TOWER_NAMES[Math.min(t.floor, TOWER_NAMES.length - 1)];
+  const base = TOWER_NAMES[Math.min(floorStep(t.floor).step, TOWER_NAMES.length - 1)];
   const players = [{ id: 1, name: playerName(), element: t.element, team: 'A', isBot: false, admin: state.admin, lives: t.lives, maxLives: TOWER.maxLives, damage: t.damage }];
   for (let i = 0; i < bots; i++) {
     players.push({ id: 2 + i, name: bots > 1 ? `${base} ${i + 1}` : base, element: enemy, team: 'B', isBot: true, brain, lives });

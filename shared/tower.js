@@ -1,8 +1,11 @@
-// Modo Torre (sobrevivência): você sobe andar por andar. No andar 0 o bot é
-// muito burro; a cada andar ele fica mais esperto, até virar um gênio no
-// andar 10. Depois disso a torre continua para sempre: aparecem mais bots e
-// eles ganham mais vidas. Suas vidas e seu dano continuam de um andar para
-// o outro; perdeu, a torre acaba e o recorde fica guardado.
+// Modo Torre (sobrevivência): você sobe andar por andar. A torre anda em
+// ciclos de 10 andares; em cada ciclo os bots começam burros e terminam gênios:
+//   andares 0–10   1 bot   (muito burro no 0 → gênio no 10)
+//   andares 11–20  2 bots  (burros no 11 → gênios no 20)
+//   andares 21–30  3 bots  (burros no 21 → gênios no 30)
+//   andares 31+    3 bots, e a cada ciclo eles ganham mais 1 vida (até 3)
+// Suas vidas e seu dano continuam de um andar para o outro; perdeu, a torre
+// acaba e o recorde fica guardado.
 
 export const TOWER = {
   geniusFloor: 10,     // andar em que o bot vira gênio
@@ -19,9 +22,17 @@ const GENIUS = { thinkEvery: 3, attackChance: 2, reflex: 1, itemGreed: 1 };
 
 const lerp = (a, b, t) => a + (b - a) * t;
 
+// Em que ciclo o andar está e em que degrau (0 = mais burro, 10 = gênio)
+export function floorStep(floor) {
+  if (floor <= TOWER.geniusFloor) return { cycle: 0, step: floor };
+  const cycle = Math.floor((floor - 1) / TOWER.geniusFloor);
+  return { cycle, step: floor - cycle * TOWER.geniusFloor };
+}
+
 export function botBrain(floor) {
-  // sobe devagar nos primeiros andares e mais rápido perto do gênio
-  const t = Math.min(1, Math.max(0, floor / TOWER.geniusFloor)) ** 1.6;
+  const { step } = floorStep(floor);
+  // sobe devagar nos primeiros degraus e mais rápido perto do gênio
+  const t = Math.min(1, Math.max(0, step / TOWER.geniusFloor)) ** 1.6;
   return {
     thinkEvery: Math.round(lerp(DUMB.thinkEvery, GENIUS.thinkEvery, t)),
     attackChance: lerp(DUMB.attackChance, GENIUS.attackChance, t),
@@ -35,16 +46,16 @@ const LEVELS = [
 ];
 
 export function brainName(floor) {
+  const { step } = floorStep(floor);
   let name = LEVELS[0][1];
-  for (const [f, n] of LEVELS) if (floor >= f) name = n;
+  for (const [f, n] of LEVELS) if (step >= f) name = n;
   return name;
 }
 
 // Quantos bots e quantas vidas cada um tem
 export function floorFoes(floor) {
-  const bots = floor <= TOWER.geniusFloor ? 1 : floor <= 20 ? 2 : 3;
-  const lives = floor <= 25 ? 1 : Math.min(3, 1 + Math.floor((floor - 16) / 10));
-  return { bots, lives };
+  const { cycle } = floorStep(floor);
+  return { bots: Math.min(3, cycle + 1), lives: Math.min(3, 1 + Math.max(0, cycle - 2)) };
 }
 
 // Como você começa o próximo andar depois de vencer o andar `floor`
