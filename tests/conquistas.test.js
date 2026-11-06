@@ -123,3 +123,21 @@ test('o jogo marca de onde veio o golpe (golpe, magia, arremesso)', () => {
   }
   assert.ok(seen.includes('golpe'));
 });
+
+test('regras novas: Mãos Limpas, Virada Lendária sozinho e Capitão Pirata somando partidas', () => {
+  const p = emptyProgress();
+  // Mãos Limpas: vence sem pegar arma
+  const t = new MatchTracker(game(), 1);
+  assert.ok(evaluate(t.summary(resultFor(true), setupFor('fogo'), 'vitoria'), p).some((x) => x.id === 'maos_limpas'));
+  const t2 = new MatchTracker(game(), 1);
+  t2.onEvents([{ type: 'pickup', id: 1 }]);
+  assert.equal(t2.summary(resultFor(true), setupFor('fogo'), 'vitoria').pickups, 1);
+  // Capitão Pirata: 5 K.O.s com canhão em várias partidas
+  const p2 = emptyProgress();
+  for (let i = 0; i < 5; i++) {
+    const tt = new MatchTracker(game(), 1);
+    tt.kos.push({ cannon: true, victim: 2, victimElement: 'agua', src: 'canhao' });
+    evaluate(tt.summary(resultFor(false), setupFor('fogo', 'dificil'), 'derrota'), p2);
+  }
+  assert.ok(p2.ouro.artilheiro);
+});

@@ -36,7 +36,7 @@ Ideias aprovadas pelo Enzo que ainda não foram feitas.
 - **Treino livre** (boneco parado com painel de dano e combo).
 - **Marretão** (arma rara de 1 uso, muito forte).
 - **Controle (gamepad)** de Xbox, PlayStation ou parecido, na luta e nos menus.
-- **Conquistas** (18 normais + 17 de ouro no Difícil, as de ouro escondidas até fazer a normal).
+- **Conquistas** (19 normais + 18 de ouro no Difícil, as de ouro escondidas até fazer a normal).
 - **Rei da Ilha** (área com coroa que dá pontos, muda de lugar a cada 25 s).
 - **Versão para celular**: joystick na esquerda e botões de pular, bater, dash e arma na direita.
 

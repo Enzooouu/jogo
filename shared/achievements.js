@@ -24,32 +24,32 @@ export const ACHIEVEMENTS = [
       goal: 3, progress: (m, c) => c.streak('intocavel', m.won && m.deaths === 0 && !m.hill) } },
   { id: 'por_um_fio', name: 'Por um Fio', desc: 'Vença com só 1 vida sobrando.', icon: '❤️',
     check: (m) => m.won && m.livesLeft === 1 && !m.hill,
-    gold: { name: 'Virada Lendária', desc: 'Vença um 3×3 no Difícil com só 1 vida sobrando.',
-      check: (m) => m.won && m.livesLeft === 1 && m.modeKey === '3x3' } },
+    gold: { name: 'Virada Lendária', desc: 'Vença um 3×3 no Difícil sozinho (seus aliados já fora) e com só 1 vida sobrando.',
+      check: (m) => m.won && m.livesLeft === 1 && m.modeKey === '3x3' && m.alliesLeft === 0 } },
   { id: 'massacre', name: 'Massacre', desc: 'Derrube 3 adversários na mesma partida de Todos contra todos.', icon: '💥',
     check: (m) => m.mode === 'ffa' && m.kos.length >= 3,
-    gold: { name: 'Carnificina', desc: 'No Difícil, derrube todos os 4 adversários pelo menos uma vez na mesma partida de Todos contra todos.',
-      check: (m) => m.mode === 'ffa' && new Set(m.kos.map((k) => k.victim)).size >= 4 } },
+    gold: { name: 'Carnificina', desc: 'No Difícil, na mesma partida de Todos contra todos, derrube 4 adversários, um de cada elemento diferente.',
+      check: (m) => m.mode === 'ffa' && new Set(m.kos.map((k) => k.victimElement)).size >= 4 } },
   { id: 'misericordia', name: 'Golpe de Misericórdia', desc: 'Derrube alguém que estava com mais de 150% de dano.', icon: '💀',
     check: (m) => m.kos.some((k) => k.damage > 150),
-    gold: { name: 'Execução', desc: 'No Difícil, derrube alguém com um soco (sem arma) quando ele estava com mais de 200% de dano.',
-      check: (m) => m.kos.some((k) => k.damage > 200 && !k.weapon && k.src === 'golpe') } },
+    gold: { name: 'Execução', desc: 'No Difícil, derrube alguém com um soco (sem arma) quando ele estava com mais de 250% de dano.',
+      check: (m) => m.kos.some((k) => k.damage > 250 && !k.weapon && k.src === 'golpe') } },
   { id: 'mestre', name: 'Mestre dos Elementos', desc: 'Vença com cada um dos 5 personagens.', icon: '🌀',
     goal: 5, progress: (m, c) => { if (m.won) c.set('mestre', m.element); return c.size('mestre'); },
-    gold: { name: 'Lenda dos Elementos', desc: 'Vença com cada um dos 5 personagens no Difícil sem perder nenhuma vida.',
-      goal: 5, progress: (m, c) => { if (m.won && m.deaths === 0) c.set('mestre', m.element); return c.size('mestre'); } } },
+    gold: { name: 'Lenda dos Elementos', desc: 'No Difícil, vença com os 5 personagens em vitórias seguidas, sem perder nenhuma vida (perder ou morrer zera).',
+      goal: 5, progress: (m, c) => { if (m.won && m.deaths === 0) c.set('mestre', m.element); else c.clear('mestre'); return c.size('mestre'); } } },
   { id: 'banho_de_lava', name: 'Banho de Lava', desc: 'Como Fogo, entre na lava 10 vezes.', icon: '🔥',
     goal: 10, progress: (m, c) => c.add('banho_de_lava', m.element === 'fogo' ? m.lavaEnters : 0),
-    gold: { name: 'Pés de Brasa', desc: 'Como Fogo, no Difícil, derrube 3 inimigos jogando eles na lava.',
-      goal: 3, progress: (m, c) => c.add('banho_de_lava', m.element === 'fogo' ? m.kos.filter((k) => k.cause === 'lava').length : 0) } },
+    gold: { name: 'Pés de Brasa', desc: 'Como Fogo, no Difícil, derrube 3 inimigos jogando eles na lava na mesma partida.',
+      check: (m) => m.element === 'fogo' && m.kos.filter((k) => k.cause === 'lava').length >= 3 } },
   { id: 'tsunami', name: 'Tsunami', desc: 'Como Água, derrube um inimigo com o jato d\'água.', icon: '🌊',
     check: (m) => m.element === 'agua' && m.kos.some((k) => k.src === 'magia'),
     gold: { name: 'Maremoto', desc: 'Como Água, no Difícil, derrube 3 inimigos com o jato d\'água na mesma partida.',
       check: (m) => m.element === 'agua' && m.kos.filter((k) => k.src === 'magia').length >= 3 } },
   { id: 'rocha_firme', name: 'Rocha Firme', desc: 'Como Terra, atordoe inimigos 3 vezes na mesma partida.', icon: '🪨',
     check: (m) => m.element === 'terra' && m.stuns >= 3,
-    gold: { name: 'Montanha Viva', desc: 'Como Terra, no Difícil, atordoe inimigos 10 vezes na mesma partida.',
-      check: (m) => m.element === 'terra' && m.stuns >= 10 } },
+    gold: { name: 'Montanha Viva', desc: 'Como Terra, no Difícil, atordoe inimigos 30 vezes na mesma partida.',
+      check: (m) => m.element === 'terra' && m.stuns >= 30 } },
   { id: 'furacao', name: 'Furacão', desc: 'Como Ar, derrube um inimigo com o tornado.', icon: '🌪️',
     check: (m) => m.element === 'ar' && m.kos.some((k) => k.src === 'magia'),
     gold: { name: 'Olho do Furacão', desc: 'Como Ar, no Difícil, derrube 3 inimigos com o tornado na mesma partida.',
@@ -60,8 +60,8 @@ export const ACHIEVEMENTS = [
       goal: 5, progress: (m, c) => (m.element === 'mortal' ? c.streak('sem_poderes', m.won) : c.get('sem_poderes')) } },
   { id: 'arsenal', name: 'Arsenal Completo', desc: 'Acerte golpes com espada, cajado, lança e marretão.', icon: '🗡️',
     goal: 4, progress: (m, c) => { for (const w of m.weapons) c.set('arsenal', w); return c.size('arsenal'); },
-    gold: { name: 'Mestre de Armas', desc: 'No Difícil, derrube inimigos com cada arma: espada, cajado, lança e marretão.',
-      goal: 4, progress: (m, c) => { for (const k of m.kos) if (k.weapon) c.set('arsenal', k.weapon); return c.size('arsenal'); } } },
+    gold: { name: 'Mestre de Armas', desc: 'No Difícil, faça 5 K.O.s com cada arma: espada, cajado, lança e marretão (conta todas as partidas).',
+      goal: 20, progress: (m, c) => { for (const k of m.kos) if (k.weapon) c.tally('arsenal', k.weapon, 1); return c.tallySum('arsenal', 5); } } },
   { id: 'martelada', name: 'Martelada', desc: 'Derrube alguém com o marretão.', icon: '🔨',
     check: (m) => m.kos.some((k) => k.weapon === 'marretao' && k.src === 'golpe'),
     gold: { name: 'Martelo dos Deuses', desc: 'No Difícil, derrube com o marretão alguém que estava com menos de 60% de dano.',
@@ -76,12 +76,16 @@ export const ACHIEVEMENTS = [
       check: (m) => m.kos.filter((k) => k.src === 'neve').length >= 3 } },
   { id: 'artilheiro', name: 'Artilheiro', desc: 'No Navio Voador, derrube um inimigo logo depois de ele levar tiro do canhão.', icon: '💣',
     check: (m) => m.kos.some((k) => k.cannon),
-    gold: { name: 'Capitão Pirata', desc: 'No Difícil, derrube 3 inimigos com a ajuda do canhão na mesma partida.',
-      check: (m) => m.kos.filter((k) => k.cannon).length >= 3 } },
+    gold: { name: 'Capitão Pirata', desc: 'No Difícil, derrube 5 inimigos com a ajuda do canhão (conta todas as partidas).',
+      goal: 5, progress: (m, c) => c.add('artilheiro', m.kos.filter((k) => k.cannon).length) } },
   { id: 'rei_absoluto', name: 'Rei Absoluto', desc: 'Vença um Rei da Ilha sem o outro time marcar ponto.', icon: '👑',
     check: (m) => m.hill && m.won && m.enemyPoints === 0,
     gold: { name: 'Imperador', desc: 'No Difícil, vença o Rei da Ilha nos dois mapas (Castelo e Pirâmide) sem o outro time marcar ponto.',
       goal: 2, progress: (m, c) => { if (m.hill && m.won && m.enemyPoints === 0) c.set('rei_absoluto', m.map); return c.size('rei_absoluto'); } } },
+  { id: 'maos_limpas', name: 'Mãos Limpas', desc: 'Vença uma partida sem pegar nenhuma arma.', icon: '👊',
+    check: (m) => m.won && m.pickups === 0,
+    gold: { name: 'Punhos de Ferro', desc: 'No Difícil, vença 3 partidas seguidas sem pegar nenhuma arma.',
+      goal: 3, progress: (m, c) => c.streak('maos_limpas', m.won && m.pickups === 0) } },
   { id: 'aprendiz', name: 'Aprendiz', desc: 'Termine o tutorial.', icon: '📜', special: true, gold: null },
 ];
 
@@ -104,6 +108,7 @@ export class MatchTracker {
     this.weapons = new Set();
     this.stuns = 0;
     this.lavaEnters = 0;
+    this.pickups = 0;
   }
 
   onEvents(events) {
@@ -120,6 +125,8 @@ export class MatchTracker {
       } else if (e.type === 'snowHit' && e.attacker === this.localId) {
         const t = g.playerById(e.target);
         this.lastHit.set(e.target, { src: 'neve', weapon: null, damage: t ? t.damage : 0, time: g.time });
+      } else if (e.type === 'pickup' && e.id === this.localId) {
+        this.pickups++;
       } else if (e.type === 'cannonHit') {
         this.cannonAt.set(e.target, g.time);
       } else if (e.type === 'hazardEnter' && e.id === this.localId && e.hazard === 'lava') {
@@ -132,10 +139,10 @@ export class MatchTracker {
         const mine = h && g.time - h.time <= KO_WINDOW;
         const cannon = this.cannonAt.has(e.id) && g.time - this.cannonAt.get(e.id) <= KO_WINDOW;
         if (mine || e.killer === this.localId) {
-          this.kos.push({ victim: e.id, cause: e.cause, src: mine ? h.src : 'golpe', weapon: mine ? h.weapon : null, damage: mine ? h.damage : 0, cannon });
+          this.kos.push({ victim: e.id, victimElement: victim.element, cause: e.cause, src: mine ? h.src : 'golpe', weapon: mine ? h.weapon : null, damage: mine ? h.damage : 0, cannon });
         } else if (cannon && g.map.id === 'navio') {
           // tiro do canhão no inimigo e ele caiu: conta para quem está no outro navio
-          this.kos.push({ victim: e.id, cause: e.cause, src: 'canhao', weapon: null, damage: 0, cannon: true });
+          this.kos.push({ victim: e.id, victimElement: victim.element, cause: e.cause, src: 'canhao', weapon: null, damage: 0, cannon: true });
         }
         this.lastHit.delete(e.id);
       }
@@ -161,6 +168,8 @@ export class MatchTracker {
       element: local?.element,
       difficulty: setup.difficulty,
       deaths: me?.deaths ?? 0,
+      alliesLeft: result.players.filter((p) => p.team === myTeam && p.id !== this.localId && p.livesLeft > 0).length,
+      pickups: this.pickups,
       livesLeft: me?.livesLeft ?? 0,
       kos: this.kos,
       weapons: [...this.weapons],
@@ -179,6 +188,10 @@ function counterApi(store) {
     set(id, v) { const list = new Set(store[id] ?? []); if (v) list.add(v); store[id] = [...list]; return list.size; },
     size(id) { return (store[id] ?? []).length; },
     get(id) { return store[id] ?? 0; },
+    clear(id) { store[id] = []; },
+    // contagem por tipo (ex.: K.O.s por arma) e a soma com limite por tipo
+    tally(id, key, n) { const o = store[id] && !Array.isArray(store[id]) ? store[id] : {}; o[key] = (o[key] ?? 0) + n; store[id] = o; },
+    tallySum(id, cap) { const o = store[id] && !Array.isArray(store[id]) ? store[id] : {}; return Object.values(o).reduce((a, v) => a + Math.min(cap, v), 0); },
     // sequência: soma 1 se deu certo, volta para 0 se não deu
     streak(id, ok) { store[id] = ok ? (store[id] ?? 0) + 1 : 0; return store[id]; },
   };
@@ -213,7 +226,7 @@ export function progressOf(a, tier, progress) {
   const rule = tier === 'ouro' ? a.gold : a;
   if (!rule?.goal) return null;
   const v = progress.counters[tier][a.id];
-  const n = Array.isArray(v) ? v.length : v ?? 0;
+  const n = Array.isArray(v) ? v.length : typeof v === 'object' && v ? Object.values(v).reduce((s, x) => s + Math.min(5, x), 0) : v ?? 0;
   return { n: Math.min(n, rule.goal), goal: rule.goal };
 }
 
