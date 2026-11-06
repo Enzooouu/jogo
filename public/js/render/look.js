@@ -86,9 +86,41 @@ export function torso(ctx, element, k, sh, hip, t) {
     ctx.lineTo(hip.x + 2, hip.y - 2);
     ctx.moveTo(sh.x + 1, sh.y + 8);
     ctx.lineTo(sh.x + 6, sh.y + 10);
+    ctx.moveTo(sh.x - 2, sh.y + 13);
+    ctx.lineTo(sh.x - 7, sh.y + 16);
     ctx.stroke();
+    // brasa acesa no peito (o "coração" de fogo)
+    ctx.globalAlpha = 1;
+    const pulse = 0.75 + Math.sin(t * 5) * 0.25;
+    const cy = sh.y + 8;
+    const core = ctx.createRadialGradient(sh.x + 1, cy, 0.5, sh.x + 1, cy, 6);
+    core.addColorStop(0, `rgba(255,250,220,${pulse})`);
+    core.addColorStop(0.4, rgba(k.glow2, 0.85 * pulse));
+    core.addColorStop(1, rgba(k.glow, 0));
+    ctx.fillStyle = core;
+    ctx.beginPath(); ctx.arc(sh.x + 1, cy, 6, 0, Math.PI * 2); ctx.fill();
+    ctx.shadowBlur = 0;
+    // placas de carvão (luz de cima)
+    ctx.fillStyle = 'rgba(255,170,90,0.12)';
+    ctx.beginPath(); ctx.moveTo(sh.x - 8, sh.y); ctx.lineTo(sh.x + 2, sh.y); ctx.lineTo(sh.x - 4, sh.y + 5); ctx.closePath(); ctx.fill();
   } else if (element === 'agua') {
-    ctx.fillStyle = 'rgba(255,255,255,0.35)';
+    // corrente ondulando por dentro do corpo
+    ctx.strokeStyle = 'rgba(200,240,255,0.55)';
+    ctx.lineWidth = 1.3;
+    ctx.beginPath();
+    for (let y = sh.y + 2; y < hip.y; y += 1) {
+      const u = (y - sh.y) / Math.max(1, hip.y - sh.y);
+      const x = sh.x + (hip.x - sh.x) * u - 1 + Math.sin(y * 0.6 + t * 6) * 1.6;
+      if (y === sh.y + 2) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+    }
+    ctx.stroke();
+    // água mais funda embaixo
+    const deep = ctx.createLinearGradient(0, sh.y, 0, hip.y + 3);
+    deep.addColorStop(0, 'rgba(10,40,120,0)');
+    deep.addColorStop(1, 'rgba(10,40,120,0.3)');
+    ctx.fillStyle = deep;
+    ctx.fillRect(sh.x - 12, sh.y, 24, hip.y - sh.y + 6);
+    ctx.fillStyle = 'rgba(255,255,255,0.45)';
     ctx.beginPath();
     ctx.ellipse(sh.x + 3, sh.y + 6, 2, 5, 0.3, 0, Math.PI * 2);
     ctx.fill();
@@ -108,14 +140,45 @@ export function torso(ctx, element, k, sh, hip, t) {
     ctx.moveTo(sh.x - 6, sh.y + 14);
     ctx.lineTo(sh.x + 6, sh.y + 13);
     ctx.stroke();
+    // placa de pedra clara em cima à esquerda (luz)
+    ctx.fillStyle = 'rgba(255,230,190,0.16)';
+    ctx.beginPath(); ctx.moveTo(sh.x - 11, sh.y); ctx.lineTo(sh.x + 4, sh.y - 1); ctx.lineTo(sh.x - 3, sh.y + 7); ctx.lineTo(sh.x - 10, sh.y + 7); ctx.closePath(); ctx.fill();
+    // cinto de musgo com folhinha
     ctx.fillStyle = '#5f8f3a';
-    ctx.fillRect(hip.x - 8, hip.y - 4, 16, 3);
+    ctx.fillRect(hip.x - 9, hip.y - 4.5, 18, 3.4);
+    ctx.fillStyle = '#8ad05a';
+    ctx.beginPath(); ctx.ellipse(hip.x + 4, hip.y - 4, 2.6, 1.2, -0.5, 0, Math.PI * 2); ctx.fill();
+    // cristal de âmbar encravado no peito
+    ctx.save();
+    ctx.shadowColor = k.glow;
+    ctx.shadowBlur = 5 + Math.sin(t * 3) * 2;
+    ctx.fillStyle = '#ffd27a';
+    const gx = sh.x + 2;
+    const gy = sh.y + 9;
+    ctx.beginPath(); ctx.moveTo(gx, gy - 4); ctx.lineTo(gx + 2.6, gy); ctx.lineTo(gx, gy + 3.6); ctx.lineTo(gx - 2.6, gy); ctx.closePath(); ctx.fill();
+    ctx.restore();
+    ctx.strokeStyle = INK;
+    ctx.lineWidth = 1;
+    ctx.beginPath(); ctx.moveTo(gx, gy - 4); ctx.lineTo(gx + 2.6, gy); ctx.lineTo(gx, gy + 3.6); ctx.lineTo(gx - 2.6, gy); ctx.closePath(); ctx.stroke();
+    ctx.fillStyle = 'rgba(255,255,255,0.8)';
+    ctx.fillRect(gx - 1.2, gy - 2, 1, 1.6);
   } else if (element === 'ar') {
-    ctx.strokeStyle = rgba(k.glow, 0.7);
-    ctx.lineWidth = 1.2;
-    ctx.beginPath();
-    ctx.arc(sh.x, sh.y + 9, 4, 0, Math.PI * 1.5);
-    ctx.stroke();
+    // emblema de redemoinho girando no peito
+    ctx.save();
+    ctx.translate(sh.x, sh.y + 9);
+    ctx.rotate(t * 3);
+    ctx.strokeStyle = rgba(k.glow, 0.85);
+    ctx.shadowColor = k.glow;
+    ctx.shadowBlur = 5;
+    ctx.lineWidth = 1.4;
+    for (let i = 0; i < 3; i++) {
+      ctx.rotate((Math.PI * 2) / 3);
+      ctx.beginPath(); ctx.arc(1.6, 0, 3, Math.PI, Math.PI * 1.8); ctx.stroke();
+    }
+    ctx.restore();
+    // faixa do cinto verde-água
+    ctx.fillStyle = rgba(k.glow, 0.6);
+    ctx.fillRect(hip.x - 7, hip.y - 4, 14, 2.4);
   }
   ctx.restore();
 }
@@ -167,15 +230,52 @@ export function fist(ctx, element, k, p, t) {
   ctx.fill();
   ctx.stroke();
   if (element === 'fogo') {
-    ctx.fillStyle = rgba(k.glow, 0.5 + Math.sin(t * 9) * 0.2);
-    ctx.beginPath();
-    ctx.arc(p.x, p.y - 4, 2.5, 0, Math.PI * 2);
-    ctx.fill();
+    // chaminha dançando em cima do punho
+    const h = 6 + Math.sin(t * 13) * 1.5;
+    ctx.fillStyle = rgba(k.glow, 0.85);
+    ctx.beginPath(); ctx.moveTo(p.x - 2.6, p.y - 2); ctx.quadraticCurveTo(p.x - 2, p.y - h * 0.7, p.x + Math.sin(t * 9), p.y - h); ctx.quadraticCurveTo(p.x + 2, p.y - h * 0.6, p.x + 2.6, p.y - 2); ctx.closePath(); ctx.fill();
+    ctx.fillStyle = rgba(k.glow2, 0.9);
+    ctx.beginPath(); ctx.arc(p.x, p.y - 3, 1.4, 0, Math.PI * 2); ctx.fill();
+  } else if (element === 'agua') {
+    ctx.fillStyle = 'rgba(255,255,255,0.8)';
+    ctx.beginPath(); ctx.arc(p.x - 1.2, p.y - 1.3, 1.1, 0, Math.PI * 2); ctx.fill();
+    // gotinha pingando da mão
+    const d = (t * 1.4) % 1;
+    ctx.fillStyle = rgba(k.bodyHi, 0.9 * (1 - d));
+    ctx.beginPath(); ctx.ellipse(p.x + 0.5, p.y + 4 + d * 10, 1, 1.5, 0, 0, Math.PI * 2); ctx.fill();
+  } else if (element === 'terra') {
+    // nós de pedra no punho
+    ctx.fillStyle = 'rgba(255,230,190,0.35)';
+    ctx.beginPath(); ctx.moveTo(p.x - 4, p.y - 1); ctx.lineTo(p.x - 1, p.y - 4.4); ctx.lineTo(p.x + 1.5, p.y - 1.5); ctx.closePath(); ctx.fill();
+    ctx.strokeStyle = 'rgba(0,0,0,0.4)';
+    ctx.lineWidth = 0.9;
+    ctx.beginPath(); ctx.moveTo(p.x + 1, p.y - 4); ctx.lineTo(p.x + 2, p.y + 1); ctx.stroke();
+  } else if (element === 'ar') {
+    ctx.strokeStyle = rgba(k.glow, 0.85);
+    ctx.lineWidth = 1;
+    ctx.beginPath(); ctx.arc(p.x, p.y, 6, t * 6, t * 6 + 2); ctx.stroke();
   }
 }
 
 export function feet(ctx, element, k, f, b, t) {
-  if (element === 'ar') {
+  if (element === 'fogo') {
+    // brasinhas subindo dos pés
+    for (const [p, o] of [[f, 0], [b, 0.5]]) {
+      const u = (t * 1.6 + o) % 1;
+      ctx.fillStyle = rgba(k.glow2, 1 - u);
+      ctx.beginPath(); ctx.arc(p.x + Math.sin(t * 5 + o * 9) * 2, p.y - 2 - u * 10, 1.1 - u * 0.5, 0, Math.PI * 2); ctx.fill();
+    }
+  } else if (element === 'agua') {
+    // ondinha em volta dos pés
+    ctx.strokeStyle = rgba(k.bodyHi, 0.6);
+    ctx.lineWidth = 1.2;
+    for (const p of [f, b]) {
+      const u = (t * 1.2) % 1;
+      ctx.globalAlpha = 1 - u;
+      ctx.beginPath(); ctx.ellipse(p.x + 1, p.y + 1.5, 4 + u * 6, 1.2 + u * 1.2, 0, 0, Math.PI * 2); ctx.stroke();
+    }
+    ctx.globalAlpha = 1;
+  } else if (element === 'ar') {
     ctx.strokeStyle = rgba(k.glow, 0.8);
     ctx.lineWidth = 1.5;
     for (const p of [f, b]) {
@@ -209,8 +309,14 @@ export function pauldron(ctx, k, sh) {
   ctx.closePath();
   ctx.fill();
   ctx.stroke();
+  ctx.fillStyle = 'rgba(255,230,190,0.3)';
+  ctx.beginPath(); ctx.moveTo(sh.x - 5, sh.y - 3); ctx.lineTo(sh.x + 3, sh.y - 6); ctx.lineTo(sh.x + 1, sh.y); ctx.closePath(); ctx.fill();
   ctx.fillStyle = '#5f8f3a';
   ctx.fillRect(sh.x - 3, sh.y - 5, 9, 2.5);
+  // cristalzinho no ombro
+  ctx.fillStyle = '#ffd27a';
+  ctx.beginPath(); ctx.moveTo(sh.x + 5, sh.y - 4); ctx.lineTo(sh.x + 6.5, sh.y - 10); ctx.lineTo(sh.x + 8, sh.y - 4); ctx.closePath(); ctx.fill();
+  ctx.strokeStyle = INK; ctx.lineWidth = 1.2; ctx.stroke();
 }
 
 export function head(ctx, element, k, h, t) {
@@ -220,7 +326,7 @@ export function head(ctx, element, k, h, t) {
   ctx.strokeStyle = INK;
   if (element === 'fogo') fireHead(ctx, k, t);
   else if (element === 'agua') waterHead(ctx, k, t);
-  else if (element === 'terra') earthHead(ctx, k);
+  else if (element === 'terra') earthHead(ctx, k, t);
   else airHead(ctx, k, t);
   ctx.restore();
 }
@@ -250,6 +356,20 @@ function fireHead(ctx, k, t) {
     ctx.closePath();
     ctx.fill();
   });
+  // miolo branco-amarelo das chamas
+  ctx.fillStyle = 'rgba(255,248,210,0.9)';
+  ctx.beginPath();
+  ctx.moveTo(-3.4, -R + 2);
+  ctx.quadraticCurveTo(-2.2, -R - 8, Math.sin(t * 11) * 1.2, -R - 12 + Math.sin(t * 13) * 1.5);
+  ctx.quadraticCurveTo(2.2, -R - 8, 3.4, -R + 2);
+  ctx.closePath();
+  ctx.fill();
+  // fagulhas subindo da cabeça
+  for (let i = 0; i < 4; i++) {
+    const u = (t * 1.1 + i / 4) % 1;
+    ctx.fillStyle = rgba(i % 2 ? k.glow2 : k.glow, 1 - u);
+    ctx.beginPath(); ctx.arc(Math.sin(t * 4 + i * 2.3) * 7, -R - 18 - u * 16, 1.3 - u * 0.7, 0, Math.PI * 2); ctx.fill();
+  }
   // A cabeça cobre a base das chamas
   ctx.fillStyle = k.body;
   ctx.beginPath();
@@ -263,6 +383,14 @@ function fireHead(ctx, k, t) {
   ctx.beginPath();
   ctx.arc(0, 0, R - 1, 0, Math.PI * 2);
   ctx.fill();
+  // rachadura de brasa na testa e reflexo de carvão
+  ctx.strokeStyle = rgba(k.glow, 0.85);
+  ctx.lineWidth = 1.1;
+  ctx.beginPath(); ctx.moveTo(-6, -6); ctx.lineTo(-3, -4); ctx.lineTo(-5, -1); ctx.stroke();
+  ctx.fillStyle = 'rgba(255,220,180,0.25)';
+  ctx.beginPath(); ctx.ellipse(-4.5, -5.5, 2.2, 1.2, -0.6, 0, Math.PI * 2); ctx.fill();
+  ctx.strokeStyle = INK;
+  ctx.lineWidth = 3;
   eyes(ctx, k, 'fenda');
 }
 
@@ -288,14 +416,57 @@ function waterHead(ctx, k, t) {
   ctx.closePath();
   ctx.fill();
   ctx.stroke();
-  ctx.fillStyle = 'rgba(255,255,255,0.65)';
+  // bolhinhas subindo dentro da gota
+  ctx.save();
+  ctx.beginPath();
+  ctx.moveTo(1, -20); ctx.quadraticCurveTo(-11, -7, -10, 1); ctx.arc(0, 1, 10, Math.PI, 0, true); ctx.quadraticCurveTo(11, -7, 1, -20);
+  ctx.clip();
+  for (let i = 0; i < 4; i++) {
+    const u = (t * 0.7 + i / 4) % 1;
+    ctx.strokeStyle = `rgba(230,250,255,${0.8 * (1 - u)})`;
+    ctx.lineWidth = 0.8;
+    ctx.beginPath(); ctx.arc(-4 + i * 2.6 + Math.sin(t * 3 + i) * 1, 8 - u * 22, 0.9 + u * 0.6, 0, Math.PI * 2); ctx.stroke();
+  }
+  // brilho na borda de baixo (água refletindo)
+  ctx.fillStyle = 'rgba(160,230,255,0.4)';
+  ctx.beginPath(); ctx.ellipse(2, 8.5, 6, 1.6, 0, 0, Math.PI * 2); ctx.fill();
+  ctx.restore();
+  ctx.fillStyle = 'rgba(255,255,255,0.75)';
   ctx.beginPath();
   ctx.ellipse(-4, -6, 2, 4, 0.4, 0, Math.PI * 2);
   ctx.fill();
+  ctx.beginPath(); ctx.arc(-1.5, -12, 1.1, 0, Math.PI * 2); ctx.fill();
+  // gotinha girando em volta da cabeça
+  const a = t * 2.4;
+  ctx.fillStyle = rgba(k.bodyHi, 0.95);
+  ctx.beginPath(); ctx.ellipse(Math.cos(a) * 15, -2 + Math.sin(a) * 5, 1.5, 2, 0, 0, Math.PI * 2); ctx.fill();
+  ctx.strokeStyle = INK;
+  ctx.lineWidth = 3;
   eyes(ctx, k, 'redondo');
 }
 
-function earthHead(ctx, k) {
+function earthHead(ctx, k, t = 0) {
+  // cristais de âmbar crescendo atrás da cabeça
+  ctx.save();
+  ctx.shadowColor = k.glow;
+  ctx.shadowBlur = 6 + Math.sin(t * 3) * 2;
+  for (const [x, y, h, a, c] of [[-8, -9, 9, -0.6, '#ffd27a'], [-4, -12, 12, -0.25, '#ffe9a8'], [-10, -3, 7, -1.1, '#e8a83a']]) {
+    ctx.save(); ctx.translate(x, y); ctx.rotate(a);
+    ctx.fillStyle = c;
+    ctx.beginPath(); ctx.moveTo(-2.2, 0); ctx.lineTo(-2.2, -h + 3); ctx.lineTo(0, -h); ctx.lineTo(2.2, -h + 3); ctx.lineTo(2.2, 0); ctx.closePath(); ctx.fill();
+    ctx.restore();
+  }
+  ctx.restore();
+  for (const [x, y, h, a] of [[-8, -9, 9, -0.6], [-4, -12, 12, -0.25], [-10, -3, 7, -1.1]]) {
+    ctx.save(); ctx.translate(x, y); ctx.rotate(a);
+    ctx.strokeStyle = INK; ctx.lineWidth = 1.4;
+    ctx.beginPath(); ctx.moveTo(-2.2, 0); ctx.lineTo(-2.2, -h + 3); ctx.lineTo(0, -h); ctx.lineTo(2.2, -h + 3); ctx.lineTo(2.2, 0); ctx.stroke();
+    ctx.fillStyle = 'rgba(255,255,255,0.6)';
+    ctx.fillRect(-1.4, -h + 3.5, 0.9, h - 5);
+    ctx.restore();
+  }
+  ctx.strokeStyle = INK;
+  ctx.lineWidth = 3;
   ctx.fillStyle = k.body;
   ctx.beginPath();
   ctx.moveTo(-10, 4);
@@ -325,6 +496,14 @@ function earthHead(ctx, k) {
   ctx.lineTo(-3, -10);
   ctx.closePath();
   ctx.fill();
+  // florzinha no musgo
+  ctx.fillStyle = '#ffffff';
+  for (let i = 0; i < 5; i++) {
+    const a = (i / 5) * Math.PI * 2;
+    ctx.beginPath(); ctx.arc(5 + Math.cos(a) * 1.4, -13.5 + Math.sin(a) * 1.4, 0.9, 0, Math.PI * 2); ctx.fill();
+  }
+  ctx.fillStyle = '#ffd25a';
+  ctx.beginPath(); ctx.arc(5, -13.5, 0.8, 0, Math.PI * 2); ctx.fill();
   ctx.strokeStyle = 'rgba(0,0,0,0.4)';
   ctx.lineWidth = 1.2;
   ctx.beginPath();
@@ -372,6 +551,23 @@ function airHead(ctx, k, t) {
   ctx.closePath();
   ctx.fill();
   ctx.stroke();
+  // penas no alto da cabeça balançando
+  for (const [x, a, len] of [[-6, -0.5, 9], [-2, -0.15, 11]]) {
+    ctx.save();
+    ctx.translate(x, -12);
+    ctx.rotate(a + Math.sin(t * 4 + x) * 0.12);
+    ctx.fillStyle = '#ffffff';
+    ctx.beginPath(); ctx.moveTo(0, 0); ctx.quadraticCurveTo(-3, -len * 0.5, 0, -len); ctx.quadraticCurveTo(3, -len * 0.5, 0, 0); ctx.fill();
+    ctx.strokeStyle = INK; ctx.lineWidth = 1; ctx.stroke();
+    ctx.strokeStyle = rgba(k.glow, 0.9); ctx.lineWidth = 0.7;
+    ctx.beginPath(); ctx.moveTo(0, -0.5); ctx.lineTo(0, -len + 1); ctx.stroke();
+    ctx.restore();
+  }
+  // brilho suave na bochecha
+  ctx.fillStyle = rgba(k.glow, 0.35);
+  ctx.beginPath(); ctx.ellipse(3, 4, 2.6, 1.4, 0, 0, Math.PI * 2); ctx.fill();
+  ctx.strokeStyle = INK;
+  ctx.lineWidth = 3;
   eyes(ctx, k, 'redondo');
 }
 
