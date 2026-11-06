@@ -102,12 +102,14 @@ export function levelInfo(xp) {
 
 // Bordas da foto de perfil que vão sendo liberadas com o nível
 export const FRAMES = [
-  { id: 'bronze', name: 'Bronze', level: 1 },
-  { id: 'prata', name: 'Prata', level: 5 },
-  { id: 'ouro', name: 'Ouro', level: 10 },
-  { id: 'esmeralda', name: 'Esmeralda', level: 15 },
-  { id: 'rubi', name: 'Rubi', level: 20 },
-  { id: 'elemental', name: 'Elemental', level: 30 },
+  { id: 'simples', name: 'Simples', level: 1 },
+  { id: 'bronze', name: 'Bronze', level: 5 },
+  { id: 'prata', name: 'Prata', level: 10 },
+  { id: 'ouro', name: 'Ouro', level: 15 },
+  { id: 'esmeralda', name: 'Esmeralda', level: 20 },
+  { id: 'rubi', name: 'Rubi', level: 30 },
+  { id: 'diamante', name: 'Diamante', level: 40 },
+  { id: 'elemental', name: 'Elemental', level: 50 },
 ];
 
 // Perfis antigos (de antes do nível): estima o XP pelas partidas já jogadas

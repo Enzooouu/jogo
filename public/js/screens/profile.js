@@ -69,11 +69,11 @@ const LOOK_KEY = 'brawl.avatar';
 export function loadLook() {
   try {
     const v = JSON.parse(localStorage.getItem(LOOK_KEY) ?? 'null');
-    if (v && typeof v.pic === 'string') return { pic: v.pic, frame: v.frame ?? 'bronze' };
+    if (v && typeof v.pic === 'string') return { pic: v.pic, frame: v.frame ?? 'auto' };
   } catch {
     // sem armazenamento
   }
-  return { pic: 'auto', frame: 'bronze' };
+  return { pic: 'auto', frame: 'auto' };
 }
 
 function saveLook(look) {
