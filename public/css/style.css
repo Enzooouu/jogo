@@ -253,12 +253,13 @@ kbd {
 .back:hover { background: rgba(255,255,255,.16); }
 
 .mode-grid {
-  position: relative; z-index: 1; display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 14px;
-  max-width: 1280px; margin: 7vh auto 0; padding: 0 32px 32px;
+  position: relative; z-index: 1; display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 14px;
+  max-width: 1180px; margin: 5vh auto 0; padding: 0 32px 32px;
 }
 @media (max-width: 1100px) { .mode-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
 @media (max-width: 700px) { .mode-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
 .mode-tile[data-mode="treino"] { background: linear-gradient(160deg, rgba(40,60,50,.92), rgba(14,20,18,.94)); }
+.mode-tile[data-mode="torre"] { background: linear-gradient(160deg, rgba(44,40,86,.92), rgba(14,12,30,.94)); }
 .mode-tile[data-mode="rei"] { background: linear-gradient(160deg, rgba(70,56,24,.92), rgba(22,16,10,.94)); }
 .mode-tile {
   position: relative; display: flex; flex-direction: column; align-items: flex-start; gap: 6px; text-align: left;
@@ -1274,4 +1275,35 @@ body.has-touch .training-hud { z-index: 25; }
   .ap-frames { grid-template-columns: repeat(4, 1fr); gap: 6px; }
   .ap-frame b { font-size: 11.5px; }
   .ap-frame small { font-size: 10px; }
+}
+
+/* modo Torre: andar no alto da tela e aviso grande entre os andares */
+.tower-hud {
+  position: absolute; top: 64px; left: 50%; transform: translateX(-50%); z-index: 3; pointer-events: none;
+  display: flex; align-items: baseline; gap: 8px; padding: 6px 16px; border-radius: 999px;
+  background: rgba(14,9,24,.62); border: 1px solid rgba(255,210,90,.35); color: #fff; white-space: nowrap;
+}
+.tower-hud[hidden] { display: none; }
+.tower-hud small { font: 800 11px var(--font); letter-spacing: .2em; color: #ffd25a; }
+.tower-hud b { font: 900 22px var(--font); }
+.tower-hud span { font: 700 12px var(--font); color: rgba(255,255,255,.75); }
+.tower-banner {
+  position: absolute; inset: 0; z-index: 4; display: grid; place-content: center; justify-items: center; gap: 4px; text-align: center;
+  pointer-events: none; background: radial-gradient(ellipse at center, rgba(10,6,20,.72), rgba(10,6,20,.2) 70%);
+  animation: towerIn .35s ease-out;
+}
+.tower-banner[hidden] { display: none; }
+.tower-banner small { font: 800 15px var(--font); letter-spacing: .32em; color: #ffd25a; }
+.tower-banner b { font: italic 900 clamp(54px, 11vw, 120px) var(--font); line-height: 1; color: #fff; text-shadow: 0 4px 0 rgba(0,0,0,.4), 0 0 30px rgba(255,200,90,.35); }
+.tower-banner span { font: 800 clamp(16px, 2.6vw, 24px) var(--font); color: #fff; }
+.tower-banner em { font: 700 15px var(--font); font-style: normal; color: #7dffb8; min-height: 1em; }
+.tower-banner.win b { color: #ffd25a; }
+@keyframes towerIn { from { opacity: 0; transform: scale(1.08); } to { opacity: 1; transform: none; } }
+@media (prefers-reduced-motion: reduce) { .tower-banner { animation: none; } }
+@media (max-height: 520px) {
+  .tower-hud { top: 44px; padding: 3px 12px; }
+  .tower-hud b { font-size: 16px; }
+  .tower-banner b { font-size: 58px; }
+  .tower-banner span { font-size: 16px; }
+  .tower-banner em { font-size: 12px; max-width: 60vw; }
 }

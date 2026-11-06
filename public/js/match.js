@@ -27,6 +27,8 @@ export class MatchRunner {
       players: setup.players, mode: setup.mode, seed: setup.seed, mapId: setup.mapId,
       // treino livre: ninguém perde vida, sem tempo e contagem curta
       ...(setup.practice ? { practice: true, timeLimit: 0, countdown: 1, items: false } : {}),
+      // modo Torre: o andar muda o céu e cada andar tem um tempo
+      ...(setup.tower ? { towerFloor: setup.tower.floor, timeLimit: setup.tower.timeLimit, lives: setup.tower.maxLives } : {}),
     });
     this.localId = setup.localPlayerId;
 
@@ -35,7 +37,7 @@ export class MatchRunner {
     this.controllers = new Map();
     for (const p of setup.players) {
       if (p.isBot) {
-        this.controllers.set(p.id, new BotController(p.id, { difficulty: setup.difficulty, seed: setup.seed + p.id * 7919 }));
+        this.controllers.set(p.id, new BotController(p.id, { difficulty: setup.difficulty, brain: p.brain ?? null, seed: setup.seed + p.id * 7919 }));
       } else if (p.id === this.localId) {
         // teclas escolhidas na tela de controles
         this.keyboard = new KeyboardController(keymapFrom(loadBindings()));

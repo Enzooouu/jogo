@@ -21,8 +21,7 @@ Ideias aprovadas pelo Enzo que ainda não foram feitas.
 
 ### Modos de jogo
 
-- **Sobrevivência**: você contra ondas de bots cada vez mais fortes, com
-  recorde de quantas ondas aguentou.
+- (nenhum por enquanto — a Sobrevivência virou o modo Torre, já feito)
 
 ### Progressão
 
@@ -47,6 +46,9 @@ Ideias aprovadas pelo Enzo que ainda não foram feitas.
 - **Controle (gamepad)** de Xbox, PlayStation ou parecido, na luta e nos menus.
 - **Conquistas** (19 normais + 18 de ouro no Difícil, as de ouro escondidas até fazer a normal).
 - **Rei da Ilha** (área com coroa que dá pontos, muda de lugar a cada 25 s).
+- **Torre** (sobrevivência): andar 0 com bot muito burro até o gênio no andar 10;
+  depois infinita, com mais bots e mais vidas. Vidas e dano continuam; perdeu,
+  volta para o andar 0. Recorde no perfil.
 - **Versão para celular**: joystick na esquerda e botões de pular, bater, dash e arma na direita.
 
 ## Outras ideias (ainda não escolhidas)

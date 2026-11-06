@@ -16,9 +16,10 @@ export const DIFFICULTIES = {
 };
 
 export class BotController {
-  constructor(playerId, { difficulty = 'normal', seed = 1 } = {}) {
+  // `brain`: cérebro sob medida (modo Torre), no lugar da dificuldade
+  constructor(playerId, { difficulty = 'normal', seed = 1, brain = null } = {}) {
     this.playerId = playerId;
-    this.cfg = DIFFICULTIES[difficulty] ?? DIFFICULTIES.normal;
+    this.cfg = brain ?? DIFFICULTIES[difficulty] ?? DIFFICULTIES.normal;
     this.rng = createRng(seed);
     this.thinkTimer = 0;
     this.goal = null;          // { type: 'enemy', id } | { type: 'item', id }

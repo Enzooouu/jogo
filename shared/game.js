@@ -77,6 +77,11 @@ export class Game {
 
     this.mode = MODES[mode];
     this.map = getMap(mapId);
+    // Torre: o andar muda o céu (uma cópia do mapa com o número do andar)
+    if (config.towerFloor !== undefined) {
+      this.towerFloor = config.towerFloor;
+      this.map = { ...this.map, towerFloor: config.towerFloor, theme: { ...this.map.theme, floor: config.towerFloor } };
+    }
     this.seed = seed;
     this.rng = createRng(seed);
     // Rei da Ilha: ninguém perde vida (game.lives = 0 esconde as bolinhas de vida)
@@ -118,7 +123,12 @@ export class Game {
       // No "todos contra todos" cada jogador é seu próprio time.
       const team = this.mode.teams ? cfg.team : `solo-${cfg.id}`;
       if (team === undefined || team === null) throw new Error(`Jogador ${cfg.id} sem time`);
-      return createPlayer({ ...cfg, team }, index, this.mode.hill ? 1 : lives);
+      // cfg.lives / cfg.damage: começa com outras vidas ou com dano (Torre)
+      const p = createPlayer({ ...cfg, team }, index, this.mode.hill ? 1 : cfg.lives ?? lives);
+      if (cfg.damage) p.damage = cfg.damage;
+      // quantas bolinhas de vida mostrar (Torre: o bot pode ter só 1)
+      p.maxLives = cfg.maxLives ?? p.lives;
+      return p;
     });
     if (new Set(this.players.map((p) => p.team)).size < 2) {
       throw new Error('A partida precisa de pelo menos 2 times');
@@ -1462,6 +1472,7 @@ export class Game {
         hazardDeaths: p.stats.hazardDeaths,
         damageDealt: Math.round(p.stats.damageDealt), damageTaken: Math.round(p.stats.damageTaken),
         hits: p.stats.hits, pickups: p.stats.pickups, livesLeft: p.state === 'out' ? 0 : p.lives,
+        damage: Math.round(p.damage),
         hillTime: Math.floor(p.stats.hillTime),
       })),
     };

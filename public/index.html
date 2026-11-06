@@ -214,6 +214,7 @@
         <button type="button" class="mode-tile" data-size="3"><canvas></canvas><b>3 × 3</b><span>Você + 2 aliados contra 3</span></button>
         <button type="button" class="mode-tile" data-mode="ffa"><canvas></canvas><b>TODOS CONTRA TODOS</b><span>5 jogadores, um de cada elemento</span></button>
         <button type="button" class="mode-tile" data-mode="rei"><canvas></canvas><b>REI DA ILHA</b><span>2 × 2 · fique na área brilhante para ganhar pontos</span></button>
+        <button type="button" class="mode-tile" data-mode="torre"><canvas></canvas><b>TORRE</b><span>Suba andares: o bot fica mais esperto a cada um</span></button>
         <button type="button" class="mode-tile" data-mode="treino"><canvas></canvas><b>TREINO LIVRE</b><span>Teste golpes e combos num boneco</span></button>
       </div>
     </section>
@@ -279,6 +280,11 @@
 
     <!-- ===================== PARTIDA ===================== -->
     <section id="screen-game" class="screen" hidden>
+      <!-- Torre: andar atual e o aviso grande entre um andar e outro -->
+      <div id="tower-hud" class="tower-hud" hidden><small>ANDAR</small><b>0</b><span></span></div>
+      <div id="tower-banner" class="tower-banner" hidden>
+        <small></small><b></b><span></span><em></em>
+      </div>
       <!-- Treino livre: painel com o dano dos golpes e as teclas -->
       <div id="training-hud" class="training-hud" hidden>
         <div class="th-title">TREINO LIVRE</div>

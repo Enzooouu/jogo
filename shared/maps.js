@@ -14,6 +14,7 @@
 
 import { TUTORIAL_MAPS } from './maps-treino.js';
 import { HILL_MAPS } from './maps-rei.js';
+import { TOWER_MAPS } from './maps-torre.js';
 
 export { HILL_MAPS };
 
@@ -337,7 +338,7 @@ export const MAPS = {
 export const DEFAULT_MAP = 'caldeira';
 
 export function getMap(id = DEFAULT_MAP) {
-  const map = MAPS[id] ?? HILL_MAPS[id] ?? TUTORIAL_MAPS[id];
+  const map = MAPS[id] ?? HILL_MAPS[id] ?? TUTORIAL_MAPS[id] ?? TOWER_MAPS[id];
   if (!map) throw new Error(`Mapa desconhecido: ${id}`);
   return map;
 }

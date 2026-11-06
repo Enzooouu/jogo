@@ -61,6 +61,23 @@ export function recordProfileMatch(summary, result, localId, outcome, { newAch =
   return { gained, before, after: levelInfo(stats.xp) };
 }
 
+// Fim de uma subida da Torre: recorde, XP e kills (os andares não contam
+// como partidas no perfil). Devolve o XP e se bateu o recorde.
+export function recordTowerRun({ floorsCleared, kills, deaths, xp }) {
+  const stats = loadStats();
+  const before = levelInfo(stats.xp);
+  const record = floorsCleared > stats.towerBest;
+  stats.towerBest = Math.max(stats.towerBest, floorsCleared);
+  stats.towerRuns++;
+  stats.kills += kills;
+  stats.deaths += deaths;
+  stats.mostKills = Math.max(stats.mostKills, kills);
+  stats.since ??= new Date().toISOString();
+  stats.xp += xp;
+  saveStats(stats);
+  return { gained: xp, before, after: levelInfo(stats.xp), record, best: stats.towerBest };
+}
+
 // ------------------------------------------------------------ foto de perfil
 
 const LOOK_KEY = 'brawl.avatar';
@@ -262,6 +279,7 @@ export function renderLocalProfile({ username, achievements, onReset }) {
     ['Vitórias seguidas (agora)', nf(s.streak)],
     ['Tempo jogado', formatTime(s.time)],
     ['Tempo no topo (Rei)', formatTime(s.hillTime)],
+    ['Recorde na Torre', s.towerRuns ? `${nf(s.towerBest)} ${s.towerBest === 1 ? 'andar' : 'andares'}` : '—'],
     ['Conquistas', achievements],
   ];
   const mg = $('#profile-more');

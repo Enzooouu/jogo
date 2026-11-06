@@ -11,6 +11,7 @@ export function emptyStats() {
     damageDealt: 0, damageTaken: 0, hits: 0, pickups: 0,
     time: 0, hillTime: 0,
     streak: 0, bestStreak: 0, mostKills: 0,
+    towerBest: 0, towerRuns: 0,  // modo Torre: andar mais alto vencido e quantas subidas
     byElement: {},   // id -> { matches, wins }
     byMode: {},      // '1x1' | '2x2' | '3x3' | 'ffa' | 'rei' -> { matches, wins }
     byMap: {},       // id -> { matches, wins }

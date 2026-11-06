@@ -1352,7 +1352,7 @@ export class Renderer {
     ctx.fillText(fit(ctx, sub, 150), x + 88, y + 40);
 
     // Vidas
-    for (let i = 0; i < this.game.lives; i++) {
+    for (let i = 0; i < livesTotal(this.game, p); i++) {
       ctx.fillStyle = i < p.lives ? el.color : 'rgba(255,255,255,0.15)';
       ctx.strokeStyle = 'rgba(0,0,0,0.6)';
       ctx.lineWidth = 1.5;
@@ -1452,7 +1452,7 @@ export class Renderer {
     }
 
     // Vidas
-    for (let i = 0; i < this.game.lives; i++) {
+    for (let i = 0; i < livesTotal(this.game, p); i++) {
       ctx.fillStyle = i < p.lives ? el.color : 'rgba(255,255,255,0.15)';
       ctx.beginPath();
       ctx.arc(x + 24 + i * 13, y + 34, 4.5, 0, Math.PI * 2);
@@ -1638,7 +1638,7 @@ export class Renderer {
 
         // vidas como bolinhas
         const [lx, lw] = colX[1];
-        const total = g.lives;
+        const total = livesTotal(g, p);
         const gap = 13;
         const startX = lx + lw / 2 - ((total - 1) * gap) / 2;
         for (let k = 0; k < total; k++) {
@@ -1791,4 +1791,9 @@ export function drawCrown(ctx, x, y, k, color) {
     ctx.fill();
   }
   ctx.restore();
+}
+
+// quantas bolinhas de vida um jogador mostra (0 no Rei da Ilha)
+function livesTotal(game, p) {
+  return game.lives ? p.maxLives ?? game.lives : 0;
 }

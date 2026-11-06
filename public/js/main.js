@@ -12,7 +12,8 @@ import { drawPortrait, fitCanvas } from './render/portrait.js';
 import { buildLocalSetup, outcomeFor } from './setup.js';
 import { api } from './api.js';
 import { renderAccountBox, initAuthScreen, setAuthMode, focusAuth } from './screens/account.js';
-import { recordProfileMatch, renderLocalProfile, renderProfileChip } from './screens/profile.js';
+import { recordProfileMatch, recordTowerRun, renderLocalProfile, renderProfileChip } from './screens/profile.js';
+import { TOWER, botBrain, brainName, floorFoes, carryAfterWin, towerXp } from '/shared/tower.js';
 import { FRAMES } from '/shared/profile-stats.js';
 import { DemoArena } from './screens/demo.js';
 import { initHomeMenu } from './screens/home-menu.js';
@@ -205,6 +206,30 @@ function drawModeTiles() {
         drawPortrait(ctx, 'mortal', w * 0.68, h - 12, s, { facing: -1, extra: { skin: 'espantalho' } });
         continue;
       }
+      if (tile.dataset.mode === 'torre') {
+        // torre de pedra com andares e o seu boneco lá no alto
+        const tw = w * 0.36;
+        const tx = w / 2 - tw / 2;
+        const top = h * 0.42;
+        ctx.fillStyle = '#1a1222';
+        ctx.fillRect(tx - 3, top - 3, tw + 6, h - top + 3);
+        ctx.fillStyle = '#8d7d6a';
+        ctx.fillRect(tx, top, tw, h - top);
+        ctx.fillStyle = '#b8a68c';
+        ctx.fillRect(tx - 6, top - 4, tw + 12, 7);
+        ctx.fillStyle = 'rgba(0,0,0,.25)';
+        for (let y = top + 14; y < h; y += 14) ctx.fillRect(tx, y, tw, 2);
+        ctx.fillStyle = '#ffcf6a';
+        for (let y = top + 20; y < h - 6; y += 28) ctx.fillRect(w / 2 - 4, y, 8, 11);
+        const s = Math.min(1.5, h / 95) * 0.75;
+        drawPortrait(ctx, state.element === RANDOM_ELEMENT ? 'fogo' : state.element, w / 2, top - 4, s, { facing: 1 });
+        ctx.font = `900 ${Math.round(h * 0.13)}px system-ui, sans-serif`;
+        ctx.textAlign = 'center';
+        ctx.fillStyle = 'rgba(255,210,90,.9)';
+        ctx.fillText('▲', w * 0.18, h * 0.8);
+        ctx.fillText('▲', w * 0.82, h * 0.55);
+        continue;
+      }
       if (tile.dataset.mode === 'rei') {
         // dois times disputando a área com a coroa
         const s = Math.min(1.5, h / 95) * 0.82;
@@ -252,6 +277,8 @@ function chooseMode(teamSize, mode = 'times') {
   show('cards');
   $('#cards-mode').textContent = mode === 'ffa'
     ? 'Todos contra todos · cada jogador tem um elemento diferente'
+    : mode === 'torre'
+      ? 'Torre · cada andar tem um bot mais esperto; suas vidas e seu dano continuam'
     : mode === 'treino'
       ? 'Treino livre · teste golpes e combos num boneco parado'
       : mode === 'rei'
@@ -351,6 +378,7 @@ function buildCards() {
 // depois da carta: escolher o mapa (o treino livre tem o mapa dele)
 function cardsNext() {
   if (state.mode === 'treino') startMatch(newSetup());
+  else if (state.mode === 'torre') startTower();
   else show('maps');
 }
 
@@ -551,11 +579,19 @@ async function startMatch(setup) {
   $('#quit-btn').textContent = 'Desistir';
   $('#quit-hint').textContent = 'Desistir conta como derrota.';
   // conquistas: anota o que acontece na partida (não vale no treino)
-  state.tracker = setup.practice ? null : new MatchTracker(runner.game, setup.localPlayerId);
+  state.tracker = setup.practice || setup.tower ? null : new MatchTracker(runner.game, setup.localPlayerId);
+  showTowerHud(setup);
   if (state.tracker) runner.onEvents = (events) => state.tracker.onEvents(events);
   if (setup.practice) {
     startTraining(runner);
     if (DEBUG) window.__brawl = { runner, state, training };
+    return;
+  }
+
+  if (setup.tower) {
+    // a Torre fica só no aparelho (não vai para o servidor)
+    state.matchTicket = null;
+    if (DEBUG) window.__brawl = { runner, state };
     return;
   }
 
@@ -751,6 +787,113 @@ window.addEventListener('keydown', (e) => {
   }
 });
 
+// ------------------------------------------------------------ modo Torre
+
+// Começa a subida do andar 0 com 3 vidas e sem dano
+function startTower() {
+  const enabled = Object.values(ELEMENTS).filter((e) => e.enabled).map((e) => e.id);
+  const element = state.element === RANDOM_ELEMENT ? enabled[Math.floor(Math.random() * enabled.length)] : state.element;
+  state.tower = { floor: 0, lives: TOWER.startLives, damage: 0, kills: 0, deaths: 0, element, enemies: [] };
+  startMatch(towerSetup());
+}
+
+const TOWER_NAMES = ['Zé Tonto', 'Bobão', 'Lerdo', 'Novato', 'Aprendiz', 'Espertinho', 'Sabido', 'Astuto', 'Estrategista', 'Mestre', 'Gênio'];
+
+// Monta o andar atual: você (com as vidas e o dano que sobraram) e os bots
+function towerSetup() {
+  const t = state.tower;
+  const others = Object.values(ELEMENTS).filter((e) => e.enabled && e.id !== t.element).map((e) => e.id);
+  const enemy = others[Math.floor(Math.random() * others.length)];
+  const { bots, lives } = floorFoes(t.floor);
+  const brain = botBrain(t.floor);
+  const base = TOWER_NAMES[Math.min(t.floor, TOWER_NAMES.length - 1)];
+  const players = [{ id: 1, name: playerName(), element: t.element, team: 'A', isBot: false, admin: state.admin, lives: t.lives, maxLives: TOWER.maxLives, damage: t.damage }];
+  for (let i = 0; i < bots; i++) {
+    players.push({ id: 2 + i, name: bots > 1 ? `${base} ${i + 1}` : base, element: enemy, team: 'B', isBot: true, brain, lives });
+  }
+  return {
+    players, mode: 'times', mapId: 'torre', localPlayerId: 1, difficulty: 'torre',
+    seed: (Math.random() * 2 ** 31) | 0,
+    tower: { floor: t.floor, timeLimit: TOWER.timeLimit, maxLives: TOWER.maxLives },
+  };
+}
+
+function showTowerHud(setup) {
+  const hud = $('#tower-hud');
+  const banner = $('#tower-banner');
+  clearTimeout(state.towerBannerTimer);
+  if (!setup.tower) {
+    hud.hidden = true;
+    banner.hidden = true;
+    return;
+  }
+  const f = setup.tower.floor;
+  const { bots } = floorFoes(f);
+  hud.hidden = false;
+  hud.querySelector('b').textContent = f;
+  hud.querySelector('span').textContent = `bot ${brainName(f).toLowerCase()}${bots > 1 ? ` ×${bots}` : ''}`;
+  towerBanner('', `ANDAR ${f}`, `${bots > 1 ? `${bots} bots` : 'Bot'}: ${brainName(f)}`, f === 0 ? 'Vença para subir. Suas vidas e seu dano continuam no próximo andar.' : '');
+  state.towerBannerTimer = setTimeout(() => { banner.hidden = true; }, 2600);
+}
+
+function towerBanner(kicker, title, line, extra, win = false) {
+  const banner = $('#tower-banner');
+  banner.classList.toggle('win', win);
+  banner.querySelector('small').textContent = kicker;
+  banner.querySelector('b').textContent = title;
+  banner.querySelector('span').textContent = line;
+  banner.querySelector('em').textContent = extra;
+  banner.hidden = false;
+  // reinicia a animação de entrada
+  banner.style.animation = 'none';
+  void banner.offsetWidth;
+  banner.style.animation = '';
+}
+
+function towerEnd(setup, result) {
+  const t = state.tower;
+  const me = result.players.find((p) => p.id === setup.localPlayerId);
+  const outcome = outcomeFor(result, setup.localPlayerId);
+  t.kills += me.kills;
+  t.deaths += me.deaths;
+  if (outcome === 'vitoria' && result.reason !== 'desistencia') {
+    const carry = carryAfterWin(t.floor, { lives: me.livesLeft, damage: me.damage });
+    t.lives = carry.lives;
+    t.damage = carry.damage;
+    t.floor++;
+    towerBanner(`ANDAR ${t.floor - 1} VENCIDO!`, 'SUBINDO…', `Próximo: andar ${t.floor} · bot ${brainName(t.floor).toLowerCase()}`,
+      carry.gotLife ? '+1 vida! ' : `Dano curado: ${me.damage}% → ${carry.damage}%`, true);
+    clearTimeout(state.towerNextTimer);
+    state.towerNextTimer = setTimeout(() => {
+      if (state.screen === 'game' && state.tower === t) startMatch(towerSetup());
+    }, 2600);
+    return;
+  }
+  // perdeu (ou desistiu, ou o tempo acabou sem vencer): a subida acaba
+  $('#tower-hud').hidden = true;
+  $('#tower-banner').hidden = true;
+  showResult(setup, result);
+  const floors = t.floor;
+  const title = $('#result-title');
+  title.textContent = floors ? `ANDAR ${floors}` : 'QUEDA NO TÉRREO';
+  title.className = `result-title ${floors ? 'win' : 'lose'}`;
+  $('#result-eyebrow').textContent = `TORRE · FIM DA SUBIDA · ${t.kills} ${t.kills === 1 ? 'KILL' : 'KILLS'}`;
+  $('#screen-result').classList.toggle('lose', !floors);
+  $('#result-ach').hidden = true;
+  const admin = setup.players.some((p) => p.admin);
+  if (admin) {
+    $('#result-xp').hidden = true;
+    $('#result-sub').textContent = `Você venceu ${floors} ${floors === 1 ? 'andar' : 'andares'}. Modo ADM: não conta no recorde.`;
+    $('#result-save').textContent = '';
+    return;
+  }
+  const xp = recordTowerRun({ floorsCleared: floors, kills: t.kills, deaths: t.deaths, xp: towerXp(floors, t.kills) });
+  $('#result-sub').textContent = `Você venceu ${floors} ${floors === 1 ? 'andar' : 'andares'}${xp.record && floors ? ' — NOVO RECORDE!' : ` · recorde: ${xp.best}.`}`;
+  $('#result-save').textContent = 'Jogar de novo começa a torre do andar 0.';
+  if (xp.gained) showXp(xp);
+  else $('#result-xp').hidden = true;
+}
+
 function quitMatch() {
   const runner = state.runner;
   if (!runner) return;
@@ -770,6 +913,10 @@ function quitMatch() {
 function endMatch(setup, result) {
   state.runner?.stop();
   state.runner = null;
+  if (setup.tower) {
+    towerEnd(setup, result);
+    return;
+  }
   const outcome = showResult(setup, result);
   saveResult(setup, result, outcome);
   checkAchievements(setup, result, outcome);
@@ -1435,6 +1582,7 @@ function init() {
   $('.mode-tile[data-mode="ffa"]').addEventListener('click', () => chooseMode(1, 'ffa'));
   $('.mode-tile[data-mode="treino"]').addEventListener('click', () => chooseMode(1, 'treino'));
   $('.mode-tile[data-mode="rei"]').addEventListener('click', () => chooseMode(2, 'rei'));
+  $('.mode-tile[data-mode="torre"]').addEventListener('click', () => chooseMode(1, 'torre'));
   // treino livre tem o mapa dele: pula a escolha de mapa
   $('#cards-next').addEventListener('click', cardsNext);
   $('#maps-next').addEventListener('click', () => mapPicker.onContinue(mapPicker.current()));
@@ -1469,7 +1617,7 @@ function init() {
     toggleDummy();
     e.currentTarget.blur();
   });
-  $('#again-btn').addEventListener('click', () => startMatch(newSetup()));
+  $('#again-btn').addEventListener('click', () => (state.lastSetup?.tower ? startTower() : startMatch(newSetup())));
   $('#menu-btn').addEventListener('click', () => show('home'));
   window.addEventListener('resize', () => {
     if (state.screen === 'mode') drawModeTiles();
