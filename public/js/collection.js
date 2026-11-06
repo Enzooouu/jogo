@@ -17,6 +17,12 @@ export const ACCESSORIES = {
     icon: '👑',
     how: 'Conquista de ouro "Imperador": no Difícil, vença o Rei da Ilha no Castelo e na Pirâmide sem o outro time marcar ponto.',
   },
+  pirata: {
+    id: 'pirata',
+    name: 'Chapéu de pirata com tapa-olho',
+    icon: '🏴‍☠️',
+    how: 'Conquista de ouro "Capitão Pirata": no Difícil, derrube 5 inimigos com a ajuda do canhão no Navio Voador.',
+  },
 };
 
 export function loadCollection() {

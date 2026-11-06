@@ -126,6 +126,7 @@ test('Imperador (ouro do Rei Absoluto) dá a coroa', () => {
   const a = ACHIEVEMENTS.find((x) => x.id === 'rei_absoluto');
   assert.equal(a.gold.name, 'Imperador');
   assert.equal(a.gold.reward, 'coroa');
+  assert.equal(ACHIEVEMENTS.find((x) => x.id === 'artilheiro').gold.reward, 'pirata');
 });
 
 test('o jogo marca de onde veio o golpe (golpe, magia, arremesso)', () => {
