@@ -148,10 +148,8 @@ function avatarCanvas(canvas, pic) {
 function drawPortraits(time) {
   for (const p of portraits) {
     if (!p.canvas.isConnected || !p.canvas.offsetParent) continue;
-    fitCanvas(p.canvas);
-    const ctx = p.canvas.getContext('2d');
-    const { width: w, height: h } = p.canvas;
-    ctx.clearRect(0, 0, w, h);
+    // fitCanvas já ajusta a escala da tela (retina): desenha em pixels de CSS
+    const { ctx, w, h } = fitCanvas(p.canvas);
     p.draw(ctx, w, h, time / 1000);
   }
 }

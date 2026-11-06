@@ -1251,3 +1251,27 @@ body.has-touch .training-hud { z-index: 25; }
 .ach-toast b { font: italic 900 17px var(--font); color: #fff; }
 @keyframes ach-in { from { opacity: 0; transform: translateY(-14px) scale(.95); } }
 @media (prefers-reduced-motion: reduce) { .ach-toast { animation: none; } }
+
+/* celular deitado (tela baixa): perfil menor no canto e sem a etiqueta de demonstração */
+@media (max-height: 520px) {
+  #screen-home .live-tag { display: none; }
+  .profile-chip { top: 10px; right: calc(14px + env(safe-area-inset-right, 0px)); gap: 8px; }
+  .profile-chip .pc-av { width: 46px; height: 46px; }
+  .pc-txt b { font-size: 15px; }
+  .profile-wrap { padding-top: 18px; }
+  .profile-hero { min-height: 170px; }
+  .pc-av.big { width: 88px; height: 88px; }
+}
+
+/* celular em pé: escolher foto com 5 por linha (cada arma numa linha só) */
+@media (max-width: 560px) {
+  .ap-card { padding: 16px 14px; }
+  .ap-card h2 { font-size: 24px; }
+  .ap-grid { grid-template-columns: repeat(5, 1fr); gap: 5px; }
+  .ap-opt { padding: 6px 2px; }
+  .ap-ring { width: 46px; height: 46px; }
+  .ap-opt small { font-size: 10px; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .ap-frames { grid-template-columns: repeat(4, 1fr); gap: 6px; }
+  .ap-frame b { font-size: 11.5px; }
+  .ap-frame small { font-size: 10px; }
+}
