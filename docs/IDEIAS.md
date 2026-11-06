@@ -26,6 +26,13 @@ Ideias aprovadas pelo Enzo que ainda não foram feitas.
 
 ### Progressão
 
+- **Moedas e loja de acessórios** (ideia do Enzo, ainda não fazer):
+  - o jogador vai ganhando moedinhas jogando (partidas, vitórias, kills);
+  - numa **loja** compra acessórios para os bonecos, tipo **chapéu viking**,
+    **coroa** e outros;
+  - alguns acessórios são liberados por **conquista** em vez de comprados
+    (ex.: um especial para quem fizer uma conquista de ouro);
+  - junta com a ideia de visuais desbloqueáveis abaixo.
 - **Visuais desbloqueáveis**: cores, chapéus e rastros para cada elemento,
   liberados jogando.
 - ~~**Nível e XP da conta**~~: feito (XP por partida, nível no perfil e bordas
