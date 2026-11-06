@@ -266,8 +266,8 @@ export function drawEmperorCrown(ctx, h, time = 0) {
 }
 
 // Chapéu de pirata com tapa-olho (prêmio da conquista de ouro "Capitão
-// Pirata"): tricórnio preto com a aba virada para cima, borda dourada e uma
-// caveira com ossos cruzados; tapa-olho preto em cima do olho, com a tira
+// Pirata"): bicórnio verde-petróleo com borda dourada, caveira com ossos
+// cruzados e uma pena vermelha; tapa-olho preto em cima do olho, com a tira
 // passando pela cabeça.
 export function drawPirateHat(ctx, h) {
   ctx.save();
@@ -297,78 +297,103 @@ export function drawPirateHat(ctx, h) {
   ctx.beginPath();
   ctx.ellipse(4.6, -3.6, 1.1, 0.8, -0.5, 0, Math.PI * 2);
   ctx.fill();
-  // chapéu um pouco menor e mais alto que a cabeça (o tapa-olho aparece)
+  // chapéu bicórnio: copa arredondada no meio e as abas descendo até pontas
+  // largas dos lados, borda dourada, caveira no meio e uma pena vermelha atrás
   ctx.save();
-  ctx.translate(0, -4);
-  ctx.scale(0.84, 0.88);
-  // copa do chapéu (aparece no meio, atrás da aba)
-  ctx.fillStyle = INK;
-  ctx.beginPath();
-  ctx.ellipse(0, -12, 11.5, 13.5, 0, Math.PI, 0);
-  ctx.fill();
-  const felt = ctx.createLinearGradient(0, -25, 0, -10);
-  felt.addColorStop(0, '#3a2c48');
-  felt.addColorStop(1, '#16101e');
-  ctx.fillStyle = felt;
-  ctx.beginPath();
-  ctx.ellipse(0, -12, 10, 12, 0, Math.PI, 0);
-  ctx.fill();
-  // aba virada para cima: as duas pontas sobem bem alto dos lados
-  const brimTop = (k) => {
-    ctx.moveTo(-21 - k, -27 - k);
-    ctx.quadraticCurveTo(-11, -10 - k, 0, -11 - k);
-    ctx.quadraticCurveTo(11, -10 - k, 21 + k, -27 - k);
-  };
-  const brimBottom = (k) => {
-    ctx.quadraticCurveTo(13, -3 + k, 0, -3 + k);
-    ctx.quadraticCurveTo(-13, -3 + k, -21 - k, -27 - k);
-  };
-  ctx.fillStyle = INK;
-  ctx.beginPath();
-  brimTop(1.5);
-  brimBottom(1.5);
-  ctx.closePath();
-  ctx.fill();
-  const brim = ctx.createLinearGradient(0, -27, 0, -3);
-  brim.addColorStop(0, '#54426a');
-  brim.addColorStop(0.5, '#33263f');
-  brim.addColorStop(1, '#1a1222');
-  ctx.fillStyle = brim;
-  ctx.beginPath();
-  brimTop(0);
-  brimBottom(0);
-  ctx.closePath();
-  ctx.fill();
-  // borda dourada na beirada de cima da aba
-  ctx.strokeStyle = '#f0c04a';
-  ctx.lineWidth = 1.7;
-  ctx.beginPath();
-  brimTop(-1.1);
-  ctx.stroke();
-  ctx.fillStyle = '#ffe08a';
-  for (const x of [-20, 20]) {
+  ctx.translate(0, -1);
+  const hat = (k) => {
     ctx.beginPath();
-    ctx.arc(x, -26, 1.5, 0, Math.PI * 2);
-    ctx.fill();
-  }
-  // caveira com ossos cruzados no meio da aba
-  ctx.strokeStyle = '#f2ece0';
-  ctx.lineWidth = 1.3;
+    ctx.moveTo(-23 - k, -3 + k * 0.4);
+    ctx.bezierCurveTo(-20 - k, -11 - k, -13 - k, -13 - k, -9 - k * 0.4, -19 - k);
+    ctx.quadraticCurveTo(0, -31 - k * 1.3, 9 + k * 0.4, -19 - k);
+    ctx.bezierCurveTo(13 + k, -13 - k, 20 + k, -11 - k, 23 + k, -3 + k * 0.4);
+    ctx.quadraticCurveTo(12, -8.5 + k, 0, -7.5 + k);
+    ctx.quadraticCurveTo(-12, -8.5 + k, -23 - k, -3 + k * 0.4);
+    ctx.closePath();
+  };
+  // pena vermelha (atrás do chapéu, saindo do lado direito)
+  ctx.save();
+  ctx.translate(9, -17);
+  ctx.rotate(0.55);
+  ctx.fillStyle = INK;
   ctx.beginPath();
-  ctx.moveTo(-3.6, -4.8);
-  ctx.lineTo(3.6, -10.6);
-  ctx.moveTo(3.6, -4.8);
-  ctx.lineTo(-3.6, -10.6);
+  ctx.ellipse(0, -9, 4.6, 12, 0, 0, Math.PI * 2);
+  ctx.fill();
+  const plume = ctx.createLinearGradient(-4, 0, 4, 0);
+  plume.addColorStop(0, '#e8453a');
+  plume.addColorStop(1, '#a8232a');
+  ctx.fillStyle = plume;
+  ctx.beginPath();
+  ctx.ellipse(0, -9, 3.3, 10.7, 0, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.strokeStyle = '#ffffff';
+  ctx.globalAlpha = 0.85;
+  ctx.lineWidth = 0.9;
+  for (const y of [-14, -9, -4]) {
+    ctx.beginPath();
+    ctx.moveTo(-3.4, y);
+    ctx.lineTo(-1.2, y + 1.2);
+    ctx.stroke();
+  }
+  ctx.globalAlpha = 1;
+  ctx.strokeStyle = '#7a1418';
+  ctx.lineWidth = 0.8;
+  ctx.beginPath();
+  ctx.moveTo(0, 2);
+  ctx.lineTo(0, -18);
+  ctx.stroke();
+  ctx.restore();
+  // contorno, borda dourada e o feltro
+  ctx.fillStyle = INK;
+  hat(1.6);
+  ctx.fill();
+  const gold = ctx.createLinearGradient(-23, 0, 23, 0);
+  gold.addColorStop(0, '#c98a24');
+  gold.addColorStop(0.3, '#f8d27a');
+  gold.addColorStop(0.7, '#f3b63a');
+  gold.addColorStop(1, '#b07418');
+  ctx.fillStyle = gold;
+  hat(0);
+  ctx.fill();
+  const felt = ctx.createLinearGradient(-20, -24, 18, -6);
+  felt.addColorStop(0, '#3a6e78');
+  felt.addColorStop(0.5, '#25505a');
+  felt.addColorStop(1, '#0f2f37');
+  ctx.fillStyle = felt;
+  hat(-2.1);
+  ctx.fill();
+  // brilho no feltro (lado esquerdo de cima)
+  ctx.fillStyle = 'rgba(255,255,255,0.13)';
+  ctx.beginPath();
+  ctx.moveTo(-8, -18);
+  ctx.quadraticCurveTo(-1, -27, 5, -22);
+  ctx.quadraticCurveTo(-1, -23, -6, -15);
+  ctx.closePath();
+  ctx.fill();
+  // caveira com ossos cruzados no meio
+  ctx.strokeStyle = '#f2ece0';
+  ctx.lineCap = 'round';
+  ctx.lineWidth = 1.5;
+  ctx.beginPath();
+  ctx.moveTo(-4.4, -9.6);
+  ctx.lineTo(4.4, -14.4);
+  ctx.moveTo(4.4, -9.6);
+  ctx.lineTo(-4.4, -14.4);
   ctx.stroke();
   ctx.fillStyle = '#f2ece0';
+  for (const [x, y] of [[-4.6, -9.4], [4.6, -9.4], [-4.6, -14.6], [4.6, -14.6]]) {
+    ctx.beginPath();
+    ctx.arc(x, y, 1, 0, Math.PI * 2);
+    ctx.fill();
+  }
   ctx.beginPath();
-  ctx.arc(0, -8.6, 2.7, 0, Math.PI * 2);
+  ctx.arc(0, -16.2, 3.1, 0, Math.PI * 2);
   ctx.fill();
-  ctx.fillRect(-1.5, -7, 3, 2.1);
-  ctx.fillStyle = INK;
+  ctx.fillRect(-1.7, -14.4, 3.4, 2.4);
+  ctx.fillStyle = '#16303a';
   ctx.beginPath();
-  ctx.arc(-1, -8.8, 0.8, 0, Math.PI * 2);
-  ctx.arc(1, -8.8, 0.8, 0, Math.PI * 2);
+  ctx.arc(-1.15, -16.3, 0.9, 0, Math.PI * 2);
+  ctx.arc(1.15, -16.3, 0.9, 0, Math.PI * 2);
   ctx.fill();
   ctx.restore();
   ctx.restore();
