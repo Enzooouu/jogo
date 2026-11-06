@@ -11,7 +11,8 @@ import { Renderer, TEAM_COLORS, drawCrown } from './render/renderer.js';
 import { drawPortrait, fitCanvas } from './render/portrait.js';
 import { buildLocalSetup, outcomeFor } from './setup.js';
 import { api } from './api.js';
-import { renderAccountBox, initAuthScreen, setAuthMode, focusAuth, loadProfile } from './screens/account.js';
+import { renderAccountBox, initAuthScreen, setAuthMode, focusAuth } from './screens/account.js';
+import { recordProfileMatch, renderLocalProfile, renderProfileChip } from './screens/profile.js';
 import { DemoArena } from './screens/demo.js';
 import { initHomeMenu } from './screens/home-menu.js';
 import { MapPicker, RANDOM_MAP, pickRandomMap, mapIdsFor } from './screens/maps.js';
@@ -74,7 +75,10 @@ export function show(name) {
   state.screen = name;
   demo.setHome(name === 'home');
   $('#menu-bg').classList.toggle('home-lit', name === 'home');
-  if (name === 'home') requestAnimationFrame(() => homeMenu?.refresh());
+  if (name === 'home') requestAnimationFrame(() => {
+    homeMenu?.refresh();
+    renderProfileChip(state.user?.username);
+  });
   if (WITH_DEMO.has(name) && state.demo) demo.start();
   else demo.stop();
   if (name !== 'versus') versus.stop();
@@ -124,6 +128,7 @@ function setUser(user) {
   if (state.offline) setOfflineMode();
   updateAdminAccess();
   homeMenu?.refresh();
+  renderProfileChip(user?.username);
 }
 
 // Modo ADM: na versão sem servidor fica liberado; com servidor e contas, só
@@ -139,7 +144,6 @@ function setOfflineMode() {
   state.offline = true;
   $('#welcome-login').hidden = true;
   $('#account-box').hidden = true;
-  $('#home-profile').hidden = true;
   $('#save-hint').textContent = 'Versão sem servidor: dá para jogar, mas contas e estatísticas ficam desligadas.';
   updateAdminAccess();
 }
@@ -150,21 +154,21 @@ function openAuth(mode) {
   focusAuth();
 }
 
-async function openProfile() {
-  if (!state.user) {
-    openAuth('login');
-    return;
-  }
+// Perfil: números guardados neste aparelho (funciona como convidado e sem servidor)
+function openProfile() {
   show('profile');
-  const ok = await loadProfile();
-  if (!ok) {
-    // Sessão expirou: volta para o login
-    const { user } = await api.me().catch(() => ({ user: null }));
-    if (!user) {
-      setUser(null);
-      openAuth('login');
-    }
-  }
+  drawProfile();
+}
+
+function drawProfile() {
+  const normal = ACHIEVEMENTS.filter((a) => achProgress.normal[a.id]).length;
+  const gold = ACHIEVEMENTS.filter((a) => a.gold && achProgress.ouro[a.id]).length;
+  const total = ACHIEVEMENTS.length + ACHIEVEMENTS.filter((a) => a.gold).length;
+  renderLocalProfile({
+    username: state.user?.username,
+    achievements: `${normal + gold}/${total}`,
+    onReset: drawProfile,
+  });
 }
 
 // ------------------------------------------------------------ início
@@ -805,7 +809,10 @@ function checkAchievements(setup, result, outcome) {
   const box = $('#result-ach');
   box.hidden = true;
   if (!tracker) return;
-  const fresh = evaluate(tracker.summary(result, setup, outcome), achProgress);
+  const summary = tracker.summary(result, setup, outcome);
+  // perfil: toda partida de verdade conta (menos treino e modo ADM)
+  if (!summary.admin) recordProfileMatch(summary, result, setup.localPlayerId, outcome);
+  const fresh = evaluate(summary, achProgress);
   saveAch(achProgress);
   if (!fresh.length) return;
   box.innerHTML = '<span class="result-ach-l">CONQUISTAS NOVAS</span>';
@@ -1353,6 +1360,7 @@ function init() {
     openAuth('login');
   });
   $('#home-profile').addEventListener('click', openProfile);
+  $('#profile-chip').addEventListener('click', openProfile);
   $('#home-controls').addEventListener('click', () => togglePanel('#controls-panel'));
   $('#panel-backdrop').addEventListener('click', closePanels);
   $('#home-settings').addEventListener('click', () => togglePanel('#settings-panel'));

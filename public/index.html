@@ -17,6 +17,11 @@
     <section id="screen-home" class="screen menu-screen" hidden>
       <div class="home-shade"></div>
       <div class="live-tag">PARTIDA DE DEMONSTRAÇÃO</div>
+      <!-- perfil no canto superior direito -->
+      <button type="button" id="profile-chip" class="profile-chip" aria-label="Abrir perfil">
+        <span class="pc-av"><canvas id="profile-chip-canvas"></canvas></span>
+        <span class="pc-txt"><b>Convidado</b><small>VER PERFIL</small></span>
+      </button>
       <!-- marca do jogo no canto da tela inicial (o brasão do manual da marca) -->
       <svg class="home-crest" viewBox="0 0 200 220" role="img" aria-label="Elementum"><defs>
     <linearGradient id="lg-gold" x1="0" y1="0" x2="0" y2="1">
@@ -412,22 +417,41 @@
       <div class="profile-wrap">
         <header class="profile-head">
           <div>
+            <small class="ph-kicker">PERFIL</small>
             <h1 id="profile-name"></h1>
             <p class="hint" id="profile-since"></p>
           </div>
           <button type="button" class="btn ghost small" data-go="home">Voltar ao menu</button>
         </header>
-        <div id="profile-stats" class="stat-grid"></div>
-        <div class="menu-grid">
+        <div class="profile-top">
+          <div id="profile-hero" class="profile-hero"></div>
+          <div id="profile-ring" class="profile-ring">
+            <div class="pr-in"><b>0%</b><small>DE VITÓRIAS</small><span></span></div>
+          </div>
+          <div id="profile-stats" class="stat-grid"></div>
+        </div>
+        <div class="panel">
+          <h2>Mais números</h2>
+          <div id="profile-more" class="profile-more"></div>
+        </div>
+        <div class="profile-cols">
           <div class="panel">
-            <h2>Elementos</h2>
+            <h2>Personagens</h2>
             <div id="profile-elements"></div>
+          </div>
+          <div class="panel">
+            <h2>Favoritos</h2>
+            <div id="profile-favs"></div>
           </div>
           <div class="panel">
             <h2>Últimas partidas</h2>
             <div id="profile-history"></div>
           </div>
         </div>
+        <footer class="profile-foot">
+          <p class="hint" id="profile-note"></p>
+          <button type="button" class="btn ghost small" id="profile-reset" hidden>Zerar estatísticas</button>
+        </footer>
       </div>
     </section>
 

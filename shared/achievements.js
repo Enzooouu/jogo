@@ -109,6 +109,7 @@ export class MatchTracker {
     this.stuns = 0;
     this.lavaEnters = 0;
     this.pickups = 0;
+    this.pickedWeapons = {};  // arma -> vezes que pegou (para o perfil)
   }
 
   onEvents(events) {
@@ -127,6 +128,7 @@ export class MatchTracker {
         this.lastHit.set(e.target, { src: 'neve', weapon: null, damage: t ? t.damage : 0, time: g.time });
       } else if (e.type === 'pickup' && e.id === this.localId) {
         this.pickups++;
+        if (e.weapon) this.pickedWeapons[e.weapon] = (this.pickedWeapons[e.weapon] ?? 0) + 1;
       } else if (e.type === 'cannonHit') {
         this.cannonAt.set(e.target, g.time);
       } else if (e.type === 'hazardEnter' && e.id === this.localId && e.hazard === 'lava') {
@@ -170,6 +172,7 @@ export class MatchTracker {
       deaths: me?.deaths ?? 0,
       alliesLeft: result.players.filter((p) => p.team === myTeam && p.id !== this.localId && p.livesLeft > 0).length,
       pickups: this.pickups,
+      pickedWeapons: { ...this.pickedWeapons },
       livesLeft: me?.livesLeft ?? 0,
       kos: this.kos,
       weapons: [...this.weapons],
