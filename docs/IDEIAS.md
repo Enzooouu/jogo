@@ -28,8 +28,8 @@ Ideias aprovadas pelo Enzo que ainda não foram feitas.
 
 - **Visuais desbloqueáveis**: cores, chapéus e rastros para cada elemento,
   liberados jogando.
-- **Nível e XP da conta**: cada partida dá XP; o perfil mostra o nível e as
-  estatísticas.
+- ~~**Nível e XP da conta**~~: feito (XP por partida, nível no perfil e bordas
+  da foto liberadas com o nível). Falta: levar o XP para a conta no servidor.
 - **Ranking**: tabela com os melhores jogadores do site (precisa do servidor
   no ar).
 

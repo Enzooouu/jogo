@@ -4,8 +4,9 @@
 import { ELEMENTS } from '/shared/elements.js';
 import { WEAPONS } from '/shared/weapons.js';
 import { getMap } from '/shared/maps.js';
-import { emptyStats, recordMatch, summarize } from '/shared/profile-stats.js';
+import { emptyStats, recordMatch, summarize, matchXp, levelInfo, estimateXp, FRAMES } from '/shared/profile-stats.js';
 import { drawPortrait, fitCanvas } from '../render/portrait.js';
+import { drawAvatar } from '../render/avatar.js';
 
 const KEY = 'brawl.perfil';
 const $ = (sel) => document.querySelector(sel);
@@ -16,7 +17,12 @@ const OUTCOME = { vitoria: ['V', 'Vitória'], derrota: ['D', 'Derrota'], empate:
 export function loadStats() {
   try {
     const v = JSON.parse(localStorage.getItem(KEY) ?? 'null');
-    if (v && typeof v.matches === 'number') return { ...emptyStats(), ...v };
+    if (v && typeof v.matches === 'number') {
+      const s = { ...emptyStats(), ...v };
+      // perfil de antes do nível: ganha o XP das partidas que já jogou
+      if (typeof v.xp !== 'number') s.xp = estimateXp(s);
+      return s;
+    }
   } catch {
     // sem armazenamento: começa do zero
   }
@@ -32,10 +38,14 @@ function saveStats(s) {
 }
 
 // Guarda uma partida. `summary` vem do MatchTracker (conquistas).
-export function recordProfileMatch(summary, result, localId, outcome) {
+// Devolve o XP ganho e o nível antes/depois (para a tela de resultado).
+export function recordProfileMatch(summary, result, localId, outcome, { newAch = 0, newGold = 0 } = {}) {
   const me = result.players.find((p) => p.id === localId);
-  if (!me) return;
+  if (!me) return null;
   const stats = loadStats();
+  const before = levelInfo(stats.xp);
+  const gained = matchXp({ outcome, kills: me.kills, difficulty: summary.difficulty, newAch, newGold });
+  stats.xp += gained;
   recordMatch(stats, {
     outcome,
     element: summary.element ?? me.element,
@@ -48,6 +58,42 @@ export function recordProfileMatch(summary, result, localId, outcome) {
     date: new Date().toISOString(),
   });
   saveStats(stats);
+  return { gained, before, after: levelInfo(stats.xp) };
+}
+
+// ------------------------------------------------------------ foto de perfil
+
+const LOOK_KEY = 'brawl.avatar';
+
+// { pic: 'auto' | 'el:<elemento>' | 'arma:<arma>:<elemento>', frame }
+export function loadLook() {
+  try {
+    const v = JSON.parse(localStorage.getItem(LOOK_KEY) ?? 'null');
+    if (v && typeof v.pic === 'string') return { pic: v.pic, frame: v.frame ?? 'bronze' };
+  } catch {
+    // sem armazenamento
+  }
+  return { pic: 'auto', frame: 'bronze' };
+}
+
+function saveLook(look) {
+  try {
+    localStorage.setItem(LOOK_KEY, JSON.stringify(look));
+  } catch {
+    // navegação privada
+  }
+}
+
+// foto que aparece: 'auto' usa o personagem mais usado
+function resolvePic(look, stats) {
+  if (look.pic !== 'auto') return look.pic;
+  return `el:${summarize(stats).favoriteElement ?? 'fogo'}`;
+}
+
+// borda escolhida, mas só se o nível já liberou (senão a melhor liberada)
+function resolveFrame(look, level) {
+  const open = FRAMES.filter((f) => f.level <= level);
+  return open.find((f) => f.id === look.frame)?.id ?? open[open.length - 1].id;
 }
 
 export function resetStats() {
@@ -91,7 +137,12 @@ let portraits = [];
 let raf = 0;
 
 function portrait(canvas, element, { scale = 1, facing = 1, foot = 0.94 } = {}) {
-  portraits.push({ canvas, element, scale, facing, foot });
+  portraits.push({ canvas, draw: (ctx, w, h, t) => drawPortrait(ctx, element, w / 2, h * foot, (h / 150) * scale, { facing, time: t }) });
+}
+
+function avatarCanvas(canvas, pic) {
+  portraits = portraits.filter((p) => p.canvas !== canvas);
+  portraits.push({ canvas, draw: (ctx, w, h, t) => drawAvatar(ctx, w, h, pic, t) });
 }
 
 function drawPortraits(time) {
@@ -101,7 +152,7 @@ function drawPortraits(time) {
     const ctx = p.canvas.getContext('2d');
     const { width: w, height: h } = p.canvas;
     ctx.clearRect(0, 0, w, h);
-    drawPortrait(ctx, p.element, w / 2, h * p.foot, (h / 150) * p.scale, { facing: p.facing, time: time / 1000 });
+    p.draw(ctx, w, h, time / 1000);
   }
 }
 
@@ -122,14 +173,14 @@ export function renderProfileChip(username) {
   const chip = $('#profile-chip');
   if (!chip) return;
   const s = loadStats();
-  const sum = summarize(s);
+  const lv = levelInfo(s.xp);
+  const look = loadLook();
   chip.querySelector('b').textContent = username || 'Convidado';
-  chip.querySelector('small').textContent = s.matches
-    ? `${s.matches} ${s.matches === 1 ? 'partida' : 'partidas'} · ${sum.winRate}% vitórias`
-    : 'VER PERFIL';
-  const canvas = chip.querySelector('canvas');
-  portraits = portraits.filter((p) => p.canvas !== canvas);
-  portrait(canvas, sum.favoriteElement ?? 'fogo', { scale: 3, foot: 1.55 });
+  chip.querySelector('.pc-lv').textContent = `NÍVEL ${lv.level}`;
+  chip.querySelector('.pc-xp i').style.width = `${(lv.into / lv.need) * 100}%`;
+  chip.querySelector('.pc-badge').textContent = lv.level;
+  chip.querySelector('.pc-av').dataset.frame = resolveFrame(look, lv.level);
+  avatarCanvas(chip.querySelector('canvas'), resolvePic(look, s));
   startPortraits();
 }
 
@@ -140,8 +191,19 @@ export function renderLocalProfile({ username, achievements, onReset }) {
   const sum = summarize(s);
   const fav = sum.favoriteElement;
   portraits = portraits.filter((p) => p.canvas.id === 'profile-chip-canvas');
+  const lv = levelInfo(s.xp);
+  const look = loadLook();
 
   $('#profile-name').textContent = username || 'Convidado';
+  // foto + nível
+  const av = $('#profile-avatar');
+  av.dataset.frame = resolveFrame(look, lv.level);
+  avatarCanvas(av.querySelector('canvas'), resolvePic(look, s));
+  av.querySelector('.pc-badge').textContent = lv.level;
+  av.onclick = () => openPicker(s, lv.level, () => renderLocalProfile({ username, achievements, onReset }));
+  $('#profile-level').textContent = `NÍVEL ${lv.level}`;
+  $('#profile-xp-fill').style.width = `${(lv.into / lv.need) * 100}%`;
+  $('#profile-xp-text').textContent = `${nf(lv.into)} / ${nf(lv.need)} XP · faltam ${nf(lv.need - lv.into)} para o nível ${lv.level + 1}`;
   $('#profile-since').textContent = s.since
     ? `Jogando desde ${formatDate(s.since)} · ${formatTime(s.time)} de jogo`
     : 'Nenhuma partida ainda: jogue uma para começar seu perfil.';
@@ -294,4 +356,87 @@ export function renderLocalProfile({ username, achievements, onReset }) {
   };
 
   requestAnimationFrame(startPortraits);
+}
+
+// ------------------------------------------------------------ escolher foto
+
+const PICK_WEAPONS = ['espada', 'cajado', 'lanca', 'marretao'];
+
+function openPicker(stats, level, onDone) {
+  const box = $('#avatar-picker');
+  const look = loadLook();
+  const enabled = Object.values(ELEMENTS).filter((e) => e.enabled);
+  const draw = () => {
+    for (const p of [...box.querySelectorAll('canvas')]) portraits = portraits.filter((x) => x.canvas !== p);
+    const chars = $('#ap-chars');
+    const weps = $('#ap-weapons');
+    const frames = $('#ap-frames');
+    chars.innerHTML = '';
+    weps.innerHTML = '';
+    frames.innerHTML = '';
+    const option = (parent, pic, label, title) => {
+      const b = el('button', `ap-opt${look.pic === pic ? ' on' : ''}`);
+      b.type = 'button';
+      b.title = title ?? label;
+      const ring = el('span', 'ap-ring');
+      const c = el('canvas');
+      ring.appendChild(c);
+      b.append(ring, el('small', '', label));
+      if (pic === 'auto') avatarCanvas(c, resolvePic({ pic: 'auto' }, stats));
+      else avatarCanvas(c, pic);
+      b.onclick = () => {
+        look.pic = pic;
+        saveLook(look);
+        draw();
+      };
+      parent.appendChild(b);
+    };
+    option(chars, 'auto', 'Automático', 'O personagem que você mais usa');
+    for (const e of enabled) option(chars, `el:${e.id}`, e.name);
+    for (const w of PICK_WEAPONS) {
+      const row = el('div', 'ap-wrow');
+      row.appendChild(el('span', 'ap-wname', WEAPONS[w].name));
+      const opts = el('div', 'ap-grid');
+      for (const e of enabled) {
+        const name = WEAPONS[w].byElement?.[e.id]?.name ?? `${WEAPONS[w].name} ${e.id === 'mortal' ? 'comum' : `(${e.name})`}`;
+        option(opts, `arma:${w}:${e.id}`, e.name, name);
+      }
+      row.appendChild(opts);
+      weps.appendChild(row);
+    }
+    const current = resolveFrame(look, level);
+    for (const f of FRAMES) {
+      const locked = f.level > level;
+      const b = el('button', `ap-frame${current === f.id ? ' on' : ''}${locked ? ' locked' : ''}`);
+      b.type = 'button';
+      b.disabled = locked;
+      const dot = el('span', 'ap-fdot');
+      dot.dataset.frame = f.id;
+      b.append(dot, el('b', '', f.name), el('small', '', locked ? `🔒 Nível ${f.level}` : `Nível ${f.level}`));
+      b.onclick = () => {
+        look.frame = f.id;
+        saveLook(look);
+        draw();
+      };
+      frames.appendChild(b);
+    }
+    startPortraits();
+  };
+  box.hidden = false;
+  draw();
+  const close = () => {
+    box.hidden = true;
+    document.removeEventListener('keydown', onKey, true);
+    onDone?.();
+  };
+  const onKey = (e) => {
+    if (e.code !== 'Escape') return;
+    e.stopPropagation();
+    e.preventDefault();
+    close();
+  };
+  document.addEventListener('keydown', onKey, true);
+  box.querySelector('.ap-close').onclick = close;
+  box.querySelector('.ap-back').onclick = close;
+  box.querySelector('.ap-close').focus({ preventScroll: true });
 }

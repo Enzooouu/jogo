@@ -53,3 +53,20 @@ test('perfil: K/D sem mortes não divide por zero', () => {
   assert.equal(summarize(s).kd, 3);
   assert.equal(summarize(emptyStats()).winRate, 0);
 });
+
+import { matchXp, levelInfo, xpToNext } from '../shared/profile-stats.js';
+
+test('nível: XP por partida e dificuldade', () => {
+  assert.equal(matchXp({ outcome: 'derrota' }), 40);
+  assert.equal(matchXp({ outcome: 'vitoria', kills: 2 }), 130);
+  assert.equal(matchXp({ outcome: 'vitoria', kills: 2, difficulty: 'dificil' }), 195);
+  assert.equal(matchXp({ outcome: 'empate', difficulty: 'facil', newAch: 1, newGold: 1 }), 45 + 350);
+});
+
+test('nível: cada nível pede 50 XP a mais', () => {
+  assert.deepEqual(levelInfo(0), { level: 1, into: 0, need: 100 });
+  assert.deepEqual(levelInfo(99), { level: 1, into: 99, need: 100 });
+  assert.deepEqual(levelInfo(100), { level: 2, into: 0, need: 150 });
+  assert.deepEqual(levelInfo(260), { level: 3, into: 10, need: 200 });
+  assert.equal(xpToNext(10), 550);
+});

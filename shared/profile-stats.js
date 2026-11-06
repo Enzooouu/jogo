@@ -5,6 +5,7 @@
 export function emptyStats() {
   return {
     since: null,
+    xp: 0,
     matches: 0, wins: 0, losses: 0, draws: 0,
     kills: 0, deaths: 0, falls: 0, hazardDeaths: 0,
     damageDealt: 0, damageTaken: 0, hits: 0, pickups: 0,
@@ -71,4 +72,45 @@ export function summarize(s) {
     favoriteWeapon: top(s.weapons),
     killsPerMatch: s.matches ? s.kills / s.matches : 0,
   };
+}
+
+// ------------------------------------------------------------ nível (XP)
+
+// XP de cada partida: jogar, vencer, kills e conquistas novas. A dificuldade
+// dos bots multiplica (Fácil vale menos, Difícil vale mais).
+export const XP = { play: 40, win: 60, draw: 20, kill: 15, ach: 100, achGold: 250 };
+export const XP_DIFFICULTY = { facil: 0.75, normal: 1, dificil: 1.5 };
+
+export function matchXp({ outcome, kills = 0, difficulty = 'normal', newAch = 0, newGold = 0 }) {
+  const base = XP.play + (outcome === 'vitoria' ? XP.win : outcome === 'empate' ? XP.draw : 0) + kills * XP.kill;
+  const mult = XP_DIFFICULTY[difficulty] ?? 1;
+  return Math.round(base * mult) + newAch * XP.ach + newGold * XP.achGold;
+}
+
+// XP para passar do nível n para o n+1 (cada nível pede 50 a mais)
+export const xpToNext = (level) => 100 + 50 * (level - 1);
+
+export function levelInfo(xp) {
+  let level = 1;
+  let left = Math.max(0, Math.floor(xp));
+  while (left >= xpToNext(level)) {
+    left -= xpToNext(level);
+    level++;
+  }
+  return { level, into: left, need: xpToNext(level) };
+}
+
+// Bordas da foto de perfil que vão sendo liberadas com o nível
+export const FRAMES = [
+  { id: 'bronze', name: 'Bronze', level: 1 },
+  { id: 'prata', name: 'Prata', level: 5 },
+  { id: 'ouro', name: 'Ouro', level: 10 },
+  { id: 'esmeralda', name: 'Esmeralda', level: 15 },
+  { id: 'rubi', name: 'Rubi', level: 20 },
+  { id: 'elemental', name: 'Elemental', level: 30 },
+];
+
+// Perfis antigos (de antes do nível): estima o XP pelas partidas já jogadas
+export function estimateXp(s) {
+  return s.matches * XP.play + s.wins * XP.win + s.draws * XP.draw + s.kills * XP.kill;
 }

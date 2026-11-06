@@ -13,6 +13,7 @@ import { buildLocalSetup, outcomeFor } from './setup.js';
 import { api } from './api.js';
 import { renderAccountBox, initAuthScreen, setAuthMode, focusAuth } from './screens/account.js';
 import { recordProfileMatch, renderLocalProfile, renderProfileChip } from './screens/profile.js';
+import { FRAMES } from '/shared/profile-stats.js';
 import { DemoArena } from './screens/demo.js';
 import { initHomeMenu } from './screens/home-menu.js';
 import { MapPicker, RANDOM_MAP, pickRandomMap, mapIdsFor } from './screens/maps.js';
@@ -808,12 +809,19 @@ function checkAchievements(setup, result, outcome) {
   state.tracker = null;
   const box = $('#result-ach');
   box.hidden = true;
+  $('#result-xp').hidden = true;
   if (!tracker) return;
   const summary = tracker.summary(result, setup, outcome);
-  // perfil: toda partida de verdade conta (menos treino e modo ADM)
-  if (!summary.admin) recordProfileMatch(summary, result, setup.localPlayerId, outcome);
   const fresh = evaluate(summary, achProgress);
   saveAch(achProgress);
+  // perfil e XP: toda partida de verdade conta (menos treino e modo ADM)
+  if (!summary.admin) {
+    const xp = recordProfileMatch(summary, result, setup.localPlayerId, outcome, {
+      newAch: fresh.filter((f) => f.tier === 'normal').length,
+      newGold: fresh.filter((f) => f.tier === 'ouro').length,
+    });
+    if (xp) showXp(xp);
+  }
   if (!fresh.length) return;
   box.innerHTML = '<span class="result-ach-l">CONQUISTAS NOVAS</span>';
   for (const f of fresh) {
@@ -825,6 +833,40 @@ function checkAchievements(setup, result, outcome) {
   }
   box.hidden = false;
   fresh.forEach((f, i) => setTimeout(() => achToast(f), 400 + i * 900));
+}
+
+// XP ganho na tela de resultado: a barra enche e mostra se subiu de nível
+function showXp({ gained, before, after }) {
+  const box = $('#result-xp');
+  box.hidden = false;
+  box.querySelector('.rx-gain').textContent = `+${gained} XP`;
+  box.querySelector('.rx-lv').textContent = `NÍVEL ${after.level} · ${after.into}/${after.need}`;
+  const fill = box.querySelector('.rx-bar i');
+  const up = after.level > before.level;
+  fill.style.transition = 'none';
+  fill.style.width = `${up ? 0 : (before.into / before.need) * 100}%`;
+  requestAnimationFrame(() => requestAnimationFrame(() => {
+    fill.style.transition = '';
+    fill.style.width = `${(after.into / after.need) * 100}%`;
+  }));
+  const msg = box.querySelector('.rx-up');
+  msg.hidden = !up;
+  if (up) {
+    const frame = FRAMES.find((f) => f.level > before.level && f.level <= after.level);
+    msg.textContent = `SUBIU PARA O NÍVEL ${after.level}!${frame ? ` Nova borda liberada: ${frame.name}` : ''}`;
+    setTimeout(() => levelToast(after.level, frame), 300);
+  }
+}
+
+function levelToast(level, frame) {
+  const t = document.createElement('div');
+  t.className = 'ach-toast ouro';
+  t.innerHTML = '<span class="ach-toast-i">⬆️</span><div><small></small><b></b></div>';
+  t.querySelector('small').textContent = 'SUBIU DE NÍVEL!';
+  t.querySelector('b').textContent = frame ? `Nível ${level} · borda ${frame.name}` : `Nível ${level}`;
+  $('#ach-toasts').appendChild(t);
+  setTimeout(() => t.classList.add('out'), 3600);
+  setTimeout(() => t.remove(), 4200);
 }
 
 function achToast({ id, tier }) {
@@ -1079,7 +1121,7 @@ const FOCUSABLE = 'button, [href], input, select, [tabindex]:not([tabindex="-1"]
 // onde o controle navega agora: painel aberto, janela por cima ou a tela
 function padRoot() {
   const visible = (el) => el && !el.hidden && el.offsetParent !== null;
-  for (const sel of ['.side-panel:not([hidden])', '#welcome', '#pause-overlay', '.tut-overlay:not([hidden])']) {
+  for (const sel of ['.side-panel:not([hidden])', '#avatar-picker', '#welcome', '#pause-overlay', '.tut-overlay:not([hidden])']) {
     const el = $(sel);
     if (visible(el)) return el;
   }
@@ -1359,7 +1401,6 @@ function init() {
     closeWelcome();
     openAuth('login');
   });
-  $('#home-profile').addEventListener('click', openProfile);
   $('#profile-chip').addEventListener('click', openProfile);
   $('#home-controls').addEventListener('click', () => togglePanel('#controls-panel'));
   $('#panel-backdrop').addEventListener('click', closePanels);

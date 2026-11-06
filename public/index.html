@@ -19,8 +19,8 @@
       <div class="live-tag">PARTIDA DE DEMONSTRAÇÃO</div>
       <!-- perfil no canto superior direito -->
       <button type="button" id="profile-chip" class="profile-chip" aria-label="Abrir perfil">
-        <span class="pc-av"><canvas id="profile-chip-canvas"></canvas></span>
-        <span class="pc-txt"><b>Convidado</b><small>VER PERFIL</small></span>
+        <span class="pc-txt"><b>Convidado</b><span class="pc-lv">NÍVEL 1</span><span class="pc-xp"><i></i></span></span>
+        <span class="pc-av" data-frame="bronze"><canvas id="profile-chip-canvas"></canvas><span class="pc-badge">1</span></span>
       </button>
       <!-- marca do jogo no canto da tela inicial (o brasão do manual da marca) -->
       <svg class="home-crest" viewBox="0 0 200 220" role="img" aria-label="Elementum"><defs>
@@ -127,7 +127,6 @@
         <div class="home-band" aria-hidden="true"><div class="fill"></div></div>
         <button type="button" class="home-item on" id="home-play">JOGAR</button>
         <button type="button" class="home-item" id="home-tutorial">TUTORIAL</button>
-        <button type="button" class="home-item" id="home-profile">PERFIL</button>
         <button type="button" class="home-item" id="home-ach">CONQUISTAS</button>
         <button type="button" class="home-item" id="home-controls">CONTROLES</button>
         <button type="button" class="home-item" id="home-settings">CONFIGURAÇÕES</button>
@@ -378,6 +377,11 @@
         <h1 id="result-title" class="result-title">VITÓRIA!</h1>
         <p id="result-sub" class="result-sub"></p>
         <div id="result-cards" class="result-cards"></div>
+        <div id="result-xp" class="result-xp" hidden>
+          <div class="rx-top"><b class="rx-gain"></b><span class="rx-lv"></span></div>
+          <div class="rx-bar"><i></i></div>
+          <p class="rx-up" hidden></p>
+        </div>
         <div id="result-ach" class="result-ach" hidden></div>
         <p id="result-save" class="hint"></p>
         <div class="result-actions">
@@ -416,10 +420,17 @@
     <section id="screen-profile" class="screen" hidden>
       <div class="profile-wrap">
         <header class="profile-head">
-          <div>
-            <small class="ph-kicker">PERFIL</small>
-            <h1 id="profile-name"></h1>
-            <p class="hint" id="profile-since"></p>
+          <div class="ph-id">
+            <button type="button" id="profile-avatar" class="pc-av big" data-frame="bronze" title="Trocar foto de perfil">
+              <canvas></canvas><span class="pc-badge">1</span><span class="pa-edit">TROCAR</span>
+            </button>
+            <div>
+              <small class="ph-kicker">PERFIL</small>
+              <h1 id="profile-name"></h1>
+              <div class="ph-level"><b id="profile-level">NÍVEL 1</b><span class="ph-xp"><i id="profile-xp-fill"></i></span></div>
+              <p class="hint" id="profile-xp-text"></p>
+              <p class="hint" id="profile-since"></p>
+            </div>
           </div>
           <button type="button" class="btn ghost small" data-go="home">Voltar ao menu</button>
         </header>
@@ -452,6 +463,19 @@
           <p class="hint" id="profile-note"></p>
           <button type="button" class="btn ghost small" id="profile-reset" hidden>Zerar estatísticas</button>
         </footer>
+      </div>
+      <!-- escolher a foto de perfil -->
+      <div id="avatar-picker" class="avatar-picker" hidden>
+        <div class="ap-card" role="dialog" aria-labelledby="ap-title">
+          <header><h2 id="ap-title">Foto de perfil</h2><button type="button" class="btn ghost small ap-close">Pronto</button></header>
+          <h3>Personagens</h3>
+          <div id="ap-chars" class="ap-grid"></div>
+          <h3>Armas</h3>
+          <div id="ap-weapons"></div>
+          <h3>Borda <small>(libera com o nível)</small></h3>
+          <div id="ap-frames" class="ap-frames"></div>
+        </div>
+        <div class="ap-back"></div>
       </div>
     </section>
 
