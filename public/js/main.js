@@ -1664,6 +1664,14 @@ function init() {
   for (const tile of document.querySelectorAll('.mode-tile[data-size]')) {
     tile.addEventListener('click', () => chooseMode(Number(tile.dataset.size)));
   }
+  // o destaque acompanha o mouse e o foco (teclado/controle): só um card aceso
+  for (const tile of document.querySelectorAll('.mode-tile')) {
+    const pick = () => {
+      for (const t of document.querySelectorAll('.mode-tile')) t.classList.toggle('on', t === tile);
+    };
+    tile.addEventListener('mouseenter', pick);
+    tile.addEventListener('focus', pick);
+  }
   $('.mode-tile[data-mode="ffa"]').addEventListener('click', () => chooseMode(1, 'ffa'));
   $('.mode-tile[data-mode="treino"]').addEventListener('click', () => chooseMode(1, 'treino'));
   $('.mode-tile[data-mode="rei"]').addEventListener('click', () => chooseMode(2, 'rei'));
