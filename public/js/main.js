@@ -78,6 +78,7 @@ export function show(name) {
   state.screen = name;
   demo.setHome(name === 'home');
   $('#menu-bg').classList.toggle('home-lit', name === 'home');
+  $('#menu-bg').classList.toggle('mode-lit', name === 'mode');
   if (name === 'home') requestAnimationFrame(() => {
     homeMenu?.refresh();
     renderProfileChip(state.user?.username);
@@ -197,12 +198,21 @@ function togglePanel(id) {
 
 // ------------------------------------------------------------ passo 1: modo
 
+// destaca o último modo escolhido (só visual)
+function markModeTile() {
+  for (const tile of document.querySelectorAll('.mode-tile')) {
+    const on = tile.dataset.mode ? tile.dataset.mode === state.mode : state.mode === 'times' && Number(tile.dataset.size) === state.teamSize;
+    tile.classList.toggle('on', on);
+  }
+}
+
 function drawModeTiles() {
+  markModeTile();
   requestAnimationFrame(() => {
     for (const tile of document.querySelectorAll('.mode-tile')) {
       const { ctx, w, h } = fitCanvas(tile.querySelector('canvas'));
       if (tile.dataset.mode === 'treino') {
-        const s = Math.min(1.5, h / 95);
+        const s = Math.min(1.68, h / 95);
         drawPortrait(ctx, state.element === RANDOM_ELEMENT ? 'fogo' : state.element, w * 0.32, h - 12, s, { facing: 1 });
         drawPortrait(ctx, 'mortal', w * 0.68, h - 12, s, { facing: -1, extra: { skin: 'espantalho' } });
         continue;
@@ -211,7 +221,8 @@ function drawModeTiles() {
         // torre de pedra com andares e o seu boneco lá no alto
         const tw = w * 0.36;
         const tx = w / 2 - tw / 2;
-        const top = h * 0.42;
+        // a torre começa mais embaixo para o boneco caber inteiro em cima
+        const top = h * 0.6;
         ctx.fillStyle = '#1a1222';
         ctx.fillRect(tx - 3, top - 3, tw + 6, h - top + 3);
         ctx.fillStyle = '#8d7d6a';
@@ -222,7 +233,7 @@ function drawModeTiles() {
         for (let y = top + 14; y < h; y += 14) ctx.fillRect(tx, y, tw, 2);
         ctx.fillStyle = '#ffcf6a';
         for (let y = top + 20; y < h - 6; y += 28) ctx.fillRect(w / 2 - 4, y, 8, 11);
-        const s = Math.min(1.5, h / 95) * 0.75;
+        const s = Math.min(1.68, h / 95) * 0.75;
         drawPortrait(ctx, state.element === RANDOM_ELEMENT ? 'fogo' : state.element, w / 2, top - 4, s, { facing: 1 });
         ctx.font = `900 ${Math.round(h * 0.13)}px system-ui, sans-serif`;
         ctx.textAlign = 'center';
@@ -233,7 +244,7 @@ function drawModeTiles() {
       }
       if (tile.dataset.mode === 'rei') {
         // dois times disputando a área com a coroa
-        const s = Math.min(1.5, h / 95) * 0.82;
+        const s = Math.min(1.68, h / 95) * 0.82;
         const glow = ctx.createRadialGradient(w / 2, h - 12, 2, w / 2, h - 12, w * 0.28);
         glow.addColorStop(0, 'rgba(255,224,138,0.7)');
         glow.addColorStop(1, 'rgba(255,224,138,0)');
@@ -248,7 +259,7 @@ function drawModeTiles() {
       }
       const ffa = tile.dataset.mode === 'ffa';
       const n = ffa ? 2 : Number(tile.dataset.size);
-      const scale = Math.min(1.5, h / 95) * (n === 3 ? 0.78 : n === 2 ? 0.9 : 1);
+      const scale = Math.min(1.68, h / 95) * (n === 3 ? 0.78 : n === 2 ? 0.9 : 1);
       const gap = scale * 26;
       const foot = h - 12;
       if (ffa) {
