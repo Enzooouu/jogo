@@ -85,7 +85,7 @@ export class BotController {
       dir = cx < back.x ? 1 : -1;
       if (me.onWall && me.wallHang <= 0.2) jump = true;
       else if (me.vy > -60 && feet > island.top - 90 && me.jumpsLeft > 0) jump = true;
-      else if (me.jumpsLeft === 0 && me.airDashes > 0 && me.dashCooldown <= 0 && me.vy > 0 && feet > island.top - 30) {
+      else if (me.jumpsLeft === 0 && game.dashReady(me) && me.vy > 0 && feet > island.top - 30) {
         // Sem pulos: usa o dash para voltar. Perto da parede vai reto para
         // cima (na diagonal cairia direto nas piscinas da borda).
         const gap = cx < island.left ? island.left - cx : cx - island.right;

@@ -25,7 +25,9 @@ export const PHYS = {
   wallJumpLock: 0.14,     // tempo em que o impulso vale mais que o direcional
   dashSpeed: 820,         // velocidade do dash
   dashTime: 0.16,         // duração do dash (sem gravidade)
-  dashCooldown: 0.55,     // intervalo mínimo entre dashes
+  dashCooldown: 0.48,     // intervalo mínimo entre dashes (contado do começo do dash)
+  airDashGap: 0.26,       // no ar: o dash libera bem antes (logo depois que o anterior termina)
+  dashBuffer: 0.12,       // apertou dash um pouco antes de liberar? ele sai sozinho assim que der
   airDashes: 1,           // dashes no ar até pisar no chão ou se pendurar na parede
 };
 

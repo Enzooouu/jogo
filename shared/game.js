@@ -431,6 +431,7 @@ export class Game {
     p.invuln = Math.max(0, p.invuln - DT);
     p.cooldown = Math.max(0, p.cooldown - DT);
     p.attackBuffer = Math.max(0, p.attackBuffer - DT);
+    p.dashBuffer = Math.max(0, p.dashBuffer - DT);
     p.hitstun = Math.max(0, p.hitstun - DT);
     p.pickupCooldown = Math.max(0, p.pickupCooldown - DT);
     p.dropTimer = Math.max(0, p.dropTimer - DT);
@@ -506,7 +507,12 @@ export class Game {
         this.emit('drop', { id: p.id });
       }
 
-      if (pressed('dash') && p.dashCooldown <= 0 && (p.onGround || p.airDashes > 0)) this.startDash(p, input);
+      // dash: o aperto também fica guardado um instante
+      if (pressed('dash')) p.dashBuffer = PHYS.dashBuffer;
+      if (p.dashBuffer > 0 && this.dashReady(p)) {
+        p.dashBuffer = 0;
+        this.startDash(p, input);
+      }
       // o aperto de "bater" fica guardado um instante: se apertar no fim do
       // golpe anterior, o próximo sai assim que liberar (os bots nunca perdem
       // um aperto; sem isso quem joga de verdade bate mais devagar que eles)
@@ -520,6 +526,7 @@ export class Game {
     } else {
       p.onWall = 0;
       p.attackBuffer = 0;   // apanhando: o aperto guardado não vale
+      p.dashBuffer = 0;
       p.vx = approach(p.vx, 0, PHYS.hitstunDrag * DT);
     }
 
@@ -955,6 +962,14 @@ export class Game {
   }
 
   // Dash na direção segurada (8 direções); sem direção, vai para a frente.
+  // Dá para dar dash agora? No chão espera o intervalo inteiro; no ar libera
+  // logo depois que o dash anterior termina (dash no chão, pulo, dash no ar),
+  // mas só enquanto ainda tem dash no ar
+  dashReady(p) {
+    if (p.onGround) return p.dashCooldown <= 0;
+    return p.airDashes > 0 && p.dashCooldown <= PHYS.dashCooldown - PHYS.airDashGap;
+  }
+
   startDash(p, input) {
     let dx = (input.right ? 1 : 0) - (input.left ? 1 : 0);
     const dy = (input.down ? 1 : 0) - (input.up ? 1 : 0);
@@ -1556,6 +1571,7 @@ function createPlayer(cfg, index, lives) {
     hitstun: 0,
     cooldown: 0,
     attackBuffer: 0,        // tempo que o aperto de bater ainda fica guardado
+    dashBuffer: 0,          // tempo que o aperto de dash ainda fica guardado
     attack: null,
     weapon: null,
     pickupCooldown: 0,

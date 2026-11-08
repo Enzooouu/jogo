@@ -1445,7 +1445,7 @@ export class Renderer {
     const available = out ? 0 : p.onGround ? maxDash : p.airDashes;
     for (let i = 0; i < maxDash; i++) {
       const has = i < available;
-      ctx.globalAlpha = (out ? 0.55 : 1) * (has && p.dashCooldown > 0 ? 0.4 : 1);
+      ctx.globalAlpha = (out ? 0.55 : 1) * (has && !this.game.dashReady(p) ? 0.4 : 1);
       const on = has;
       const ax = x + 124 + i * 20;
       const ay = y + 82;

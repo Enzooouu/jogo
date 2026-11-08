@@ -925,6 +925,7 @@ test('no ar só tem 1 dash; recarrega ao pisar no chão', () => {
   const vy = p.vy;
   run(g, 1, { 1: makeInput({ dash: true }) });
   assert.equal(p.dashTime, 0, 'segundo dash no ar não sai');
+  run(g, 10);   // o aperto guardado expira (senão vira dash ao pousar)
   place(p, 640, 540);
   run(g, 3);
   assert.equal(p.onGround, true);
@@ -1228,4 +1229,42 @@ test('aperto guardado expira: apertar muito antes não faz golpe sozinho depois'
   while (me.attack || me.cooldown > 0) run(g, 1);
   run(g, 3);
   assert.equal(me.attack, null);
+});
+
+test('dash no chão, pulo e dash no ar: o dash do ar libera logo depois que o primeiro termina', () => {
+  const g = duel('fogo', 'agua');
+  place(g.playerById(2), 1050, 540);
+  g.nextWindIn = Infinity;
+  const me = g.playerById(1);
+  place(me, 560, 540);
+  run(g, 6);
+  assert.ok(me.onGround);
+  run(g, 1, { 1: makeInput({ dash: true, right: true }) });          // dash no chão
+  assert.ok(me.dashTime > 0);
+  while (me.dashTime > 0) run(g, 1);
+  run(g, 1, { 1: makeInput({ up: true }) });                         // pula logo depois
+  run(g, 4);
+  assert.equal(me.onGround, false);
+  assert.ok(me.dashCooldown > 0, 'a recarga do chão ainda não acabou');
+  let ticks = 0;
+  while (!g.dashReady(me) && ticks < 60) { run(g, 1); ticks++; }
+  assert.ok(ticks <= 3, `dash do ar liberou rápido (${ticks} quadros)`);
+  run(g, 1, { 1: makeInput({ dash: true, up: true }) });
+  assert.ok(me.dashTime > 0, 'deu o dash no ar');
+});
+
+test('no chão o dash ainda espera o intervalo inteiro', () => {
+  const g = duel('fogo', 'agua');
+  place(g.playerById(2), 1050, 540);
+  g.nextWindIn = Infinity;
+  const me = g.playerById(1);
+  place(me, 400, 540);
+  run(g, 3);
+  run(g, 1, { 1: makeInput({ dash: true, right: true }) });
+  while (me.dashTime > 0) run(g, 1);
+  run(g, 2);
+  assert.ok(me.onGround);
+  assert.equal(g.dashReady(me), false);
+  run(g, 1, { 1: makeInput({ dash: true, left: true }) });
+  assert.equal(me.dashTime, 0, 'apertar cedo demais no chão não dá dash');
 });
