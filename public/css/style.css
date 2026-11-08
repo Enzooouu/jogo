@@ -285,7 +285,7 @@ kbd {
    competitivos: grafite com o laranja da marca */
 .mode-tile { --mc: 255,140,60; --bg1: 46,34,30; --bg2: 14,10,11; }
 .mode-tile[data-mode="rei"] { --mc: 255,200,80; --bg1: 74,56,22; --bg2: 22,16,8; }
-.mode-tile[data-mode="torre"] { --mc: 130,140,255; --bg1: 44,42,96; --bg2: 12,12,32; }
+.mode-tile[data-mode="torre"] { --mc: 80,150,240; --bg1: 22,44,84; --bg2: 8,14,30; }
 .mode-tile[data-mode="treino"] { --mc: 96,220,140; --bg1: 34,62,48; --bg2: 10,20,16; }
 
 .mode-tile {
