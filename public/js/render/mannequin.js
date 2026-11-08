@@ -434,20 +434,23 @@ export function drawScarecrow(ctx, p, time) {
   ctx.fillStyle = shirt;
   ctx.strokeStyle = INK;
   ctx.lineWidth = 2;
-  ctx.beginPath();
-  ctx.moveTo(-28, -56);
-  ctx.lineTo(28, -56);
-  ctx.lineTo(28, -45);
-  ctx.lineTo(13, -44);
-  ctx.lineTo(14, -21);
-  ctx.lineTo(8, -23);
-  ctx.lineTo(3, -20);
-  ctx.lineTo(-3, -23);
-  ctx.lineTo(-8, -20);
-  ctx.lineTo(-14, -22);
-  ctx.lineTo(-13, -44);
-  ctx.lineTo(-28, -45);
-  ctx.closePath();
+  const shirtPath = () => {
+    ctx.beginPath();
+    ctx.moveTo(-28, -56);
+    ctx.lineTo(28, -56);
+    ctx.lineTo(28, -45);
+    ctx.lineTo(13, -44);
+    ctx.lineTo(14, -21);
+    ctx.lineTo(8, -23);
+    ctx.lineTo(3, -20);
+    ctx.lineTo(-3, -23);
+    ctx.lineTo(-8, -20);
+    ctx.lineTo(-14, -22);
+    ctx.lineTo(-13, -44);
+    ctx.lineTo(-28, -45);
+    ctx.closePath();
+  };
+  shirtPath();
   ctx.fill();
   ctx.save();
   ctx.clip();
@@ -482,8 +485,11 @@ export function drawScarecrow(ctx, p, time) {
   ctx.strokeRect(-9.2, -37.2, 6.4, 6.4);
   ctx.setLineDash([]);
   ctx.restore();
+  // contorno da camisa (refaz o caminho: o último traço era uma listra do
+  // xadrez, que aparecia solta do lado do espantalho)
   ctx.strokeStyle = INK;
   ctx.lineWidth = 2;
+  shirtPath();
   ctx.stroke();
   // cinto de corda
   ctx.strokeStyle = '#d9b46a';
