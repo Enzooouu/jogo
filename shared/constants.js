@@ -38,6 +38,7 @@ export const PLAYER = {
   killCreditTime: 6,      // até quantos segundos depois do último golpe a kill conta
   pickupCooldown: 0.4,    // tempo sem pegar arma depois de arremessar
   adminDamage: 999,       // dano de cada golpe no modo ADM (testes)
+  attackBuffer: 0.18,     // apertou bater um pouco antes de poder? o golpe sai sozinho assim que der
 };
 
 export const MATCH = {

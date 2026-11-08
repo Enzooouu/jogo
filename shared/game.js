@@ -430,6 +430,7 @@ export class Game {
 
     p.invuln = Math.max(0, p.invuln - DT);
     p.cooldown = Math.max(0, p.cooldown - DT);
+    p.attackBuffer = Math.max(0, p.attackBuffer - DT);
     p.hitstun = Math.max(0, p.hitstun - DT);
     p.pickupCooldown = Math.max(0, p.pickupCooldown - DT);
     p.dropTimer = Math.max(0, p.dropTimer - DT);
@@ -506,11 +507,19 @@ export class Game {
       }
 
       if (pressed('dash') && p.dashCooldown <= 0 && (p.onGround || p.airDashes > 0)) this.startDash(p, input);
-      if (pressed('attack') && p.cooldown <= 0 && !p.attack) this.startAttack(p);
+      // o aperto de "bater" fica guardado um instante: se apertar no fim do
+      // golpe anterior, o próximo sai assim que liberar (os bots nunca perdem
+      // um aperto; sem isso quem joga de verdade bate mais devagar que eles)
+      if (pressed('attack')) p.attackBuffer = PLAYER.attackBuffer;
+      if (p.attackBuffer > 0 && p.cooldown <= 0 && !p.attack) {
+        p.attackBuffer = 0;
+        this.startAttack(p);
+      }
       if (pressed('throw') && p.weapon) this.throwWeapon(p);
       else if (pressed('throw') && p.snowballs > 0) this.throwSnowball(p);
     } else {
       p.onWall = 0;
+      p.attackBuffer = 0;   // apanhando: o aperto guardado não vale
       p.vx = approach(p.vx, 0, PHYS.hitstunDrag * DT);
     }
 
@@ -1546,6 +1555,7 @@ function createPlayer(cfg, index, lives) {
     invuln: 0,
     hitstun: 0,
     cooldown: 0,
+    attackBuffer: 0,        // tempo que o aperto de bater ainda fica guardado
     attack: null,
     weapon: null,
     pickupCooldown: 0,

@@ -1199,3 +1199,33 @@ test('mapas novos: bots terminam partidas sem travar', () => {
     assert.equal(g.phase, 'ended', mapId);
   }
 });
+
+test('apertar bater um pouco antes de poder: o golpe sai assim que libera (igual aos bots)', () => {
+  const g = newGame(['fogo', 'agua']);
+  const me = g.playerById(1);
+  const atk = { 1: { attack: true } };
+  run(g, 1, atk);           // primeiro golpe
+  run(g, 1);                // solta o botão
+  assert.ok(me.cooldown > 0, 'está esperando para o próximo golpe');
+  // espera até faltar pouco (menos que a janela do buffer) e aperta de novo
+  while (me.cooldown > 0.1 || me.attack) run(g, 1);
+  run(g, 1, atk);
+  run(g, 1);
+  assert.equal(me.attack, null, 'ainda não podia bater');
+  let ticks = 0;
+  while (!me.attack && ticks < 30) { run(g, 1); ticks++; }
+  assert.ok(me.attack, 'o golpe guardado saiu sozinho');
+  assert.ok(ticks <= 7, `saiu logo que liberou (${ticks} quadros)`);
+});
+
+test('aperto guardado expira: apertar muito antes não faz golpe sozinho depois', () => {
+  const g = newGame(['fogo', 'agua']);
+  const me = g.playerById(1);
+  run(g, 1, { 1: { attack: true } });
+  run(g, 1);
+  run(g, 1, { 1: { attack: true } });   // aperta logo no começo do golpe (bem cedo)
+  run(g, 1);
+  while (me.attack || me.cooldown > 0) run(g, 1);
+  run(g, 3);
+  assert.equal(me.attack, null);
+});
