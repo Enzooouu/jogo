@@ -234,6 +234,7 @@ export class TutorialScreen {
   }
 
   showEnd({ title, text, main, alt }) {
+    this.closePause();
     $('#tut-end-title').textContent = title;
     $('#tut-end-text').textContent = text;
     const mainBtn = $('#tut-end-main');
@@ -248,7 +249,15 @@ export class TutorialScreen {
 
   // ------------------------------------------------------------ escolha do lutador
 
+  // fecha a pausa se ela estiver aberta (ex.: pausou na troca de etapa)
+  closePause() {
+    this.paused = false;
+    $('#tut-pause').hidden = true;
+    this.last = null;
+  }
+
   showPick() {
+    this.closePause();
     this.keyboard?.destroy();
     this.keyboard = null;
     const grid = $('#tut-pick-grid');
@@ -382,7 +391,10 @@ export class TutorialScreen {
   // ------------------------------------------------------------ laço
 
   setPaused(paused) {
-    if (!this.running || !$('#tut-pick').hidden || !$('#tut-end').hidden) return;
+    if (!this.running) return;
+    // não dá para pausar por cima da escolha de lutador ou da janela final,
+    // mas tirar a pausa sempre funciona
+    if (paused && (!$('#tut-pick').hidden || !$('#tut-end').hidden)) return;
     this.paused = paused;
     $('#tut-pause').hidden = !paused;
     if (paused) $('#tut-resume').focus();
@@ -414,7 +426,10 @@ export class TutorialScreen {
     const blocked = this.paused || !$('#tut-pick').hidden || !$('#tut-end').hidden;
     if (t && this.renderer) {
       if (!blocked) {
-        if (!this.clockDone) {
+        // o relógio só conta enquanto a etapa está sendo jogada: a transição
+        // entre etapas ("Muito bem!" e a troca de arena) não conta para
+        // ninguém (antes, pausar nessa hora economizava tempo)
+        if (!this.clockDone && !this.completed) {
           this.clock += dt;
           this.updateClock();
         }
