@@ -16,7 +16,7 @@ import { playEvents, chime } from '../audio.js';
 const DONE_KEY = 'brawl.tutorial';
 // Speedrun do tutorial (conquista de ouro "Velocista"): terminar tudo, sem
 // pular nenhuma etapa, em até SPEEDRUN_GOAL segundos
-export const SPEEDRUN_GOAL = 90;
+export const SPEEDRUN_GOAL = 80;   // 1:20
 const BEST_KEY = 'brawl.tutorial.recorde';
 
 function loadBest() {
@@ -39,6 +39,11 @@ function saveBest(time) {
     return time;
   }
   return best;
+}
+
+// meta escrita do jeito curto: 80 -> "1:20"
+function goalText() {
+  return `${Math.floor(SPEEDRUN_GOAL / 60)}:${String(SPEEDRUN_GOAL % 60).padStart(2, '0')}`;
 }
 
 function fmtTime(sec) {
@@ -212,7 +217,7 @@ export class TutorialScreen {
     const record = valid && (before == null || time < before);
     const timeLine = !valid
       ? ' (Você pulou alguma etapa, então o tempo não vale para o recorde.)'
-      : ` Seu tempo: ${fmtTime(time)}${record ? ' (novo recorde!)' : ` (recorde ${fmtTime(before)})`}.${time <= SPEEDRUN_GOAL ? ' Abaixo de 1:30: conquista de ouro!' : ' Faça em até 1:30, sem pular etapa, para a conquista de ouro.'}`;
+      : ` Seu tempo: ${fmtTime(time)}${record ? ' (novo recorde!)' : ` (recorde ${fmtTime(before)})`}.${time <= SPEEDRUN_GOAL ? ` Dentro de ${goalText()}: conquista de ouro!` : ` Faça em até ${goalText()}, sem pular etapa, para a conquista de ouro.`}`;
     this.fade(false);
     this.keyboard?.destroy();
     this.keyboard = null;
@@ -413,7 +418,7 @@ export class TutorialScreen {
     const best = loadBest();
     el.querySelector('small').textContent = this.skipped
       ? 'pulou etapa: não vale para o recorde'
-      : `meta do ouro ${fmtTime(SPEEDRUN_GOAL)}${best != null ? ` · recorde ${fmtTime(best)}` : ''}`;
+      : `meta do ouro ${goalText()}${best != null ? ` · recorde ${fmtTime(best)}` : ''}`;
     el.classList.toggle('late', !this.skipped && (this.clock ?? 0) > SPEEDRUN_GOAL);
     el.classList.toggle('off', !!this.skipped);
   }
