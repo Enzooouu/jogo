@@ -15,7 +15,7 @@ import { playEvents, chime } from '../audio.js';
 
 const DONE_KEY = 'brawl.tutorial';
 // Speedrun do tutorial (conquista de ouro "Velocista"): terminar tudo, sem
-// pular nenhuma etapa, em até SPEEDRUN_GOAL segundos
+// pular nenhuma etapa e sem morrer nenhuma vez, em até SPEEDRUN_GOAL segundos
 export const SPEEDRUN_GOAL = 80;   // 1:20
 const BEST_KEY = 'brawl.tutorial.recorde';
 
@@ -127,6 +127,7 @@ export class TutorialScreen {
     this.clock = 0;
     this.clockDone = false;
     this.skipped = index > 0;
+    this.died = false;
     this.updateClock();
     for (const id of ['#tut-pick', '#tut-pause', '#tut-end']) $(id).hidden = true;
     window.addEventListener('resize', this.onResize);
@@ -209,15 +210,17 @@ export class TutorialScreen {
     markDone();
     this.clockDone = true;
     const time = this.clock;
-    const valid = !this.skipped;
+    const valid = !this.skipped && !this.died;
     const before = loadBest();
     if (valid) saveBest(time);
     window.dispatchEvent(new CustomEvent('tutorial-complete', { detail: { time, valid } }));
     this.updateClock();
     const record = valid && (before == null || time < before);
     const timeLine = !valid
-      ? ' (Você pulou alguma etapa, então o tempo não vale para o recorde.)'
-      : ` Seu tempo: ${fmtTime(time)}${record ? ' (novo recorde!)' : ` (recorde ${fmtTime(before)})`}.${time <= SPEEDRUN_GOAL ? ` Dentro de ${goalText()}: conquista de ouro!` : ` Faça em até ${goalText()}, sem pular etapa, para a conquista de ouro.`}`;
+      ? (this.skipped
+        ? ' (Você pulou alguma etapa, então o tempo não vale para o recorde.)'
+        : ' (Você morreu no caminho, então o tempo não vale para o recorde. Para a conquista de ouro, não pode morrer nenhuma vez.)')
+      : ` Seu tempo: ${fmtTime(time)}${record ? ' (novo recorde!)' : ` (recorde ${fmtTime(before)})`}.${time <= SPEEDRUN_GOAL ? ` Dentro de ${goalText()}: conquista de ouro!` : ` Faça em até ${goalText()}, sem pular etapa e sem morrer, para a conquista de ouro.`}`;
     this.fade(false);
     this.keyboard?.destroy();
     this.keyboard = null;
@@ -416,11 +419,14 @@ export class TutorialScreen {
     if (!el) return;
     el.querySelector('b').textContent = fmtTime(this.clock ?? 0);
     const best = loadBest();
+    const invalid = this.skipped || this.died;
     el.querySelector('small').textContent = this.skipped
       ? 'pulou etapa: não vale para o recorde'
-      : `meta do ouro ${goalText()}${best != null ? ` · recorde ${fmtTime(best)}` : ''}`;
-    el.classList.toggle('late', !this.skipped && (this.clock ?? 0) > SPEEDRUN_GOAL);
-    el.classList.toggle('off', !!this.skipped);
+      : this.died
+        ? 'morreu: não vale para o recorde'
+        : `meta do ouro ${goalText()} sem morrer${best != null ? ` · recorde ${fmtTime(best)}` : ''}`;
+    el.classList.toggle('late', !invalid && (this.clock ?? 0) > SPEEDRUN_GOAL);
+    el.classList.toggle('off', !!invalid);
   }
 
   loop = (now) => {
@@ -462,6 +468,12 @@ export class TutorialScreen {
     if (events.length) {
       this.renderer.handleEvents(events);
       playEvents(events, TUTORIAL_LOCAL_ID);
+      // speedrun: morrer (cair para fora, perigo ou perder vida no desafio
+      // final) invalida a tentativa
+      if (!this.clockDone && !this.died && events.some((e) => e.type === 'ko' && e.id === TUTORIAL_LOCAL_ID)) {
+        this.died = true;
+        this.updateClock();
+      }
     }
     if (this.completed) return;
     if (t.update(events)) {
