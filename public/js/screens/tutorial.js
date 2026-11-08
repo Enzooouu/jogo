@@ -16,7 +16,7 @@ import { playEvents, chime } from '../audio.js';
 const DONE_KEY = 'brawl.tutorial';
 // Speedrun do tutorial (conquista de ouro "Velocista"): terminar tudo, sem
 // pular nenhuma etapa e sem morrer nenhuma vez, em até SPEEDRUN_GOAL segundos
-export const SPEEDRUN_GOAL = 80;   // 1:20
+export const SPEEDRUN_GOAL = 85;   // 1:25
 const BEST_KEY = 'brawl.tutorial.recorde';
 
 function loadBest() {

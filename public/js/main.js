@@ -1153,7 +1153,7 @@ function renderAch() {
 }
 
 window.addEventListener('tutorial-complete', (e) => {
-  // speedrun: em até 1:20 (SPEEDRUN_GOAL) sem pular etapa e sem morrer vale a de ouro (Velocista)
+  // speedrun: em até 1:25 (SPEEDRUN_GOAL) sem pular etapa e sem morrer vale a de ouro (Velocista)
   const { time = Infinity, valid = false } = e.detail ?? {};
   const gold = valid && time <= SPEEDRUN_GOAL;
   const fresh = unlockSpecial('aprendiz', achProgress, gold ? 'ouro' : 'normal');
