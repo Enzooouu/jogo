@@ -14,6 +14,39 @@ import { loadBindings, keymapFrom, keyLabel } from '../input/bindings.js';
 import { playEvents, chime } from '../audio.js';
 
 const DONE_KEY = 'brawl.tutorial';
+// Speedrun do tutorial (conquista de ouro "Velocista"): terminar tudo, sem
+// pular nenhuma etapa, em até SPEEDRUN_GOAL segundos
+export const SPEEDRUN_GOAL = 90;
+const BEST_KEY = 'brawl.tutorial.recorde';
+
+function loadBest() {
+  try {
+    const v = Number(localStorage.getItem(BEST_KEY));
+    return v > 0 ? v : null;
+  } catch {
+    return null;
+  }
+}
+
+function saveBest(time) {
+  const best = loadBest();
+  if (best == null || time < best) {
+    try {
+      localStorage.setItem(BEST_KEY, String(time));
+    } catch {
+      // navegação privada
+    }
+    return time;
+  }
+  return best;
+}
+
+function fmtTime(sec) {
+  const m = Math.floor(sec / 60);
+  const s = sec - m * 60;
+  return `${m}:${s.toFixed(1).padStart(4, '0')}`;
+}
+
 const $ = (sel) => document.querySelector(sel);
 
 export function tutorialDone() {
@@ -85,6 +118,11 @@ export class TutorialScreen {
     this.element = null;
     this.running = true;
     this.paused = false;
+    // cronômetro da speedrun (conquista de ouro): só vale do começo, sem pular nada
+    this.clock = 0;
+    this.clockDone = false;
+    this.skipped = index > 0;
+    this.updateClock();
     for (const id of ['#tut-pick', '#tut-pause', '#tut-end']) $(id).hidden = true;
     window.addEventListener('resize', this.onResize);
     this.last = null;
@@ -142,6 +180,7 @@ export class TutorialScreen {
 
   skip() {
     if (!this.running) return;
+    this.skipped = true;
     $('#tut-pick').hidden = true;
     this.load(this.index + 1);
   }
@@ -151,6 +190,7 @@ export class TutorialScreen {
     this.completed = true;
     chime();
     const last = this.index === STEPS.length - 1;
+    if (last) this.clockDone = true;
     this.toast(last ? 'Desafio vencido!' : '✔ Muito bem!');
     this.updateCard();
     this.nextTimer = setTimeout(() => {
@@ -162,13 +202,23 @@ export class TutorialScreen {
 
   finish() {
     markDone();
-    window.dispatchEvent(new CustomEvent('tutorial-complete'));
+    this.clockDone = true;
+    const time = this.clock;
+    const valid = !this.skipped;
+    const before = loadBest();
+    if (valid) saveBest(time);
+    window.dispatchEvent(new CustomEvent('tutorial-complete', { detail: { time, valid } }));
+    this.updateClock();
+    const record = valid && (before == null || time < before);
+    const timeLine = !valid
+      ? ' (Você pulou alguma etapa, então o tempo não vale para o recorde.)'
+      : ` Seu tempo: ${fmtTime(time)}${record ? ' (novo recorde!)' : ` (recorde ${fmtTime(before)})`}.${time <= SPEEDRUN_GOAL ? ' Abaixo de 1:30: conquista de ouro!' : ' Faça em até 1:30, sem pular etapa, para a conquista de ouro.'}`;
     this.fade(false);
     this.keyboard?.destroy();
     this.keyboard = null;
     this.showEnd({
       title: 'Tutorial completo!',
-      text: 'Você aprendeu tudo: andar, pular, dash, paredes, armas, perigos e como voltar para a arena. Agora é com você!',
+      text: `Você aprendeu tudo: andar, pular, dash, paredes, armas, perigos e como voltar para a arena. Agora é com você!${timeLine}`,
       main: ['Jogar agora', () => { const el = this.element; this.stop(); this.onPlay(el); }],
       alt: ['Voltar ao menu', () => this.exit()],
     });
@@ -179,7 +229,7 @@ export class TutorialScreen {
       title: 'Não foi dessa vez!',
       text: 'O rival ganhou o duelo. Tente de novo: use o dash para voltar quando for arremessado e pegue as armas que caem do céu.',
       main: ['Tentar de novo', () => { $('#tut-end').hidden = true; this.load(this.index); }],
-      alt: ['Pular o desafio', () => { $('#tut-end').hidden = true; this.finish(); }],
+      alt: ['Pular o desafio', () => { $('#tut-end').hidden = true; this.skipped = true; this.finish(); }],
     });
   }
 
@@ -343,6 +393,19 @@ export class TutorialScreen {
     this.setPaused(!this.paused);
   }
 
+  // cronômetro no alto da tela: tempo atual, recorde e a meta do ouro
+  updateClock() {
+    const el = $('#tut-clock');
+    if (!el) return;
+    el.querySelector('b').textContent = fmtTime(this.clock ?? 0);
+    const best = loadBest();
+    el.querySelector('small').textContent = this.skipped
+      ? 'pulou etapa: não vale para o recorde'
+      : `meta do ouro ${fmtTime(SPEEDRUN_GOAL)}${best != null ? ` · recorde ${fmtTime(best)}` : ''}`;
+    el.classList.toggle('late', !this.skipped && (this.clock ?? 0) > SPEEDRUN_GOAL);
+    el.classList.toggle('off', !!this.skipped);
+  }
+
   loop = (now) => {
     if (!this.running) return;
     const dt = this.last == null ? 0 : Math.max(0, Math.min(0.1, (now - this.last) / 1000));
@@ -351,6 +414,10 @@ export class TutorialScreen {
     const blocked = this.paused || !$('#tut-pick').hidden || !$('#tut-end').hidden;
     if (t && this.renderer) {
       if (!blocked) {
+        if (!this.clockDone) {
+          this.clock += dt;
+          this.updateClock();
+        }
         this.acc += dt;
         let steps = 0;
         while (this.acc >= DT && steps < 12) {

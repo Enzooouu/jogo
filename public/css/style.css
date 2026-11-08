@@ -1436,3 +1436,19 @@ body.has-touch .training-hud { z-index: 25; }
 .tower-hud.boss span { color: #ff9aa8; font-weight: 800; }
 .tower-banner.boss small { color: #ff7a8a; }
 .tower-banner.boss b { color: #ffd25a; text-shadow: 0 4px 0 rgba(0,0,0,.4), 0 0 34px rgba(255,80,100,.55); }
+
+/* cronômetro do tutorial (speedrun da conquista de ouro) */
+.tut-clock {
+  position: absolute; top: 104px; right: 14px; z-index: 3; pointer-events: none;
+  display: flex; flex-direction: column; align-items: flex-end; gap: 1px; padding: 6px 12px; border-radius: 12px; white-space: nowrap;
+  background: rgba(14,9,24,.6); border: 1px solid rgba(255,210,90,.35); color: #fff;
+  -webkit-backdrop-filter: blur(4px); backdrop-filter: blur(4px);
+}
+.tut-clock span { display: none; }
+.tut-clock b { font: 900 20px var(--font); font-variant-numeric: tabular-nums; color: #ffd25a; }
+.tut-clock b::before { content: '⏱ '; font-size: 14px; }
+.tut-clock small { font: 700 11px var(--font); color: rgba(255,255,255,.7); }
+.tut-clock.late b { color: #ff9a8a; }
+.tut-clock.off { border-color: rgba(255,255,255,.15); }
+.tut-clock.off b { color: rgba(255,255,255,.6); }
+@media (max-width: 560px), (max-height: 520px) { .tut-clock { top: auto; bottom: 10px; right: 50%; transform: translateX(50%); padding: 3px 10px; } .tut-clock b { font-size: 15px; } .tut-clock small { display: none; } }

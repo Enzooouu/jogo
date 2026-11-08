@@ -20,7 +20,7 @@ import { DemoArena } from './screens/demo.js';
 import { initHomeMenu } from './screens/home-menu.js';
 import { MapPicker, RANDOM_MAP, pickRandomMap, mapIdsFor } from './screens/maps.js';
 import { initControls } from './screens/controls.js';
-import { TutorialScreen } from './screens/tutorial.js';
+import { TutorialScreen, SPEEDRUN_GOAL } from './screens/tutorial.js';
 import { currentBindings, actionOf } from './input/bindings.js';
 import { watchGamepad } from './input/gamepad.js';
 import { isDeveloper } from '/shared/dev.js';
@@ -1152,8 +1152,11 @@ function renderAch() {
   }
 }
 
-window.addEventListener('tutorial-complete', () => {
-  const fresh = unlockSpecial('aprendiz', achProgress);
+window.addEventListener('tutorial-complete', (e) => {
+  // speedrun: em até 1:30 sem pular etapa vale a de ouro (Velocista)
+  const { time = Infinity, valid = false } = e.detail ?? {};
+  const gold = valid && time <= SPEEDRUN_GOAL;
+  const fresh = unlockSpecial('aprendiz', achProgress, gold ? 'ouro' : 'normal');
   saveAch(achProgress);
   fresh.forEach(achToast);
 });

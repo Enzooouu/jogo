@@ -86,7 +86,9 @@ export const ACHIEVEMENTS = [
     check: (m) => m.won && m.pickups === 0,
     gold: { name: 'Punhos de Ferro', desc: 'No Difícil, vença 3 partidas seguidas sem pegar nenhuma arma.',
       goal: 3, progress: (m, c) => c.streak('maos_limpas', m.won && m.pickups === 0) } },
-  { id: 'aprendiz', name: 'Aprendiz', desc: 'Termine o tutorial.', icon: '📜', special: true, gold: null },
+  { id: 'aprendiz', name: 'Aprendiz', desc: 'Termine o tutorial.', icon: '📜', special: true,
+    // ouro: speedrun do tutorial (o cronômetro fica no alto da tela do tutorial)
+    gold: { name: 'Velocista', desc: 'Termine o tutorial em até 1:30, sem pular nenhuma etapa.' } },
   // Torre: dada pelo próprio modo (ver towerEnd em main.js)
   { id: 'alpinista', name: 'Alpinista', desc: 'Na Torre, vença o andar 10 (o primeiro Gênio).', icon: '🗼', special: true,
     gold: { name: 'Astronauta', desc: 'Na Torre, passe do andar 50 e chegue ao espaço. Prêmio: capacete de astronauta.', reward: 'capacete' } },

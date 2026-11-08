@@ -103,10 +103,11 @@ test('Mestre dos Elementos precisa vencer com os 5', () => {
   assert.ok(p.normal.mestre);
 });
 
-test('Aprendiz vem do tutorial e não tem versão de ouro', () => {
+test('Aprendiz vem do tutorial; a de ouro (Velocista) é a speedrun', () => {
   const p = emptyProgress();
   assert.equal(unlockSpecial('aprendiz', p).length, 1);
-  assert.equal(ACHIEVEMENTS.find((a) => a.id === 'aprendiz').gold, null);
+  assert.equal(ACHIEVEMENTS.find((a) => a.id === 'aprendiz').gold.name, 'Velocista');
+  assert.deepEqual(unlockSpecial('aprendiz', p, 'ouro'), [{ id: 'aprendiz', tier: 'ouro' }]);
   for (const a of ACHIEVEMENTS) if (a.gold) assert.ok(a.gold.name && a.gold.desc && (a.gold.check || a.gold.goal || a.special), a.id);
   assert.ok(ACHIEVEMENTS.length >= 10);
 });
