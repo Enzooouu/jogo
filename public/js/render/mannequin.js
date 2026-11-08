@@ -27,6 +27,8 @@ const SKINS = {
   boneco: {
     body: '#c9a46a', back: '#9d7c48', hi: 'rgba(255,240,200,0.6)',
     joint: '#7a4f28', jointHi: 'rgba(255,220,170,0.6)', head: '#d2ae74', rim: null,
+    // boneco de pano: juntas amarradas com corda, costura nos membros e palha
+    rope: true, seam: 'rgba(90,58,26,0.75)', straw: true,
   },
 };
 
@@ -54,6 +56,25 @@ function bone(ctx, a, b, w, color, hi) {
 
 // Junta redonda com reflexo
 function joint(ctx, p, r, k) {
+  if (k.rope) {
+    // corda enrolada amarrando a junta
+    ctx.fillStyle = '#8a6232';
+    ctx.strokeStyle = INK;
+    ctx.lineWidth = 1.6;
+    ctx.beginPath();
+    ctx.arc(p.x, p.y, r, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.stroke();
+    ctx.strokeStyle = '#d9b46a';
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    for (const o of [-0.45, 0.15]) {
+      ctx.moveTo(p.x - r * 0.75, p.y + r * o - r * 0.25);
+      ctx.lineTo(p.x + r * 0.75, p.y + r * o + r * 0.25);
+    }
+    ctx.stroke();
+    return;
+  }
   ctx.fillStyle = k.joint;
   ctx.strokeStyle = INK;
   ctx.lineWidth = 1.8;
@@ -81,11 +102,35 @@ function limb(ctx, start, l, w, color, hi, k, end) {
   const [a2, b2] = shrink(l.mid, l.end, 2.5);
   bone(ctx, a1, b1, w, color, hi);
   bone(ctx, a2, b2, w * 0.9, color, hi);
+  if (k.seam) {
+    // costura tracejada ao longo do braço/perna
+    ctx.strokeStyle = k.seam;
+    ctx.lineWidth = 0.8;
+    ctx.setLineDash([1.4, 1.3]);
+    ctx.beginPath();
+    for (const [a, b] of [[a1, b1], [a2, b2]]) {
+      ctx.moveTo(a.x + w * 0.18, a.y + w * 0.18);
+      ctx.lineTo(b.x + w * 0.18, b.y + w * 0.18);
+    }
+    ctx.stroke();
+    ctx.setLineDash([]);
+  }
   joint(ctx, l.mid, w * 0.5, k);
   end(l);
 }
 
 function hand(ctx, p, k, color) {
+  if (k.straw) {
+    // palha escapando da luva de pano
+    ctx.strokeStyle = '#e8c860';
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    for (const [dx, dy] of [[-4.5, 2.5], [-3.5, 4.5], [4, 3.5]]) {
+      ctx.moveTo(p.x, p.y + 1);
+      ctx.lineTo(p.x + dx, p.y + dy + 1);
+    }
+    ctx.stroke();
+  }
   ctx.fillStyle = color;
   ctx.strokeStyle = INK;
   ctx.lineWidth = 1.8;
@@ -171,22 +216,59 @@ function body(ctx, skin, k, sh, hip) {
     ctx.ellipse(4.5, 3.5, 1.6, 4, 0.2, 0, Math.PI * 2);
     ctx.fill();
   } else {
-    // alvo pintado
-    for (const [r, c] of [[6, '#e8e0d0'], [4.4, '#d6372e'], [2.8, '#e8e0d0'], [1.4, '#d6372e']]) {
+    // trama do pano
+    ctx.strokeStyle = 'rgba(110,72,32,0.18)';
+    ctx.lineWidth = 0.5;
+    ctx.beginPath();
+    for (let y = -3; y < chestH + 2; y += 1.8) {
+      ctx.moveTo(-10, y);
+      ctx.lineTo(10, y + 0.4);
+    }
+    ctx.stroke();
+    // alvo pintado (meio gasto de tanto apanhar)
+    const ty = chestH * 0.45;
+    ctx.fillStyle = 'rgba(30,18,10,0.35)';
+    ctx.beginPath();
+    ctx.arc(1.5, ty + 0.6, 6.6, 0, Math.PI * 2);
+    ctx.fill();
+    for (const [r, c] of [[6.2, '#efe6d2'], [4.6, '#d6372e'], [3, '#efe6d2'], [1.5, '#d6372e']]) {
       ctx.fillStyle = c;
       ctx.beginPath();
-      ctx.arc(1.5, chestH * 0.45, r, 0, Math.PI * 2);
+      ctx.arc(1.5, ty, r, 0, Math.PI * 2);
       ctx.fill();
     }
-    // costura
-    ctx.strokeStyle = 'rgba(80,50,20,0.7)';
+    ctx.strokeStyle = 'rgba(60,20,10,0.55)';
+    ctx.lineWidth = 0.6;
+    ctx.beginPath();
+    ctx.arc(1.5, ty, 6.2, 0, Math.PI * 2);
+    ctx.stroke();
+    // marcas de pancada
+    ctx.fillStyle = 'rgba(120,80,40,0.45)';
+    for (const [x, y, r] of [[-1.5, ty - 2.5, 0.9], [4, ty + 2, 0.7], [-4.5, ty + 4.5, 0.8]]) {
+      ctx.beginPath();
+      ctx.arc(x, y, r, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    // costura do lado
+    ctx.strokeStyle = 'rgba(80,50,20,0.75)';
     ctx.lineWidth = 0.9;
     ctx.setLineDash([1.6, 1.6]);
     ctx.beginPath();
     ctx.moveTo(-6, 1);
-    ctx.lineTo(-4, chestH - 1);
+    ctx.lineTo(-4.5, chestH - 1);
     ctx.stroke();
     ctx.setLineDash([]);
+    // remendo xadrez embaixo do alvo
+    ctx.fillStyle = '#6f8fb8';
+    ctx.fillRect(3, chestH - 5.5, 4.5, 4);
+    ctx.strokeStyle = '#efe6d2';
+    ctx.lineWidth = 0.5;
+    ctx.strokeRect(3.4, chestH - 5.1, 3.7, 3.2);
+    // luz no ombro
+    ctx.fillStyle = 'rgba(255,240,200,0.25)';
+    ctx.beginPath();
+    ctx.ellipse(-3.5, 1.5, 3.5, 1.6, -0.2, 0, Math.PI * 2);
+    ctx.fill();
   }
   ctx.restore();
   ctx.restore();
@@ -220,12 +302,38 @@ function body(ctx, skin, k, sh, hip) {
     });
   }
   if (skin === 'boneco') {
-    // cordinha amarrando a cintura
-    ctx.strokeStyle = '#6b4a22';
-    ctx.lineWidth = 1.5;
+    // corda trançada amarrando a cintura, com nó e pontas soltas
+    ctx.strokeStyle = INK;
+    ctx.lineWidth = 3;
     ctx.beginPath();
-    ctx.moveTo(-6.5, -5);
-    ctx.lineTo(6.5, -5);
+    ctx.moveTo(-7, -5);
+    ctx.lineTo(7, -5);
+    ctx.stroke();
+    ctx.strokeStyle = '#d9b46a';
+    ctx.lineWidth = 1.8;
+    ctx.stroke();
+    ctx.strokeStyle = '#a8823e';
+    ctx.lineWidth = 0.6;
+    ctx.beginPath();
+    for (let x = -6; x <= 6; x += 2) {
+      ctx.moveTo(x, -6);
+      ctx.lineTo(x + 1, -4);
+    }
+    ctx.stroke();
+    ctx.strokeStyle = '#d9b46a';
+    ctx.lineWidth = 1.1;
+    ctx.beginPath();
+    ctx.moveTo(3, -5);
+    ctx.lineTo(4.5, -0.5);
+    ctx.moveTo(3, -5);
+    ctx.lineTo(1.5, -1);
+    ctx.stroke();
+    ctx.fillStyle = '#d9b46a';
+    ctx.strokeStyle = INK;
+    ctx.lineWidth = 0.8;
+    ctx.beginPath();
+    ctx.arc(3, -5, 1.4, 0, Math.PI * 2);
+    ctx.fill();
     ctx.stroke();
   }
   ctx.restore();
@@ -293,39 +401,93 @@ function headShape(ctx, skin, k, h, neck) {
     }
   } else {
     // saco de pano amarrado, olhos de X costurados
+    const sackPath = () => {
+      ctx.beginPath();
+      ctx.moveTo(-8, 7);
+      ctx.quadraticCurveTo(-10, -6, -3, -11);
+      ctx.quadraticCurveTo(5, -13, 9, -5);
+      ctx.quadraticCurveTo(10, 4, 6, 8);
+      ctx.closePath();
+    };
+    // palha saindo do topo (atrás do saco)
+    ctx.lineWidth = 1.2;
+    for (const [x, a, c] of [[-4, -0.6, '#c99a38'], [-2, -0.25, '#e8c860'], [0.5, 0.05, '#f0d478'], [3, 0.4, '#e8c860'], [5, 0.75, '#c99a38']]) {
+      ctx.strokeStyle = c;
+      ctx.beginPath();
+      ctx.moveTo(x, -9.5);
+      ctx.quadraticCurveTo(x + Math.sin(a) * 3, -12.5, x + Math.sin(a) * 6.5, -10 - Math.cos(a) * 6.5);
+      ctx.stroke();
+    }
+    const sack = ctx.createRadialGradient(-2, -5, 1, 0, -1, 12);
+    sack.addColorStop(0, '#e6c88e');
+    sack.addColorStop(0.6, k.head);
+    sack.addColorStop(1, '#a8874f');
+    ctx.fillStyle = sack;
+    sackPath();
+    ctx.fill();
+    ctx.save();
+    sackPath();
+    ctx.clip();
+    // trama do pano
+    ctx.strokeStyle = 'rgba(110,72,32,0.2)';
+    ctx.lineWidth = 0.5;
     ctx.beginPath();
-    ctx.moveTo(-8, 7);
-    ctx.quadraticCurveTo(-10, -6, -3, -11);
-    ctx.quadraticCurveTo(5, -13, 9, -5);
-    ctx.quadraticCurveTo(10, 4, 6, 8);
-    ctx.closePath();
-    ctx.fillStyle = k.head;
+    for (let y = -12; y < 9; y += 1.8) {
+      ctx.moveTo(-11, y);
+      ctx.lineTo(11, y + 0.5);
+    }
+    for (let x = -10; x < 11; x += 1.8) {
+      ctx.moveTo(x, -13);
+      ctx.lineTo(x + 0.4, 9);
+    }
+    ctx.stroke();
+    // curativo em X na testa (de tanto apanhar)
+    ctx.save();
+    ctx.translate(-3.5, -7);
+    for (const r of [0.6, -0.6]) {
+      ctx.save();
+      ctx.rotate(r);
+      ctx.fillStyle = '#fff3dc';
+      ctx.strokeStyle = 'rgba(70,40,20,0.8)';
+      ctx.lineWidth = 0.6;
+      ctx.fillRect(-3.8, -1.2, 7.6, 2.4);
+      ctx.strokeRect(-3.8, -1.2, 7.6, 2.4);
+      ctx.fillStyle = '#e8b4a0';
+      ctx.fillRect(-1, -1.2, 2, 2.4);
+      ctx.restore();
+    }
+    ctx.restore();
+    ctx.restore();
     ctx.strokeStyle = INK;
     ctx.lineWidth = 2.4;
-    ctx.fill();
+    sackPath();
     ctx.stroke();
-    ctx.fillStyle = 'rgba(120,80,40,0.25)';
-    for (let i = 0; i < 6; i++) ctx.fillRect(-7 + (i * 5) % 14, -9 + i * 2.6, 1.2, 1.2);
-    ctx.strokeStyle = '#3a2410';
-    ctx.lineWidth = 1.4;
+    // olhos de X costurados (linha grossa escura)
+    ctx.strokeStyle = '#2e1a0c';
+    ctx.lineWidth = 1.6;
     ctx.beginPath();
-    for (const ex of [1, 6]) {
-      ctx.moveTo(ex - 1.6, -4.6);
-      ctx.lineTo(ex + 1.6, -1.4);
-      ctx.moveTo(ex + 1.6, -4.6);
-      ctx.lineTo(ex - 1.6, -1.4);
+    for (const ex of [1.5, 6.5]) {
+      ctx.moveTo(ex - 1.7, -4.8);
+      ctx.lineTo(ex + 1.7, -1.4);
+      ctx.moveTo(ex + 1.7, -4.8);
+      ctx.lineTo(ex - 1.7, -1.4);
     }
-    ctx.moveTo(1, 3.5);
-    ctx.lineTo(7, 3);
     ctx.stroke();
-    // palha saindo do topo
-    ctx.strokeStyle = '#e8c860';
-    ctx.lineWidth = 1.2;
+    // boca costurada em zigue-zague
+    ctx.lineWidth = 1;
     ctx.beginPath();
-    for (const [x, a] of [[-3, -0.5], [0, -0.1], [3, 0.4]]) {
-      ctx.moveTo(x, -11);
-      ctx.lineTo(x + Math.sin(a) * 6, -11 - Math.cos(a) * 6);
-    }
+    ctx.moveTo(0.5, 3.6);
+    for (let i = 1; i <= 6; i++) ctx.lineTo(0.5 + i, 3.6 + (i % 2 ? -1 : 0) - i * 0.08);
+    ctx.stroke();
+    // corda amarrando o saco no pescoço
+    ctx.strokeStyle = INK;
+    ctx.lineWidth = 3;
+    ctx.beginPath();
+    ctx.moveTo(-7.5, 6.6);
+    ctx.lineTo(6.5, 7.4);
+    ctx.stroke();
+    ctx.strokeStyle = '#a8823e';
+    ctx.lineWidth = 1.8;
     ctx.stroke();
   }
   ctx.restore();

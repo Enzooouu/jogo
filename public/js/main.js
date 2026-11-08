@@ -754,8 +754,16 @@ function toggleDummy() {
   d.name = d.anchored ? 'Espantalho' : 'Boneco';
   d.sway = 0;
   d.swayV = 0;
-  resetDummy();
+  // volta para o lugar dele (o espantalho fica na estaca), mas o painel do
+  // lado continua igual: dano, combo e totais não zeram (só o R zera)
+  d.vx = 0;
+  d.vy = 0;
+  if (d.state !== 'respawning' && d.state !== 'out') {
+    d.x = d.checkpoint.x - d.w / 2;
+    d.y = d.checkpoint.y - d.h;
+  }
   updateDummyButton();
+  updateTrainingHud();
 }
 
 function updateDummyButton() {
