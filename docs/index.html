@@ -1347,7 +1347,7 @@ body.has-touch .training-hud { z-index: 25; }
 .ach-t span { font-size: 12px; color: rgba(255,255,255,.5); }
 .ach-item em { font: 800 12px var(--font); font-style: normal; color: rgba(255,255,255,.5); font-variant-numeric: tabular-nums; }
 .ach-item.got { border-color: rgba(120,220,160,.35); background: rgba(120,220,160,.07); }
-.ach-item.got .ach-i { filter: none; opacity: 1; background: rgba(120,220,160,.15); }
+.ach-item.got .ach-i { filter: none; opacity: 1; background: linear-gradient(160deg, #4a4752, #24222b); box-shadow: inset 0 1px 0 rgba(255,255,255,.12); }
 .ach-item.got .ach-t b { color: #fff; }
 .ach-item.got em { color: #7fe0a8; font-size: 16px; }
 .ach-item.ouro.got { border-color: rgba(255,210,90,.6); background: linear-gradient(90deg, rgba(255,210,90,.16), rgba(255,210,90,.03)); box-shadow: inset 0 0 0 1px rgba(255,240,180,.08); }
@@ -1365,7 +1365,8 @@ body.has-touch .training-hud { z-index: 25; }
 .ach-toast { display: flex; align-items: center; gap: 12px; padding: 10px 18px 10px 10px; border-radius: 14px; background: rgba(14,10,24,.94); border: 1px solid rgba(120,220,160,.5); box-shadow: 0 12px 30px rgba(0,0,0,.45); animation: ach-in .45s cubic-bezier(.2,1.3,.4,1) both; transition: opacity .5s, transform .5s; }
 .ach-toast.ouro { border-color: #ffd25a; box-shadow: 0 0 24px rgba(255,200,80,.35), 0 12px 30px rgba(0,0,0,.45); }
 .ach-toast.out { opacity: 0; transform: translateY(-10px); }
-.ach-toast-i { width: 42px; height: 42px; border-radius: 12px; display: grid; place-items: center; font-size: 22px; background: rgba(120,220,160,.15); }
+.ach-toast-i { width: 42px; height: 42px; border-radius: 12px; display: grid; place-items: center; font-size: 22px; color: #e6e4ea; background: linear-gradient(160deg, #4a4752, #24222b); }
+.ach-toast.ouro .ach-toast-i { color: #6b4210; }
 .ach-toast.ouro .ach-toast-i { background: radial-gradient(circle at 40% 30%, #fff1b8, #e8a520); }
 .ach-toast small { display: block; font: 800 10px var(--font); letter-spacing: .2em; color: #7fe0a8; }
 .ach-toast.ouro small { color: #ffd25a; }
@@ -1560,10 +1561,11 @@ body.has-touch .training-hud { z-index: 25; }
 .icon { display: inline-block; width: 1em; height: 1em; vertical-align: -0.14em; flex: none; }
 .ach-i .icon, .ach-toast-i .icon, .pcol-q .icon, .pf-i .icon { width: 1.05em; height: 1.05em; vertical-align: middle; }
 .pf-i { color: #ffd25a; }
-.ach-item.got .ach-i { color: #ffd25a; }
-.ach-item.ouro.got .ach-i { color: #ffe08a; }
+.ach-item.got .ach-i { color: #e6e4ea; }
+.ach-item.ouro.got .ach-i { color: #6b4210; }
 .ach-item em .icon { color: #7dffb8; }
-.ach-chip .icon { margin-right: 2px; }
+.ach-chip .icon { margin-right: 2px; color: #d6d3dc; }
+.ach-chip.ouro .icon { color: #ffe08a; }
 .icon.host { color: #ffd25a; }
 .tc-small .icon { width: 20px; height: 20px; vertical-align: middle; }
 .tut-clock b .icon { width: 15px; height: 15px; margin-right: 5px; vertical-align: -2px; }
