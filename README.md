@@ -5,6 +5,14 @@ Jogo de luta 2D com plataformas que roda no navegador. Mistura Brawlhalla
 Watergirl (cada elemento morre num perigo diferente) e Supreme Duelist
 Stickman (bonecos de palito).
 
+## Jogar online
+
+Versão sem servidor (só modo convidado, as estatísticas ficam no aparelho):
+**https://enzooouu.github.io/jogo/** (GitHub Pages, publicada da pasta `docs/`).
+
+O arquivo `docs/index.html` é o jogo inteiro num arquivo só. Depois de mudar o
+jogo, gere de novo esse arquivo para a versão online atualizar.
+
 ## Como rodar
 
 Precisa do **Node.js 22.13 ou mais novo** (recomendado: Node 24 LTS).
