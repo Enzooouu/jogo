@@ -1503,6 +1503,46 @@ function syncTouch() {
 requestAnimationFrame(syncTouch);
 
 // no celular a luta abre em tela cheia, deitada
+// ------------------------------------------------------------ sair
+
+function openExit() {
+  const box = $('#exit-box');
+  box.classList.remove('bye');
+  $('#exit-title').textContent = 'Sair do jogo?';
+  $('#exit-text').textContent = 'Seu progresso (perfil, conquistas e coleção) fica salvo neste aparelho.';
+  $('#exit-yes').textContent = 'Sair';
+  $('#exit-no').hidden = false;
+  box.hidden = false;
+  $('#exit-no').focus();
+}
+
+function closeExit() {
+  $('#exit-box').hidden = true;
+  $('#home-exit').focus({ preventScroll: true });
+}
+
+// O navegador só deixa uma página fechar a aba se ela mesma abriu a aba;
+// se não fechar, mostra a despedida (dá para fechar a aba normalmente).
+function exitGame() {
+  if (onlineScreen?.lobby) onlineScreen.leave();
+  state.demo && demo.stop();
+  if (document.fullscreenElement) document.exitFullscreen?.().catch(() => {});
+  try {
+    window.close();
+  } catch {
+    // não deixou fechar
+  }
+  setTimeout(() => {
+    const box = $('#exit-box');
+    box.classList.add('bye');
+    $('#exit-title').textContent = 'Até a próxima!';
+    $('#exit-text').textContent = 'Obrigado por jogar ELEMENTUM. Já pode fechar esta aba.';
+    $('#exit-yes').textContent = 'Voltar ao jogo';
+    $('#exit-no').hidden = true;
+    $('#exit-yes').focus();
+  }, 150);
+}
+
 function goFullscreen() {
   if (!touchMode || document.fullscreenElement) return;
   try {
@@ -1528,7 +1568,7 @@ const FOCUSABLE = 'button, [href], input, select, [tabindex]:not([tabindex="-1"]
 // onde o controle navega agora: painel aberto, janela por cima ou a tela
 function padRoot() {
   const visible = (el) => el && !el.hidden && el.offsetParent !== null;
-  for (const sel of ['.side-panel:not([hidden])', '#avatar-picker', '#welcome', '#pause-overlay', '.tut-overlay:not([hidden])']) {
+  for (const sel of ['#exit-box', '.side-panel:not([hidden])', '#avatar-picker', '#welcome', '#pause-overlay', '.tut-overlay:not([hidden])']) {
     const el = $(sel);
     if (visible(el)) return el;
   }
@@ -1708,6 +1748,10 @@ window.addEventListener('keydown', (e) => {
     tutorial.togglePause();
     return;
   }
+  if (e.code === 'Escape' && !$('#exit-box').hidden) {
+    closeExit();
+    return;
+  }
   if (state.screen === 'home' && e.code === 'Escape' && !$('#welcome').hidden) {
     closeWelcome();
     return;
@@ -1814,6 +1858,15 @@ function init() {
   $('#home-controls').addEventListener('click', () => togglePanel('#controls-panel'));
   $('#panel-backdrop').addEventListener('click', closePanels);
   $('#home-settings').addEventListener('click', () => togglePanel('#settings-panel'));
+  $('#home-exit').addEventListener('click', () => openExit());
+  $('#exit-no').addEventListener('click', closeExit);
+  $('#exit-yes').addEventListener('click', () => {
+    if ($('#exit-box').classList.contains('bye')) {
+      closeExit();
+      return;
+    }
+    exitGame();
+  });
   $('#home-ach').addEventListener('click', () => {
     renderAch();
     togglePanel('#ach-panel');

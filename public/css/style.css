@@ -582,6 +582,11 @@ body.pad-nav .mode-tile:focus { outline: none !important; }
   text-align: center;
 }
 .overlay-card h2 { margin: 0 0 6px; font-family: var(--display); letter-spacing: 0.08em; font-size: 34px; }
+.exit-box { position: fixed; z-index: 7; }
+.exit-box[hidden] { display: none; }
+.exit-box .overlay-card { width: min(380px, 92vw); }
+.exit-box.bye .overlay-card { border-color: rgba(255,210,90,.4); }
+.home-exit { color: rgba(236,232,246,.45); }
 
 /* ------------------------------------------------------------ tutorial */
 

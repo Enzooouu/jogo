@@ -131,11 +131,21 @@
         <button type="button" class="home-item" id="home-friends">AMIGOS</button>
         <button type="button" class="home-item" id="home-controls">CONTROLES</button>
         <button type="button" class="home-item" id="home-settings">CONFIGURAÇÕES</button>
+        <button type="button" class="home-item home-exit" id="home-exit">SAIR</button>
       </nav>
       <div id="account-box" class="account-box"></div>
 
       <div id="panel-backdrop" class="panel-backdrop" hidden></div>
       <!-- Primeira vez no jogo: convite para o tutorial -->
+      <!-- sair do jogo: confirma e depois mostra a despedida -->
+      <div id="exit-box" class="overlay exit-box" hidden>
+        <div class="overlay-card" role="dialog" aria-labelledby="exit-title">
+          <h2 id="exit-title">Sair do jogo?</h2>
+          <p class="hint" id="exit-text">Seu progresso (perfil, conquistas e coleção) fica salvo neste aparelho.</p>
+          <button type="button" class="btn" id="exit-yes">Sair</button>
+          <button type="button" class="btn ghost" id="exit-no">Continuar jogando</button>
+        </div>
+      </div>
       <div id="welcome" class="welcome" hidden>
         <div class="welcome-card" role="dialog" aria-labelledby="welcome-title">
           <span class="welcome-tag">PRIMEIRA VEZ?</span>
