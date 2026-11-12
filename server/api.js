@@ -5,7 +5,7 @@ import { ELEMENTS } from '../shared/elements.js';
 import { MODES, PLAYER } from '../shared/constants.js';
 import {
   hashPassword, verifyPassword, validateUsername, validatePassword,
-  setSessionCookie, clearSessionCookie, requireUser, rateLimit,
+  setSessionCookie, clearSessionCookie, requireUser, rateLimit, clientIp,
 } from './auth.js';
 
 const RESULTS = new Set(['vitoria', 'derrota', 'empate']);
@@ -23,15 +23,31 @@ export function createApi(store, online = null) {
   });
   api.use(express.json({ limit: '10kb' }));
 
-  const authLimit = rateLimit({
-    max: 20,
+  // login: só conta as tentativas erradas, por endereço + conta (quem tenta
+  // adivinhar a senha de uma conta é bloqueado; um colega da mesma escola,
+  // que sai pelo mesmo endereço de internet, não é atrapalhado)
+  const loginLimit = rateLimit({
+    max: 10,
     windowMs: 15 * 60 * 1000,
-    message: 'Muitas tentativas. Espere alguns minutos e tente de novo.',
+    failuresOnly: true,
+    key: (req) => `${clientIp(req)}|${String(req.body?.username ?? '').toLowerCase().slice(0, 40)}`,
+    message: 'Muitas tentativas erradas. Espere alguns minutos e tente de novo.',
+  });
+  // e um teto geral de erros por endereço (contra quem tenta várias contas)
+  const loginIpLimit = rateLimit({
+    max: 60,
+    windowMs: 15 * 60 * 1000,
+    failuresOnly: true,
+    message: 'Muitas tentativas erradas daqui. Espere alguns minutos e tente de novo.',
+  });
+  // cadastro: limite folgado por endereço (escolas dividem o mesmo endereço)
+  const registerLimit = rateLimit({
+    max: 40,
+    windowMs: 60 * 60 * 1000,
+    message: 'Muitas contas criadas daqui. Espere um pouco e tente de novo.',
   });
 
-  // ------------------------------------------------------------ contas
-
-  api.post('/auth/register', authLimit, async (req, res) => {
+  api.post('/auth/register', registerLimit, async (req, res) => {
     const { username, password } = req.body ?? {};
     const error = validateUsername(username) ?? validatePassword(password);
     if (error) return res.status(400).json({ error });
@@ -53,7 +69,7 @@ export function createApi(store, online = null) {
     res.status(201).json({ user: publicUser(user) });
   });
 
-  api.post('/auth/login', authLimit, async (req, res) => {
+  api.post('/auth/login', loginIpLimit, loginLimit, async (req, res) => {
     const { username, password } = req.body ?? {};
     if (typeof username !== 'string' || typeof password !== 'string') {
       return res.status(400).json({ error: 'Informe usuário e senha.' });

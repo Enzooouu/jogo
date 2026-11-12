@@ -147,3 +147,23 @@ test('partida não pode ser registrada duas vezes nem com números impossíveis'
   const guest = client();
   assert.equal((await guest('POST', '/api/matches', { mode: 'times', element: 'fogo', teamSize: 2 })).status, 401);
 });
+
+test('limite de tentativas: um jogador não bloqueia os outros, e acertar a senha não conta', async () => {
+  const post = (url, body, ip) => fetch(base + url, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'CF-Connecting-IP': ip },
+    body: JSON.stringify(body),
+  });
+  await post('/api/auth/register', { username: 'Limite1', password: 'segredo123' }, '10.0.0.1');
+  // o "atacante" erra a senha até ser bloqueado
+  let last;
+  for (let i = 0; i < 12; i++) last = await post('/api/auth/login', { username: 'Limite1', password: 'errada' + i }, '10.0.0.66');
+  assert.equal(last.status, 429, 'quem erra muito é bloqueado');
+  // outra pessoa (outro endereço) continua entrando e criando conta normalmente
+  assert.equal((await post('/api/auth/login', { username: 'Limite1', password: 'segredo123' }, '10.0.0.2')).status, 200);
+  assert.equal((await post('/api/auth/register', { username: 'Limite2', password: 'segredo123' }, '10.0.0.3')).status, 201);
+  // escola: o mesmo endereço errou a senha da Limite1, mas a Limite2 entra normal
+  assert.equal((await post('/api/auth/login', { username: 'Limite2', password: 'segredo123' }, '10.0.0.66')).status, 200);
+  // quem acerta a senha várias vezes nunca é bloqueado
+  for (let i = 0; i < 15; i++) assert.equal((await post('/api/auth/login', { username: 'Limite1', password: 'segredo123' }, '10.0.0.4')).status, 200);
+});

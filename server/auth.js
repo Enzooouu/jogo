@@ -82,24 +82,41 @@ export function requireUser(req, res, next) {
   next();
 }
 
-// Limite simples em memória: N tentativas por janela de tempo, por chave.
-export function rateLimit({ max, windowMs, message }) {
+// Endereço de quem está jogando. No Render todo pedido passa pelo Cloudflare,
+// que coloca o endereço verdadeiro em CF-Connecting-IP (e apaga o que vier do
+// jogador). Sem isso, vários jogadores pareciam a mesma pessoa e um gastava o
+// limite de tentativas de todos.
+export function clientIp(req) {
+  const cf = req.headers['cf-connecting-ip'];
+  return typeof cf === 'string' && cf.length < 64 ? cf : req.ip;
+}
+
+// Limite simples em memória: N tentativas por janela de tempo, por endereço.
+// `failuresOnly`: só conta os pedidos que deram erro (ex.: senha errada), então
+// quem entra certo nunca é bloqueado.
+export function rateLimit({ max, windowMs, message, failuresOnly = false, key: keyOf = clientIp }) {
   const hits = new Map();
   return (req, res, next) => {
     const now = Date.now();
-    const key = req.ip;
+    const key = keyOf(req);
     let entry = hits.get(key);
     if (!entry || entry.reset <= now) {
       entry = { count: 0, reset: now + windowMs };
       hits.set(key, entry);
     }
-    entry.count++;
     if (hits.size > 10000) {
       for (const [k, v] of hits) if (v.reset <= now) hits.delete(k);
     }
-    if (entry.count > max) {
+    if (entry.count >= max) {
       res.set('Retry-After', String(Math.ceil((entry.reset - now) / 1000)));
       return res.status(429).json({ error: message });
+    }
+    if (failuresOnly) {
+      res.on('finish', () => {
+        if (res.statusCode >= 400 && res.statusCode !== 429) entry.count++;
+      });
+    } else {
+      entry.count++;
     }
     next();
   };
