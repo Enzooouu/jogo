@@ -18,8 +18,18 @@ export function touchMoveInput() {
   return out;
 }
 
+// Celular/tablet: o jeito principal de mexer é o dedo. Computadores que só
+// "aceitam" toque (notebook com tela de toque, Chromebook da escola) usam
+// mouse/trackpad como principal e não entram no modo toque sozinhos (se a
+// pessoa encostar na tela, o main.js liga o modo toque na hora).
 export function isTouchDevice() {
-  return window.matchMedia?.('(pointer: coarse)').matches || 'ontouchstart' in window || navigator.maxTouchPoints > 0;
+  return Boolean(window.matchMedia?.('(pointer: coarse)').matches && !window.matchMedia?.('(any-pointer: fine)').matches)
+    || Boolean(window.matchMedia?.('(pointer: coarse)').matches && Math.min(screen.width, screen.height) <= 820);
+}
+
+// tela de celular (para pedir para girar): o lado menor da tela é pequeno
+export function isPhoneScreen() {
+  return Math.min(screen.width, screen.height) <= 820;
 }
 
 const RADIUS = 56;     // até onde o pino do joystick anda

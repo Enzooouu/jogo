@@ -25,7 +25,7 @@ import { currentBindings, actionOf } from './input/bindings.js';
 import { watchGamepad } from './input/gamepad.js';
 import { isDeveloper } from '/shared/dev.js';
 import { ACHIEVEMENTS, byId, MatchTracker, evaluate, emptyProgress, progressOf, unlockSpecial } from '/shared/achievements.js';
-import { TouchControls, isTouchDevice } from './input/touch.js';
+import { TouchControls, isTouchDevice, isPhoneScreen } from './input/touch.js';
 import { VersusScreen } from './screens/versus.js';
 
 const $ = (sel) => document.querySelector(sel);
@@ -1307,6 +1307,9 @@ const touch = new TouchControls($('#touch-controls'), {
 });
 let touchMode = isTouchDevice();
 document.body.classList.toggle('has-touch', touchMode);
+// "gire o celular" só em tela de celular (nunca no computador)
+document.body.classList.toggle('phone', isPhoneScreen());
+$('#rotate-ok').addEventListener('click', () => document.body.classList.add('rotate-ok'));
 // encostou na tela: liga o modo toque (ex.: notebook com tela de toque)
 window.addEventListener('touchstart', () => {
   if (touchMode) return;
@@ -1326,7 +1329,7 @@ function syncTouch() {
   // no treino o botão de placar não serve
   touch.root.querySelector('.tc-scores').hidden = state.screen !== 'game' || Boolean(training && state.runner === training?.runner);
   // virou o celular de pé no meio da luta: pausa sozinho
-  const portrait = touchMode && window.innerHeight > window.innerWidth;
+  const portrait = touchMode && isPhoneScreen() && !document.body.classList.contains('rotate-ok') && window.innerHeight > window.innerWidth;
   if (portrait && !wasPortrait && fighting) {
     if (state.screen === 'game') setPaused(true);
     else tutorial.setPaused(true);
