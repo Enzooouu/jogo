@@ -39,6 +39,20 @@ export function createStore(db) {
     useElement: db.prepare(`
       INSERT INTO element_usage (user_id, element, matches) VALUES (?, ?, 1)
       ON CONFLICT (user_id, element) DO UPDATE SET matches = matches + 1, last_played = datetime('now')`),
+
+    friendRow: db.prepare('SELECT status FROM friendships WHERE user_id = ? AND friend_id = ?'),
+    insertFriend: db.prepare("INSERT OR REPLACE INTO friendships (user_id, friend_id, status) VALUES (?, ?, ?)"),
+    deleteFriend: db.prepare('DELETE FROM friendships WHERE (user_id = ? AND friend_id = ?) OR (user_id = ? AND friend_id = ?)'),
+    friends: db.prepare(`
+      SELECT u.id, u.username FROM friendships f JOIN users u ON u.id = f.friend_id
+      WHERE f.user_id = ? AND f.status = 'aceito' ORDER BY u.username COLLATE NOCASE`),
+    incoming: db.prepare(`
+      SELECT u.id, u.username FROM friendships f JOIN users u ON u.id = f.user_id
+      WHERE f.friend_id = ? AND f.status = 'pendente' ORDER BY f.created_at`),
+    outgoing: db.prepare(`
+      SELECT u.id, u.username FROM friendships f JOIN users u ON u.id = f.friend_id
+      WHERE f.user_id = ? AND f.status = 'pendente' ORDER BY f.created_at`),
+    friendCount: db.prepare("SELECT COUNT(*) AS n FROM friendships WHERE user_id = ?"),
   };
 
   return {
@@ -89,6 +103,41 @@ export function createStore(db) {
         })),
       };
     },
+
+    // ------------------------------------------------ amigos
+    areFriends: (a, b) => q.friendRow.get(a, b)?.status === 'aceito',
+    friendList: (userId) => ({
+      friends: q.friends.all(userId).map((r) => ({ id: r.id, username: r.username })),
+      incoming: q.incoming.all(userId).map((r) => r.username),
+      outgoing: q.outgoing.all(userId).map((r) => r.username),
+    }),
+    friendCount: (userId) => q.friendCount.get(userId).n,
+    // Pede amizade. Se o outro já tinha pedido para você, vira amizade na hora.
+    // Devolve 'pedido' | 'aceito' | 'ja_amigos' | 'ja_pedido'
+    requestFriend(userId, friendId) {
+      return transaction(db, () => {
+        if (q.friendRow.get(userId, friendId)?.status === 'aceito') return 'ja_amigos';
+        if (q.friendRow.get(friendId, userId)?.status === 'pendente') {
+          q.insertFriend.run(friendId, userId, 'aceito');
+          q.insertFriend.run(userId, friendId, 'aceito');
+          return 'aceito';
+        }
+        if (q.friendRow.get(userId, friendId)) return 'ja_pedido';
+        q.insertFriend.run(userId, friendId, 'pendente');
+        return 'pedido';
+      });
+    },
+    // Aceita o pedido que `friendId` mandou para `userId`
+    acceptFriend(userId, friendId) {
+      return transaction(db, () => {
+        if (q.friendRow.get(friendId, userId)?.status !== 'pendente') return false;
+        q.insertFriend.run(friendId, userId, 'aceito');
+        q.insertFriend.run(userId, friendId, 'aceito');
+        return true;
+      });
+    },
+    // Desfaz amizade, recusa ou cancela pedido (nos dois sentidos)
+    removeFriend: (userId, friendId) => q.deleteFriend.run(userId, friendId, friendId, userId).changes > 0,
 
     // ------------------------------------------------ partidas
     startMatch(userId, { mode, element, teamSize, maxKills, maxDeaths }) {

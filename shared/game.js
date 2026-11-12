@@ -149,7 +149,9 @@ export class Game {
       throw new Error('A partida precisa de pelo menos 2 times');
     }
     // no treino o boneco (Mortal) pode ter o mesmo elemento do jogador
-    if (this.mode.teams && !this.practice) {
+    // (online: os dois jogadores podem escolher o mesmo elemento, e na Torre
+    // em dupla o time mistura elementos — config.checkElements = false)
+    if (this.mode.teams && !this.practice && config.checkElements !== false) {
       const error = teamElementsError(this.players);
       if (error) throw new Error(error);
     }

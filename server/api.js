@@ -10,7 +10,7 @@ import {
 
 const RESULTS = new Set(['vitoria', 'derrota', 'empate']);
 
-export function createApi(store) {
+export function createApi(store, online = null) {
   const api = express.Router();
 
   // Só aceitamos JSON nas rotas que mudam algo. Junto com o cookie
@@ -80,6 +80,62 @@ export function createApi(store) {
 
   api.get('/profile', requireUser, (req, res) => {
     res.json(store.profile(req.user.id));
+  });
+
+  // ------------------------------------------------------------ amigos
+
+  const MAX_FRIENDS = 200;
+  const friendLimit = rateLimit({ max: 60, windowMs: 10 * 60 * 1000, message: 'Muitos pedidos de amizade. Espere um pouco.' });
+
+  api.get('/friends', requireUser, (req, res) => {
+    const list = store.friendList(req.user.id);
+    res.json({
+      friends: list.friends.map((f) => ({ username: f.username, online: online?.isOnline(f.id) ?? false })),
+      incoming: list.incoming,
+      outgoing: list.outgoing,
+    });
+  });
+
+  const friendTarget = (req, res) => {
+    const { username } = req.body ?? {};
+    const other = typeof username === 'string' ? store.findUserByName(username.trim()) : null;
+    if (!other) {
+      res.status(404).json({ error: 'Não achei ninguém com esse nome de usuário.' });
+      return null;
+    }
+    if (other.id === req.user.id) {
+      res.status(400).json({ error: 'Você não pode adicionar você mesmo.' });
+      return null;
+    }
+    return other;
+  };
+
+  api.post('/friends/add', requireUser, friendLimit, (req, res) => {
+    const other = friendTarget(req, res);
+    if (!other) return;
+    if (store.friendCount(req.user.id) >= MAX_FRIENDS) return res.status(400).json({ error: 'Você chegou ao limite de amigos.' });
+    const status = store.requestFriend(req.user.id, other.id);
+    const message = {
+      pedido: `Pedido de amizade enviado para ${other.username}.`,
+      aceito: `Agora você e ${other.username} são amigos!`,
+      ja_amigos: `Você e ${other.username} já são amigos.`,
+      ja_pedido: `Você já mandou um pedido para ${other.username}.`,
+    }[status];
+    res.json({ status, message });
+  });
+
+  api.post('/friends/accept', requireUser, (req, res) => {
+    const other = friendTarget(req, res);
+    if (!other) return;
+    if (!store.acceptFriend(req.user.id, other.id)) return res.status(404).json({ error: 'Esse pedido não existe mais.' });
+    res.json({ message: `Agora você e ${other.username} são amigos!` });
+  });
+
+  api.post('/friends/remove', requireUser, (req, res) => {
+    const other = friendTarget(req, res);
+    if (!other) return;
+    store.removeFriend(req.user.id, other.id);
+    res.json({ message: 'Pronto.' });
   });
 
   // ------------------------------------------------------------ partidas

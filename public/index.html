@@ -128,6 +128,7 @@
         <button type="button" class="home-item on" id="home-play">JOGAR</button>
         <button type="button" class="home-item" id="home-tutorial">TUTORIAL</button>
         <button type="button" class="home-item" id="home-ach">CONQUISTAS</button>
+        <button type="button" class="home-item" id="home-friends">AMIGOS</button>
         <button type="button" class="home-item" id="home-controls">CONTROLES</button>
         <button type="button" class="home-item" id="home-settings">CONFIGURAÇÕES</button>
       </nav>
@@ -199,6 +200,11 @@
         <ul id="ach-list" class="ach-list"></ul>
         <div class="panel-actions"><button type="button" class="btn ghost small" data-close>Fechar</button></div>
       </div>
+      <div id="friends-panel" class="side-panel friends-panel" hidden>
+        <h2>Amigos</h2>
+        <div id="friends-body"></div>
+        <div class="panel-actions"><button type="button" class="btn ghost small" data-close>Fechar</button></div>
+      </div>
     </section>
 
     <!-- ===================== MODO ===================== -->
@@ -215,7 +221,52 @@
         <button type="button" class="mode-tile" data-mode="ffa"><canvas></canvas><b>TODOS CONTRA TODOS</b><span>5 jogadores, um de cada elemento</span></button>
         <button type="button" class="mode-tile" data-mode="rei"><canvas></canvas><b>REI DA ILHA</b><span>2 × 2 · fique na área brilhante para ganhar pontos</span></button>
         <button type="button" class="mode-tile" data-mode="torre"><canvas></canvas><b>TORRE</b><span>Suba andares: o bot fica mais esperto a cada um</span></button>
+        <button type="button" class="mode-tile" data-mode="online"><canvas></canvas><b>ONLINE</b><span>Jogue com um amigo usando um código de 6 números</span></button>
         <button type="button" class="mode-tile" data-mode="treino"><canvas></canvas><b>TREINO LIVRE</b><span>Teste golpes e combos num boneco</span></button>
+      </div>
+    </section>
+
+    <!-- ===================== ONLINE ===================== -->
+    <section id="screen-online" class="screen menu-screen" hidden>
+      <div class="dim"></div>
+      <header class="step-head">
+        <button type="button" class="back" id="online-back">‹ Voltar</button>
+        <div><small>JOGAR COM UM AMIGO</small><h1>ONLINE</h1></div>
+      </header>
+      <div class="online-wrap">
+        <div id="online-entry" class="online-entry">
+          <div class="online-card">
+            <h2>Criar partida</h2>
+            <p class="hint">Você recebe um código de 6 números para passar para o seu amigo. Quem cria escolhe o modo e o mapa.</p>
+            <button type="button" id="online-create" class="go-btn">CRIAR PARTIDA</button>
+          </div>
+          <div class="online-card">
+            <h2>Entrar com código</h2>
+            <p class="hint">Digite os 6 números que seu amigo recebeu.</p>
+            <form id="online-join-form" class="online-join">
+              <input id="online-code" inputmode="numeric" maxlength="6" placeholder="000000" autocomplete="off" aria-label="Código da sala">
+              <button type="submit" class="go-btn">ENTRAR</button>
+            </form>
+          </div>
+          <p id="online-status" class="online-status" role="status"></p>
+        </div>
+        <div id="online-lobby" class="online-lobby" hidden>
+          <div class="ol-top">
+            <div class="ol-code"><small>CÓDIGO DA SALA</small><b id="ol-code">------</b><button type="button" id="ol-copy" class="btn ghost small">Copiar</button></div>
+            <div class="ol-timer" id="ol-timer"></div>
+          </div>
+          <div class="ol-players" id="ol-players"></div>
+          <div class="ol-grid">
+            <div class="ol-section"><h3>Modo <small id="ol-mode-note"></small></h3><div class="chips" id="ol-modes"></div></div>
+            <div class="ol-section"><h3>Mapa <small id="ol-map-note"></small></h3><div class="chips" id="ol-maps"></div></div>
+          </div>
+          <div class="ol-section"><h3>Seu personagem</h3><div class="ol-elements" id="ol-elements"></div></div>
+          <div class="ol-section" id="ol-friends-box" hidden><h3>Convidar amigos online</h3><div class="ol-friends" id="ol-friends"></div></div>
+          <div class="ol-actions">
+            <button type="button" id="ol-ready" class="go-btn">ESTOU PRONTO</button>
+            <button type="button" id="ol-leave" class="btn ghost">Sair da sala</button>
+          </div>
+        </div>
       </div>
     </section>
 
@@ -493,6 +544,11 @@
   </div>
   <div id="pad-toast" class="pad-toast" role="status" hidden></div>
   <div id="ach-toasts" class="ach-toasts" aria-live="polite"></div>
+  <div id="invite-toast" class="invite-toast" role="alert" hidden>
+    <div><b id="invite-from"></b><span>te chamou para jogar online!</span></div>
+    <button type="button" id="invite-go" class="btn small">Entrar</button>
+    <button type="button" id="invite-no" class="btn ghost small">Agora não</button>
+  </div>
   <!-- controles de toque (celular): joystick à esquerda, botões à direita -->
   <div id="touch-controls" class="touch-controls" hidden>
     <div class="tc-zone" aria-label="Joystick: encoste e arraste">

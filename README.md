@@ -13,6 +13,26 @@ Versão sem servidor (só modo convidado, as estatísticas ficam no aparelho):
 O arquivo `docs/index.html` é o jogo inteiro num arquivo só. Depois de mudar o
 jogo, gere de novo esse arquivo para a versão online atualizar.
 
+## Online e amigos (precisa do servidor)
+
+O modo **ONLINE** (sala com código de 6 números, 30 s para escolher modo, mapa
+e personagem) e os **amigos** só funcionam com o servidor do jogo no ar. A
+partida roda no servidor (`server/online.js`) e os navegadores só mostram.
+
+Para colocar o servidor na internet de graça pelo **Render**:
+1. Crie uma conta em https://render.com entrando com o GitHub.
+2. Clique em **New → Blueprint** e escolha o repositório `Enzooouu/jogo`
+   (o arquivo `render.yaml` já tem tudo configurado).
+3. Espere terminar e abra o endereço que o Render mostrar
+   (ex.: `https://elementum.onrender.com`).
+
+No plano grátis o servidor "dorme" depois de 15 min sem ninguém e leva
+uns 30–50 s para acordar, e as contas são apagadas quando ele reinicia
+(para guardar de vez precisa de um disco pago ou outro banco).
+
+Depois coloque o endereço em `public/js/config.js` (`ONLINE_URL`) para a versão
+sem servidor mostrar o link certo.
+
 ## Como rodar
 
 Precisa do **Node.js 22.13 ou mais novo** (recomendado: Node 24 LTS).

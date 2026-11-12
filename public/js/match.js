@@ -6,6 +6,7 @@
 // rodaria o mesmo Game com os comandos que chegam pela rede.
 
 import { Game } from '/shared/game.js';
+import { gameConfig } from '/shared/net.js';
 import { BotController } from '/shared/ai.js';
 import { MATCH } from '/shared/constants.js';
 import { DT } from '/shared/constants.js';
@@ -24,14 +25,7 @@ export class MatchRunner {
   constructor({ canvas, setup, onEnd, debug = false }) {
     this.setup = setup;
     this.onEnd = onEnd;
-    this.game = new Game({
-      players: setup.players, mode: setup.mode, seed: setup.seed, mapId: setup.mapId,
-      // treino livre: ninguém perde vida, sem tempo e contagem curta
-      ...(setup.practice ? { practice: true, timeLimit: 0, countdown: 1, items: false } : {}),
-      // modo Torre: o andar muda o céu e cada andar tem um tempo
-      ...(setup.tower ? { towerFloor: setup.tower.floor, timeLimit: setup.tower.timeLimit, lives: setup.tower.maxLives, gravityScale: setup.tower.gravity ?? 1,
-        climb: setup.tower.climb ?? 0, climbInfo: setup.tower.climbInfo ?? null, celebrate: setup.tower.celebrate ?? true, endDelay: setup.tower.endDelay } : {}),
-    });
+    this.game = new Game(gameConfig(setup));
     this.localId = setup.localPlayerId;
 
     // Cada jogador tem uma "fonte de comandos". No online, jogadores remotos

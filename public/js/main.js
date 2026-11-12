@@ -13,6 +13,11 @@ import { buildLocalSetup, outcomeFor } from './setup.js';
 import { api } from './api.js';
 import { renderAccountBox, initAuthScreen, setAuthMode, focusAuth } from './screens/account.js';
 import { recordProfileMatch, recordTowerRun, renderLocalProfile, renderProfileChip } from './screens/profile.js';
+import { OnlineClient } from './net/online-client.js';
+import { OnlineRunner } from './net/online-runner.js';
+import { OnlineScreen } from './screens/online.js';
+import { FriendsPanel } from './screens/friends.js';
+import { ONLINE_URL } from './config.js';
 import { TOWER, botBrain, brainName, floorFoes, floorStep, carryAfterWin, towerXp, gravityFor, isGuardianFloor, guardianOf } from '/shared/tower.js';
 import { ACCESSORIES, grantAccessory, equippedAccessory } from './collection.js';
 import { FRAMES } from '/shared/profile-stats.js';
@@ -69,8 +74,8 @@ const mapPicker = new MapPicker($('#screen-maps'), {
 
 // ------------------------------------------------------------ telas
 
-const SCREENS = ['home', 'mode', 'cards', 'maps', 'versus', 'game', 'tutorial', 'result', 'auth', 'profile'];
-const WITH_DEMO = new Set(['home', 'mode', 'cards', 'auth', 'profile', 'result']);
+const SCREENS = ['home', 'mode', 'cards', 'maps', 'versus', 'game', 'tutorial', 'result', 'auth', 'profile', 'online'];
+const WITH_DEMO = new Set(['home', 'mode', 'cards', 'auth', 'profile', 'result', 'online']);
 
 export function show(name) {
   for (const s of SCREENS) $(`#screen-${s}`).hidden = s !== name;
@@ -133,6 +138,11 @@ function setUser(user) {
   updateAdminAccess();
   homeMenu?.refresh();
   renderProfileChip(user?.username);
+  // entrou ou saiu da conta: reconecta o online para o servidor saber quem é
+  // (e para receber convites de amigos)
+  if (!state.offline && onlineClient && (user || onlineClient.connected) && !onlineScreen?.lobby && state.screen !== 'game') {
+    onlineClient.reconnect().catch(() => {});
+  }
 }
 
 // Modo ADM: na versão sem servidor fica liberado; com servidor e contas, só
@@ -215,6 +225,31 @@ function drawModeTiles() {
         const s = Math.min(1.68, h / 95);
         drawPortrait(ctx, state.element === RANDOM_ELEMENT ? 'fogo' : state.element, w * 0.32, h - 12, s, { facing: 1 });
         drawPortrait(ctx, 'mortal', w * 0.68, h - 12, s, { facing: -1, extra: { skin: 'espantalho' } });
+        continue;
+      }
+      if (tile.dataset.mode === 'online') {
+        // dois jogadores, cada um "no seu computador", ligados por um raio
+        const s = Math.min(1.68, h / 95) * 0.82;
+        const cx = w / 2;
+        const cy = h * 0.42;
+        ctx.strokeStyle = 'rgba(120,230,255,0.85)';
+        ctx.lineWidth = Math.max(2, h / 60);
+        ctx.lineCap = 'round';
+        for (const r of [0.08, 0.15, 0.22]) {
+          ctx.beginPath();
+          ctx.arc(cx, cy + h * 0.1, h * r, -Math.PI * 0.8, -Math.PI * 0.2);
+          ctx.stroke();
+        }
+        ctx.fillStyle = 'rgba(120,230,255,0.95)';
+        ctx.beginPath();
+        ctx.arc(cx, cy + h * 0.1, h * 0.025, 0, Math.PI * 2);
+        ctx.fill();
+        drawPortrait(ctx, state.element === RANDOM_ELEMENT ? 'fogo' : state.element, w * 0.22, h - 12, s, { facing: 1 });
+        drawPortrait(ctx, 'agua', w * 0.78, h - 12, s, { facing: -1 });
+        ctx.font = `900 ${Math.round(h * 0.11)}px system-ui, sans-serif`;
+        ctx.textAlign = 'center';
+        ctx.fillStyle = 'rgba(255,255,255,0.9)';
+        ctx.fillText('123 456', cx, h * 0.86);
         continue;
       }
       if (tile.dataset.mode === 'torre') {
@@ -983,9 +1018,128 @@ function towerEnd(setup, result) {
   else $('#result-xp').hidden = true;
 }
 
+// ------------------------------------------------------------ online
+
+const onlineClient = new OnlineClient();
+const onlineScreen = new OnlineScreen({
+  client: onlineClient,
+  getHat: () => equippedAccessory(),
+  loadFriends: async () => (state.user && !state.offline ? (await api.friends()).friends : []),
+  offline: () => state.offline,
+  onlineUrl: ONLINE_URL,
+  onBack: () => show('mode'),
+});
+const friendsPanel = new FriendsPanel({
+  getUser: () => state.user,
+  offline: () => state.offline,
+  onLogin: () => {
+    closePanels();
+    openAuth('login');
+  },
+  onPlay: (username) => playWithFriend(username),
+});
+
+function openOnline() {
+  show('online');
+  onlineScreen.open();
+}
+
+// "Chamar para jogar": cria a sala e manda o convite assim que ela existir
+function playWithFriend(username) {
+  closePanels();
+  state.pendingInvite = username;
+  show('online');
+  onlineScreen.open().then(() => onlineScreen.create());
+}
+
+onlineClient.on('lobby', (m) => {
+  if (state.pendingInvite && m.host) {
+    onlineClient.send({ t: 'invite', username: state.pendingInvite });
+    state.pendingInvite = null;
+  }
+});
+
+// convite de um amigo (aparece em qualquer tela, menos no meio da partida)
+onlineClient.on('invited', (m) => {
+  state.invite = m;
+  $('#invite-from').textContent = m.from;
+  $('#invite-toast').hidden = false;
+  clearTimeout(state.inviteTimer);
+  state.inviteTimer = setTimeout(() => { $('#invite-toast').hidden = true; }, 20000);
+});
+
+// a partida começou (ou, na Torre em dupla, o próximo andar)
+onlineClient.on('start', ({ setup, you }) => {
+  state.lastSetup = { ...setup, localPlayerId: you };
+  unlockAudio();
+  goFullscreen();
+  document.activeElement?.blur?.();
+  show('game');
+  $('#pause-overlay').hidden = true;
+  state.runner?.stop();
+  const runner = new OnlineRunner({ canvas: $('#game-canvas'), setup, you, client: onlineClient, debug: DEBUG });
+  state.runner = runner;
+  runner.start();
+  $('#quit-btn').textContent = 'Sair da partida';
+  $('#quit-hint').textContent = setup.tower ? 'A Torre em dupla acaba para os dois.' : 'Sair conta como derrota (o outro ganha).';
+  // conquistas e perfil contam no online (menos a Torre em dupla)
+  state.tracker = setup.tower ? null : new MatchTracker(runner.game, you);
+  if (state.tracker) runner.onEvents = (events) => state.tracker.onEvents(events);
+  showTowerHud(state.lastSetup);
+  if (DEBUG) window.__brawl = { runner, state, online: onlineClient };
+});
+
+onlineClient.on('end', (msg) => {
+  const setup = state.lastSetup;
+  state.runner?.stop();
+  state.runner = null;
+  if (!setup?.online) return;
+  $('#tower-hud').hidden = true;
+  $('#tower-banner').hidden = true;
+  if (msg.mode === 'torre') {
+    showResult(setup, msg.result);
+    const floors = msg.floors ?? 0;
+    const title = $('#result-title');
+    title.textContent = floors ? `ANDAR ${floors}` : 'QUEDA NO TÉRREO';
+    title.className = `result-title ${floors ? 'win' : 'lose'}`;
+    $('#result-eyebrow').textContent = 'TORRE EM DUPLA · ONLINE';
+    $('#result-sub').textContent = `Vocês venceram ${floors} ${floors === 1 ? 'andar' : 'andares'} juntos. (No online o recorde da Torre não conta.)`;
+    $('#result-xp').hidden = true;
+    $('#result-ach').hidden = true;
+    state.tracker = null;
+  } else {
+    const outcome = showResult(setup, msg.result);
+    checkAchievements(setup, msg.result, outcome);
+  }
+  $('#result-save').textContent = msg.leftBy ? `${msg.leftBy} saiu da partida.` : 'Partida online: a sala continua aberta para a revanche.';
+  $('#again-btn').textContent = 'VOLTAR PARA A SALA';
+});
+
+// caiu a conexão no meio da partida
+onlineClient.on('close', () => {
+  if (state.runner?.online) {
+    state.runner.stop();
+    state.runner = null;
+    $('#pause-overlay').hidden = true;
+    show('online');
+    onlineScreen.open();
+  }
+});
+
 function quitMatch() {
   const runner = state.runner;
   if (!runner) return;
+  if (runner.online) {
+    // sair da partida online: o outro ganha e você sai da sala
+    onlineClient.send({ t: 'leave' });
+    onlineScreen.lobby = null;
+    runner.stop();
+    state.runner = null;
+    $('#pause-overlay').hidden = true;
+    show('online');
+    onlineScreen.open();
+    return;
+  }
   if (runner.game.practice) {
     runner.stop();
     state.runner = null;
@@ -1216,6 +1370,7 @@ function teamColor(result, team) {
 
 function showResult(setup, result) {
   const outcome = outcomeFor(result, setup.localPlayerId);
+  $('#again-btn').textContent = 'JOGAR DE NOVO';
   const title = $('#result-title');
   title.textContent = { vitoria: 'VITÓRIA!', derrota: 'DERROTA', empate: 'EMPATE' }[outcome];
   title.className = `result-title ${{ vitoria: 'win', derrota: 'lose', empate: 'draw' }[outcome]}`;
@@ -1557,7 +1712,8 @@ window.addEventListener('keydown', (e) => {
   }
   // Esc volta um passo nos menus
   if (e.code === 'Escape') {
-    const back = { mode: 'home', cards: 'mode', maps: 'cards', versus: 'maps', auth: 'home', profile: 'home' }[state.screen];
+    const back = { mode: 'home', cards: 'mode', maps: 'cards', versus: 'maps', auth: 'home', profile: 'home', online: 'mode' }[state.screen];
+    if (state.screen === 'online') onlineScreen.leave();
     if (state.screen === 'home') closePanels();
     else if (back) show(back);
   }
@@ -1688,6 +1844,20 @@ function init() {
   }
   $('.mode-tile[data-mode="ffa"]').addEventListener('click', () => chooseMode(1, 'ffa'));
   $('.mode-tile[data-mode="treino"]').addEventListener('click', () => chooseMode(1, 'treino'));
+  $('.mode-tile[data-mode="online"]').addEventListener('click', openOnline);
+  $('#home-friends').addEventListener('click', () => {
+    togglePanel('#friends-panel');
+    if (!$('#friends-panel').hidden) friendsPanel.open();
+  });
+  $('#invite-go').addEventListener('click', () => {
+    $('#invite-toast').hidden = true;
+    const code = state.invite?.code;
+    if (!code || state.screen === 'game') return;
+    closePanels();
+    show('online');
+    onlineScreen.open({ code });
+  });
+  $('#invite-no').addEventListener('click', () => { $('#invite-toast').hidden = true; });
   $('.mode-tile[data-mode="rei"]').addEventListener('click', () => chooseMode(2, 'rei'));
   $('.mode-tile[data-mode="torre"]').addEventListener('click', () => chooseMode(1, 'torre'));
   // treino livre tem o mapa dele: pula a escolha de mapa
@@ -1724,8 +1894,18 @@ function init() {
     toggleDummy();
     e.currentTarget.blur();
   });
-  $('#again-btn').addEventListener('click', () => (state.lastSetup?.tower ? startTower() : startMatch(newSetup())));
-  $('#menu-btn').addEventListener('click', () => show('home'));
+  $('#again-btn').addEventListener('click', () => {
+    if (state.lastSetup?.online) {
+      // online: volta para a sala (a revanche começa de lá)
+      show('online');
+      onlineScreen.open();
+    } else if (state.lastSetup?.tower) startTower();
+    else startMatch(newSetup());
+  });
+  $('#menu-btn').addEventListener('click', () => {
+    if (state.lastSetup?.online) onlineScreen.leave();
+    show('home');
+  });
   window.addEventListener('resize', () => {
     if (state.screen === 'mode') drawModeTiles();
   });

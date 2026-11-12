@@ -32,4 +32,8 @@ export const api = {
   profile: () => request('GET', '/api/profile'),
   startMatch: (info) => request('POST', '/api/matches', info),
   finishMatch: (id, summary) => request('POST', `/api/matches/${id}/finish`, summary),
+  friends: () => request('GET', '/api/friends'),
+  addFriend: (username) => request('POST', '/api/friends/add', { username }),
+  acceptFriend: (username) => request('POST', '/api/friends/accept', { username }),
+  removeFriend: (username) => request('POST', '/api/friends/remove', { username }),
 };

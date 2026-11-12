@@ -1,7 +1,7 @@
 // Servidor HTTP: entrega o jogo (arquivos estáticos) e a API de contas.
 //
-// Para o multiplayer online, o servidor WebSocket pode ser ligado a este
-// mesmo servidor HTTP (ver docs/ARQUITETURA.md).
+// O multiplayer online (WebSocket em /ws, ver server/online.js) fica ligado a
+// este mesmo servidor HTTP.
 
 import express from 'express';
 import path from 'node:path';
@@ -10,11 +10,11 @@ import { openDatabase } from './db.js';
 import { createStore } from './store.js';
 import { createApi } from './api.js';
 import { loadUser } from './auth.js';
+import { createOnline } from './online.js';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 
-export function createApp({ db }) {
-  const store = createStore(db);
+export function createApp({ db, store = createStore(db), online = null }) {
   const app = express();
   app.disable('x-powered-by');
   // Atrás de um proxy (ex.: hospedagem), use TRUST_PROXY=1 para o IP real.
@@ -26,13 +26,13 @@ export function createApp({ db }) {
       'X-Frame-Options': 'DENY',
       'Referrer-Policy': 'same-origin',
       'Content-Security-Policy':
-        "default-src 'self'; img-src 'self' data:; style-src 'self' 'unsafe-inline'; script-src 'self'; connect-src 'self'; object-src 'none'; base-uri 'self'; frame-ancestors 'none'",
+        "default-src 'self'; img-src 'self' data:; style-src 'self' 'unsafe-inline'; script-src 'self'; connect-src 'self' ws: wss:; object-src 'none'; base-uri 'self'; frame-ancestors 'none'",
     });
     next();
   });
 
   app.use(loadUser(store));
-  app.use('/api', createApi(store));
+  app.use('/api', createApi(store, online));
 
   // /shared roda no navegador e no servidor (mesma simulação dos dois lados)
   app.use('/shared', express.static(path.join(ROOT, 'shared')));
@@ -52,11 +52,16 @@ if (isMain) {
   const port = Number(process.env.PORT) || 3000;
   const dbFile = process.env.DB_PATH || path.join(ROOT, 'data', 'brawl.db');
   const db = openDatabase(dbFile);
-  const server = createApp({ db }).listen(port, () => {
+  const store = createStore(db);
+  // multiplayer online: salas com código e partidas rodando aqui no servidor
+  const online = createOnline(store);
+  const server = createApp({ db, store, online }).listen(port, () => {
     console.log(`Elementum rodando em http://localhost:${port}`);
     console.log(`Banco de dados: ${dbFile}`);
   });
+  online.attach(server);
   const shutdown = () => {
+    online.close();
     server.close();
     db.close();
     process.exit(0);

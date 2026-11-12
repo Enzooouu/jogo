@@ -20,7 +20,9 @@ export const TOWER_MAPS = {
     ],
     hazards: [],
     spawns: [
-      { x: 380, y: 560 }, { x: 900, y: 560 }, { x: 780, y: 560 }, { x: 640, y: 320 },
+      // esquerda (você e o parceiro na Torre em dupla) e direita (bots)
+      { x: 380, y: 560 }, { x: 900, y: 560 }, { x: 300, y: 560 }, { x: 980, y: 560 },
+      { x: 470, y: 560 }, { x: 810, y: 560 },
     ],
     respawns: [{ x: 640, y: 140 }, { x: 520, y: 140 }, { x: 760, y: 140 }],
     itemSpawn: { minX: 280, maxX: 1000, y: -40 },

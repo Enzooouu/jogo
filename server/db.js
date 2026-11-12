@@ -61,6 +61,18 @@ const MIGRATIONS = [
   );
   CREATE INDEX matches_user ON matches(user_id, id);
   `,
+  // 2: amigos. Um pedido é uma linha (quem pediu -> quem recebeu) com status
+  // 'pendente'; quando aceita, vira 'aceito' nos dois sentidos.
+  `
+  CREATE TABLE friendships (
+    user_id    INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    friend_id  INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    status     TEXT NOT NULL DEFAULT 'pendente',
+    created_at TEXT NOT NULL DEFAULT (datetime('now')),
+    PRIMARY KEY (user_id, friend_id)
+  );
+  CREATE INDEX friendships_friend ON friendships(friend_id);
+  `,
 ];
 
 export function openDatabase(file) {
