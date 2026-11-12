@@ -8,6 +8,7 @@ import { emptyStats, recordMatch, summarize, matchXp, levelInfo, estimateXp, FRA
 import { drawPortrait, fitCanvas } from '../render/portrait.js';
 import { drawAvatar } from '../render/avatar.js';
 import { ACCESSORIES, loadCollection, equipAccessory } from '../collection.js';
+import { iconSvg, iconEl } from '../icons.js';
 
 const KEY = 'brawl.perfil';
 const $ = (sel) => document.querySelector(sel);
@@ -319,7 +320,9 @@ export function renderLocalProfile({ username, achievements, onReset }) {
   favs.innerHTML = '';
   const favRow = (icon, label, value, extra) => {
     const r = el('div', 'pf');
-    r.append(el('span', 'pf-i', icon));
+    const ic = el('span', 'pf-i');
+    ic.innerHTML = iconSvg(icon);
+    r.append(ic);
     const t = el('div');
     t.append(el('small', '', label), el('b', '', value ?? '—'));
     r.appendChild(t);
@@ -327,9 +330,9 @@ export function renderLocalProfile({ username, achievements, onReset }) {
     favs.appendChild(r);
   };
   const cnt = (n, one, many) => `${n} ${n === 1 ? one : many}`;
-  favRow('🗺️', 'Mapa favorito', sum.favoriteMap && mapName(sum.favoriteMap), sum.favoriteMap && cnt(s.byMap[sum.favoriteMap].matches, 'partida', 'partidas'));
-  favRow('🎮', 'Modo favorito', sum.favoriteMode && (MODE_NAMES[sum.favoriteMode] ?? sum.favoriteMode), sum.favoriteMode && cnt(s.byMode[sum.favoriteMode].matches, 'partida', 'partidas'));
-  favRow('⚔️', 'Arma favorita', sum.favoriteWeapon && weaponName(sum.favoriteWeapon), sum.favoriteWeapon && cnt(s.weapons[sum.favoriteWeapon], 'vez', 'vezes'));
+  favRow('mapa', 'Mapa favorito', sum.favoriteMap && mapName(sum.favoriteMap), sum.favoriteMap && cnt(s.byMap[sum.favoriteMap].matches, 'partida', 'partidas'));
+  favRow('controle', 'Modo favorito', sum.favoriteMode && (MODE_NAMES[sum.favoriteMode] ?? sum.favoriteMode), sum.favoriteMode && cnt(s.byMode[sum.favoriteMode].matches, 'partida', 'partidas'));
+  favRow('espada', 'Arma favorita', sum.favoriteWeapon && weaponName(sum.favoriteWeapon), sum.favoriteWeapon && cnt(s.weapons[sum.favoriteWeapon], 'vez', 'vezes'));
   // vitórias por modo
   const modes = Object.entries(s.byMode).sort((a, b) => b[1].matches - a[1].matches);
   if (modes.length) {
@@ -377,7 +380,9 @@ export function renderLocalProfile({ username, achievements, onReset }) {
     card.appendChild(c);
     if (has) portraits.push({ canvas: c, draw: (ctx, w, h, t) => drawPortrait(ctx, favEl, w / 2, h * 1.3, (h / 150) * 2.3, { facing: 1, time: t, extra: { hat: a.id } }) });
     const info = el('div');
-    info.append(el('b', '', has ? a.name : `🔒 ${a.name}`), el('small', '', has ? (on ? 'Usando agora' : 'Na sua coleção') : a.how));
+    const title = el('b', '', has ? a.name : ` ${a.name}`);
+    if (!has) title.prepend(iconEl('cadeado'));
+    info.append(title, el('small', '', has ? (on ? 'Usando agora' : 'Na sua coleção') : a.how));
     card.appendChild(info);
     if (has) {
       const btn = el('button', `btn small${on ? ' ghost' : ''}`, on ? 'Tirar' : 'Usar');
@@ -388,7 +393,9 @@ export function renderLocalProfile({ username, achievements, onReset }) {
       };
       card.appendChild(btn);
     } else {
-      c.replaceWith(el('span', 'pcol-q', a.icon));
+      const q = el('span', 'pcol-q');
+      q.innerHTML = iconSvg(a.icon);
+      c.replaceWith(q);
     }
     col.appendChild(card);
   }
@@ -459,7 +466,9 @@ function openPicker(stats, level, onDone) {
       b.disabled = locked;
       const dot = el('span', 'ap-fdot');
       dot.dataset.frame = f.id;
-      b.append(dot, el('b', '', f.name), el('small', '', locked ? `🔒 Nível ${f.level}` : `Nível ${f.level}`));
+      const lv = el('small', '', locked ? ` Nível ${f.level}` : `Nível ${f.level}`);
+      if (locked) lv.prepend(iconEl('cadeado'));
+      b.append(dot, el('b', '', f.name), lv);
       b.onclick = () => {
         look.frame = f.id;
         saveLook(look);

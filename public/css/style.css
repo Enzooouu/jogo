@@ -1443,9 +1443,7 @@ body.has-touch .training-hud { z-index: 25; }
   background: rgba(14,9,24,.6); border: 1px solid rgba(255,210,90,.35); color: #fff;
   -webkit-backdrop-filter: blur(4px); backdrop-filter: blur(4px);
 }
-.tut-clock span { display: none; }
 .tut-clock b { font: 900 20px var(--font); font-variant-numeric: tabular-nums; color: #ffd25a; }
-.tut-clock b::before { content: '⏱ '; font-size: 14px; }
 .tut-clock small { font: 700 11px var(--font); color: rgba(255,255,255,.7); }
 .tut-clock.late b { color: #ff9a8a; }
 .tut-clock.off { border-color: rgba(255,255,255,.15); }
@@ -1547,3 +1545,17 @@ body.has-touch .training-hud { z-index: 25; }
 }
 .invite-toast[hidden] { display: none; }
 .invite-toast b { color: #8fe6ff; margin-right: 4px; }
+
+/* ícones vetoriais (public/js/icons.js): do tamanho da letra, na cor do texto */
+.icon { display: inline-block; width: 1em; height: 1em; vertical-align: -0.14em; flex: none; }
+.ach-i .icon, .ach-toast-i .icon, .pcol-q .icon, .pf-i .icon { width: 1.05em; height: 1.05em; vertical-align: middle; }
+.pf-i { color: #ffd25a; }
+.ach-item.got .ach-i { color: #ffd25a; }
+.ach-item.ouro.got .ach-i { color: #ffe08a; }
+.ach-item em .icon { color: #7dffb8; }
+.ach-chip .icon { margin-right: 2px; }
+.icon.host { color: #ffd25a; }
+.tc-small .icon { width: 20px; height: 20px; vertical-align: middle; }
+.tut-clock b .icon { width: 15px; height: 15px; margin-right: 5px; vertical-align: -2px; }
+.pad-title .icon, .pad-only .icon { vertical-align: -0.2em; }
+.pcol-q { color: rgba(255,255,255,.75); }

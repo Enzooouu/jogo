@@ -8,19 +8,19 @@ export const ACCESSORIES = {
   capacete: {
     id: 'capacete',
     name: 'Capacete de astronauta',
-    icon: '👨‍🚀',
+    icon: 'capacete',
     how: 'Conquista de ouro "Astronauta": passe do andar 50 da Torre.',
   },
   coroa: {
     id: 'coroa',
     name: 'Coroa do Imperador',
-    icon: '👑',
+    icon: 'coroa',
     how: 'Conquista de ouro "Imperador": no Difícil, vença o Rei da Ilha no Castelo e na Pirâmide sem o outro time marcar ponto.',
   },
   pirata: {
     id: 'pirata',
     name: 'Chapéu de pirata com tapa-olho',
-    icon: '🏴‍☠️',
+    icon: 'pirata',
     how: 'Conquista de ouro "Capitão Pirata": no Difícil, derrube 5 inimigos com a ajuda do canhão no Navio Voador.',
   },
 };

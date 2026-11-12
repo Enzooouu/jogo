@@ -3,6 +3,7 @@
 // o laço, o cartão da tarefa (HTML por cima do jogo), a bandeira de chegada,
 // a escolha do lutador e as telas de pausa e de fim.
 
+import { iconEl, drawIcon } from '../icons.js';
 import { STEPS, createStep, TUTORIAL_LOCAL_ID } from '/shared/tutorial.js';
 import { enabledElements } from '/shared/elements.js';
 import { BotController } from '/shared/ai.js';
@@ -197,7 +198,7 @@ export class TutorialScreen {
     chime();
     const last = this.index === STEPS.length - 1;
     if (last) this.clockDone = true;
-    this.toast(last ? 'Desafio vencido!' : '✔ Muito bem!');
+    this.toast(last ? 'Desafio vencido!' : 'Muito bem!', !last);
     this.updateCard();
     this.nextTimer = setTimeout(() => {
       if (!this.running) return;
@@ -323,9 +324,11 @@ export class TutorialScreen {
     }
   }
 
-  toast(text) {
+  toast(text, check = false) {
     const el = $('#tut-toast');
-    el.textContent = text;
+    el.textContent = '';
+    if (check) el.append(iconEl('check'), ' ');
+    el.append(text);
     el.hidden = false;
     el.classList.remove('show');
     void el.offsetWidth;
@@ -371,10 +374,7 @@ export class TutorialScreen {
     ctx.fill();
     ctx.stroke();
     // estrela no pano
-    ctx.fillStyle = '#ffffff';
-    ctx.font = '700 16px system-ui, sans-serif';
-    ctx.textAlign = 'center';
-    ctx.fillText('★', x + 22, y - 72 + Math.sin(time * 6 - 2) * 2);
+    drawIcon(ctx, 'estrela', x + 15, y - 84 + Math.sin(time * 6 - 2) * 2, 14, '#ffffff');
     // seta
     if (!this.completed) {
       const by = y - 128 + Math.sin(time * 5) * 6;
@@ -417,7 +417,7 @@ export class TutorialScreen {
   updateClock() {
     const el = $('#tut-clock');
     if (!el) return;
-    el.querySelector('b').textContent = fmtTime(this.clock ?? 0);
+    el.querySelector('.tc-time').textContent = fmtTime(this.clock ?? 0);
     const best = loadBest();
     const invalid = this.skipped || this.died;
     el.querySelector('small').textContent = this.skipped

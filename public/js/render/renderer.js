@@ -4,6 +4,7 @@
 import { drawHammerArt } from './hammer-art.js';
 import { HILL } from '/shared/hill.js';
 import { MATCH } from '/shared/constants.js';
+import { drawIcon } from '../icons.js';
 import { ELEMENTS } from '/shared/elements.js';
 import { weaponProfile } from '/shared/weapons.js';
 import { StageRenderer, roundRect } from './stage.js';
@@ -319,7 +320,7 @@ export class Renderer {
         case 'hillMove': {
           P.add({ type: 'ring', x: e.x, y: e.y - 10, size: 20, grow: 380, life: 0.6, color: '#ffe08a' });
           P.burst(e.x, e.y - 20, { type: 'spark', count: 22, speed: 380, life: 0.7, size: 3, color: '#ffe08a', drag: 2.5 });
-          this.pushFeed('👑 A ilha mudou de lugar!', null, true);
+          this.pushFeed('A ilha mudou de lugar!', null, true, 'coroa');
           break;
         }
         case 'hillCapture': {
@@ -329,7 +330,7 @@ export class Renderer {
           if (this.hillAnnounced !== e.team) {
             this.hillAnnounced = e.team;
             const idx = this.game.teams().indexOf(e.team);
-            this.pushFeed(`👑 ${Renderer.teamName(idx)} pegou a ilha`, this.game.players.find((p) => p.team === e.team));
+            this.pushFeed(`${Renderer.teamName(idx)} pegou a ilha`, this.game.players.find((p) => p.team === e.team), false, 'coroa');
           }
           break;
         }
@@ -508,9 +509,9 @@ export class Renderer {
     ctx.fillText(hill.contested ? 'DISPUTA!' : `${HILL.target} PONTOS VENCE`, VIEW_W / 2, y + 48);
   }
 
-  pushFeed(text, player, strong = false) {
+  pushFeed(text, player, strong = false, icon = null) {
     const color = player ? this.teamColor.get(player.team) : '#fff';
-    this.feed.unshift({ text, color, time: strong ? 5 : 4 });
+    this.feed.unshift({ text, color, icon, time: strong ? 5 : 4 });
     this.feed.length = Math.min(this.feed.length, 5);
   }
 
@@ -1321,12 +1322,14 @@ export class Renderer {
     ctx.font = '700 15px system-ui, sans-serif';
     this.feed.forEach((f, i) => {
       ctx.globalAlpha = Math.min(1, f.time);
-      const w = ctx.measureText(f.text).width + 20;
+      const tw = ctx.measureText(f.text).width;
+      const w = tw + 20 + (f.icon ? 20 : 0);
       ctx.fillStyle = 'rgba(0,0,0,0.55)';
       roundRect(ctx, VIEW_W - 16 - w, 14 + i * 30, w, 25, 6);
       ctx.fill();
       ctx.fillStyle = f.color;
       ctx.fillText(f.text, VIEW_W - 26, 32 + i * 30);
+      if (f.icon) drawIcon(ctx, f.icon, VIEW_W - 26 - tw - 20, 18 + i * 30, 16, f.color);
     });
     ctx.globalAlpha = 1;
 

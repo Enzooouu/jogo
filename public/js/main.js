@@ -18,6 +18,7 @@ import { OnlineRunner } from './net/online-runner.js';
 import { OnlineScreen } from './screens/online.js';
 import { FriendsPanel } from './screens/friends.js';
 import { ONLINE_URL } from './config.js';
+import { iconSvg } from './icons.js';
 import { TOWER, botBrain, brainName, floorFoes, floorStep, carryAfterWin, towerXp, gravityFor, isGuardianFloor, guardianOf } from '/shared/tower.js';
 import { ACCESSORIES, grantAccessory, equippedAccessory } from './collection.js';
 import { FRAMES } from '/shared/profile-stats.js';
@@ -964,7 +965,7 @@ function accessoryToast(id) {
   const t = document.createElement('div');
   t.className = 'ach-toast ouro';
   t.innerHTML = '<span class="ach-toast-i"></span><div><small>NOVO ACESSÓRIO!</small><b></b></div>';
-  t.querySelector('.ach-toast-i').textContent = a.icon;
+  t.querySelector('.ach-toast-i').innerHTML = iconSvg(a.icon);
   t.querySelector('b').textContent = a.name;
   $('#ach-toasts').appendChild(t);
   setTimeout(() => t.classList.add('out'), 4200);
@@ -1221,7 +1222,8 @@ function checkAchievements(setup, result, outcome) {
     const a = byId[f.id];
     const chip = document.createElement('span');
     chip.className = `ach-chip ${f.tier}`;
-    chip.textContent = `${a.icon} ${achName(a, f.tier)}`;
+    chip.innerHTML = iconSvg(a.icon);
+    chip.append(` ${achName(a, f.tier)}`);
     box.appendChild(chip);
   }
   box.hidden = false;
@@ -1255,7 +1257,7 @@ function showXp({ gained, before, after }) {
 function levelToast(level, frame) {
   const t = document.createElement('div');
   t.className = 'ach-toast ouro';
-  t.innerHTML = '<span class="ach-toast-i">⬆️</span><div><small></small><b></b></div>';
+  t.innerHTML = `<span class="ach-toast-i">${iconSvg('nivel')}</span><div><small></small><b></b></div>`;
   t.querySelector('small').textContent = 'SUBIU DE NÍVEL!';
   t.querySelector('b').textContent = frame ? `Nível ${level} · borda ${frame.name}` : `Nível ${level}`;
   $('#ach-toasts').appendChild(t);
@@ -1268,7 +1270,7 @@ function achToast({ id, tier }) {
   const t = document.createElement('div');
   t.className = `ach-toast ${tier}`;
   t.innerHTML = '<span class="ach-toast-i"></span><div><small></small><b></b></div>';
-  t.querySelector('.ach-toast-i').textContent = a.icon;
+  t.querySelector('.ach-toast-i').innerHTML = iconSvg(a.icon);
   t.querySelector('small').textContent = tier === 'ouro' ? 'CONQUISTA DE OURO!' : 'CONQUISTA DESBLOQUEADA';
   t.querySelector('b').textContent = achName(a, tier);
   $('#ach-toasts').appendChild(t);
@@ -1295,13 +1297,17 @@ function renderAch() {
     const li = document.createElement('li');
     li.className = `ach-item ${tier}${got ? ' got' : ''}${hidden ? ' hidden' : ''}`;
     li.innerHTML = '<span class="ach-i"></span><div class="ach-t"><b></b><span></span></div><em></em>';
-    li.querySelector('.ach-i').textContent = hidden ? '?' : got ? a.icon : '🔒';
+    const ai = li.querySelector('.ach-i');
+    if (hidden) ai.textContent = '?';
+    else ai.innerHTML = iconSvg(got ? a.icon : 'cadeado');
     li.querySelector('b').textContent = hidden ? '???' : achName(a, tier);
     li.querySelector('.ach-t span').textContent = hidden
       ? 'Complete a conquista normal para descobrir.'
       : tier === 'ouro' ? a.gold.desc : a.desc;
     const pr = !hidden && !got ? progressOf(a, tier, achProgress) : null;
-    li.querySelector('em').textContent = got ? '✓' : pr ? `${pr.n}/${pr.goal}` : '';
+    const em = li.querySelector('em');
+    if (got) em.innerHTML = iconSvg('check');
+    else em.textContent = pr ? `${pr.n}/${pr.goal}` : '';
     list.appendChild(li);
   }
 }
@@ -1333,7 +1339,7 @@ async function saveResult(setup, result, outcome) {
     const started = await ticket;
     if (started.error) throw started.error;
     await api.finishMatch(started.matchId, { result: outcome, kills: me.kills, deaths: me.deaths });
-    note.innerHTML = '<span class="ok">✓ Estatísticas salvas na sua conta.</span> ';
+    note.innerHTML = `<span class="ok">${iconSvg('check')} Estatísticas salvas na sua conta.</span> `;
     const link = document.createElement('button');
     link.type = 'button';
     link.className = 'btn ghost small';
@@ -1674,7 +1680,8 @@ let padToastTimer = null;
 function onPadConnect(connected) {
   document.body.classList.toggle('has-pad', connected);
   const toast = $('#pad-toast');
-  toast.textContent = connected ? '🎮 Controle conectado' : '🎮 Controle desconectado';
+  toast.innerHTML = iconSvg('controle');
+  toast.append(connected ? ' Controle conectado' : ' Controle desconectado');
   toast.hidden = false;
   toast.classList.remove('out');
   clearTimeout(padToastTimer);

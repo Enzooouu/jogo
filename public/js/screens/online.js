@@ -7,6 +7,7 @@ import { ELEMENTS, enabledElements } from '/shared/elements.js';
 import { getMap } from '/shared/maps.js';
 import { ONLINE_MODES, mapsFor, RANDOM } from '/shared/net.js';
 import { drawPortrait, fitCanvas } from '../render/portrait.js';
+import { iconEl } from '../icons.js';
 
 const $ = (sel) => document.querySelector(sel);
 
@@ -195,7 +196,9 @@ export class OnlineScreen {
       slot.appendChild(c);
       const info = el('div');
       if (p) {
-        info.append(el('b', '', `${p.host ? '👑 ' : ''}${p.name}${p.you ? ' (você)' : ''}`));
+        const nm = el('b', '', `${p.host ? ' ' : ''}${p.name}${p.you ? ' (você)' : ''}`);
+        if (p.host) nm.prepend(iconEl('coroa', 'icon host', 'Criou a sala'));
+        info.append(nm);
         info.append(el('small', '', p.element && p.element !== RANDOM ? ELEMENTS[p.element].name : 'Personagem aleatório'));
         info.append(el('span', `ol-badge${p.ready ? ' on' : ''}`, p.ready ? 'PRONTO' : 'escolhendo…'));
       } else {
@@ -224,7 +227,8 @@ export class OnlineScreen {
     maps.innerHTML = '';
     const list = m.mode === 'torre' ? ['torre'] : [RANDOM, ...mapsFor(m.mode)];
     for (const id of list) {
-      const b = el('button', id === m.mapId || (m.mode === 'torre' && id === 'torre') ? 'on' : '', id === RANDOM ? '🎲 Aleatório' : getMap(id).name);
+      const b = el('button', id === m.mapId || (m.mode === 'torre' && id === 'torre') ? 'on' : '', id === RANDOM ? ' Aleatório' : getMap(id).name);
+      if (id === RANDOM) b.prepend(iconEl('dado'));
       b.type = 'button';
       b.disabled = !host;
       b.addEventListener('click', () => this.client.send({ t: 'config', mode: m.mode, mapId: id }));
@@ -252,7 +256,8 @@ export class OnlineScreen {
     for (const b of els.children) b.classList.toggle('on', b.dataset.element === (mine || RANDOM));
 
     const ready = $('#ol-ready');
-    ready.textContent = this.ready ? 'PRONTO ✓ (cancelar)' : 'ESTOU PRONTO';
+    ready.textContent = this.ready ? 'PRONTO (cancelar) ' : 'ESTOU PRONTO';
+    if (this.ready) ready.append(iconEl('check'));
     ready.classList.toggle('on', this.ready);
     ready.disabled = m.members.length < 2;
     this.updateTimer();
