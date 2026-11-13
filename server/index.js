@@ -35,8 +35,11 @@ export function createApp({ db, store = createStore(db), online = null }) {
   app.use('/api', createApi(store, online));
 
   // /shared roda no navegador e no servidor (mesma simulação dos dois lados)
-  app.use('/shared', express.static(path.join(ROOT, 'shared')));
-  app.use(express.static(path.join(ROOT, 'public')));
+  // no-cache: o navegador sempre confere se o arquivo mudou (senão, depois de
+  // atualizar o servidor, alguns jogadores ficavam com o jogo velho)
+  const fresh = { setHeaders: (res) => res.setHeader('Cache-Control', 'no-cache') };
+  app.use('/shared', express.static(path.join(ROOT, 'shared'), fresh));
+  app.use(express.static(path.join(ROOT, 'public'), fresh));
 
   app.use((err, _req, res, _next) => {
     if (err.type === 'entity.parse.failed') return res.status(400).json({ error: 'JSON inválido.' });
