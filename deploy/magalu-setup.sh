@@ -27,8 +27,12 @@ id elementum >/dev/null 2>&1 || useradd --system --home "$PASTA" --shell /usr/sb
 mkdir -p "$DADOS" && chown elementum:elementum "$DADOS"
 
 # 3) Baixa (ou atualiza) o jogo
+# a pasta é do usuário "elementum"; sem isto o git (rodando como root) se
+# recusa a atualizar ("dubious ownership")
+git config --global --add safe.directory "$PASTA"
 if [ -d "$PASTA/.git" ]; then
-  git -C "$PASTA" fetch origin "$RAMO" && git -C "$PASTA" reset --hard "origin/$RAMO"
+  git -C "$PASTA" fetch origin "$RAMO"
+  git -C "$PASTA" reset --hard "origin/$RAMO"
 else
   git clone --branch "$RAMO" "$REPO" "$PASTA"
 fi
@@ -75,4 +79,5 @@ if command -v ufw >/dev/null; then
   ufw allow OpenSSH && ufw allow 80 && ufw allow 443 && ufw --force enable
 fi
 
+echo "Versão instalada: $(git -C "$PASTA" log -1 --format=%s)"
 echo "Pronto! Abra https://$DOMINIO (o HTTPS pode levar 1 minuto na primeira vez)."
