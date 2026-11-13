@@ -1,6 +1,7 @@
 // Tela de perfil: números guardados neste aparelho (funcionam sem conta e na
 // versão sem servidor) e o "chip" de perfil no canto superior direito do menu.
 
+import { cloudDirty } from '../cloud.js';
 import { ELEMENTS } from '/shared/elements.js';
 import { WEAPONS } from '/shared/weapons.js';
 import { getMap } from '/shared/maps.js';
@@ -34,6 +35,7 @@ export function loadStats() {
 function saveStats(s) {
   try {
     localStorage.setItem(KEY, JSON.stringify(s));
+    cloudDirty();
   } catch {
     // navegação privada: vale só até fechar a página
   }
@@ -98,6 +100,7 @@ export function loadLook() {
 function saveLook(look) {
   try {
     localStorage.setItem(LOOK_KEY, JSON.stringify(look));
+    cloudDirty();
   } catch {
     // navegação privada
   }

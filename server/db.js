@@ -73,6 +73,17 @@ const MIGRATIONS = [
   );
   CREATE INDEX friendships_friend ON friendships(friend_id);
   `,
+  // 3: progresso guardado no servidor (nível/XP, conquistas, coleção, foto).
+  // `rev` muda a cada gravação: se o administrador mexer, o jogo do jogador
+  // percebe e pega a versão nova.
+  `
+  CREATE TABLE progress (
+    user_id    INTEGER PRIMARY KEY REFERENCES users(id) ON DELETE CASCADE,
+    data       TEXT NOT NULL,
+    rev        INTEGER NOT NULL DEFAULT 1,
+    updated_at TEXT NOT NULL DEFAULT (datetime('now'))
+  );
+  `,
 ];
 
 export function openDatabase(file) {

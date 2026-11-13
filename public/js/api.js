@@ -1,9 +1,10 @@
 // Chamadas à API do servidor (contas e estatísticas).
 
 export class ApiError extends Error {
-  constructor(message, status) {
+  constructor(message, status, body = null) {
     super(message);
     this.status = status;
+    this.body = body;
   }
 }
 
@@ -20,7 +21,7 @@ async function request(method, url, body) {
     throw new ApiError('Sem conexão com o servidor.', 0);
   }
   const data = res.status === 204 ? null : await res.json().catch(() => null);
-  if (!res.ok) throw new ApiError(data?.error ?? `Erro ${res.status}`, res.status);
+  if (!res.ok) throw new ApiError(data?.error ?? `Erro ${res.status}`, res.status, data);
   return data;
 }
 
@@ -32,6 +33,8 @@ export const api = {
   profile: () => request('GET', '/api/profile'),
   startMatch: (info) => request('POST', '/api/matches', info),
   finishMatch: (id, summary) => request('POST', `/api/matches/${id}/finish`, summary),
+  progress: () => request('GET', '/api/progress'),
+  saveProgress: (data, rev) => request('POST', '/api/progress', { data, rev }),
   friends: () => request('GET', '/api/friends'),
   addFriend: (username) => request('POST', '/api/friends/add', { username }),
   acceptFriend: (username) => request('POST', '/api/friends/accept', { username }),

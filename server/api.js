@@ -1,6 +1,7 @@
 // Rotas da API (/api/...). Respostas sempre em JSON.
 
 import express from 'express';
+import { checkProgress } from './progress.js';
 import { ELEMENTS } from '../shared/elements.js';
 import { MODES, PLAYER } from '../shared/constants.js';
 import {
@@ -21,6 +22,8 @@ export function createApi(store, online = null) {
     }
     next();
   });
+  // o progresso é maior que o resto (tem o histórico do perfil)
+  api.use('/progress', express.json({ limit: '80kb' }));
   api.use(express.json({ limit: '10kb' }));
 
   // login: só conta as tentativas erradas, por endereço + conta (quem tenta
@@ -96,6 +99,30 @@ export function createApi(store, online = null) {
 
   api.get('/profile', requireUser, (req, res) => {
     res.json(store.profile(req.user.id));
+  });
+
+  // ------------------------------------------------------------ progresso
+  // Nível, XP, conquistas, coleção e foto ficam guardados na conta.
+
+  const progressLimit = rateLimit({ max: 120, windowMs: 10 * 60 * 1000, key: (req) => `p${req.user.id}`, message: 'Muitas gravações. Espere um pouco.' });
+
+  api.get('/progress', requireUser, (req, res) => {
+    const p = store.getProgress(req.user.id);
+    res.json(p ? { data: p.data, rev: p.rev } : { data: null, rev: null });
+  });
+
+  api.post('/progress', requireUser, progressLimit, (req, res) => {
+    const { data, rev } = req.body ?? {};
+    const old = store.getProgress(req.user.id);
+    // alguém (o administrador) mexeu: o jogo pega a versão do servidor
+    if ((old?.rev ?? null) !== (rev ?? null)) {
+      return res.status(409).json({ error: 'Seu progresso mudou no servidor.', data: old?.data ?? null, rev: old?.rev ?? null });
+    }
+    const error = checkProgress(data, old);
+    if (error) return res.status(422).json({ error, data: old?.data ?? null, rev: old?.rev ?? null });
+    const next = store.saveProgress(req.user.id, data, old ? old.rev : null);
+    if (next == null) return res.status(409).json({ error: 'Tente de novo.' });
+    res.json({ rev: next });
   });
 
   // ------------------------------------------------------------ amigos

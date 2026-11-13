@@ -53,9 +53,29 @@ export function createStore(db) {
       SELECT u.id, u.username FROM friendships f JOIN users u ON u.id = f.friend_id
       WHERE f.user_id = ? AND f.status = 'pendente' ORDER BY f.created_at`),
     friendCount: db.prepare("SELECT COUNT(*) AS n FROM friendships WHERE user_id = ?"),
+    progressGet: db.prepare("SELECT data, rev, CAST(strftime('%s', updated_at) AS INTEGER) AS at FROM progress WHERE user_id = ?"),
+    progressInsert: db.prepare('INSERT INTO progress (user_id, data) VALUES (?, ?)'),
+    progressUpdate: db.prepare("UPDATE progress SET data = ?, rev = rev + 1, updated_at = datetime('now') WHERE user_id = ? AND rev = ?"),
   };
 
   return {
+    // ------------------------------------------------ progresso
+    // { data, rev, at } ou null (conta que ainda não guardou nada)
+    getProgress(userId) {
+      const row = q.progressGet.get(userId);
+      return row ? { data: JSON.parse(row.data), rev: row.rev, at: row.at } : null;
+    },
+    // grava se ninguém mexeu desde `rev`; devolve a nova rev ou null (conflito)
+    saveProgress(userId, data, rev) {
+      const json = JSON.stringify(data);
+      if (rev == null) {
+        if (q.progressGet.get(userId)) return null;
+        q.progressInsert.run(userId, json);
+        return 1;
+      }
+      return q.progressUpdate.run(json, userId, rev).changes ? rev + 1 : null;
+    },
+
     // ------------------------------------------------ usuários
     createUser(username, passwordHash) {
       return transaction(db, () => {

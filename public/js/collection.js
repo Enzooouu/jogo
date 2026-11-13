@@ -2,6 +2,8 @@
 // ganho de algum jeito (por enquanto, por conquista) e o jogador escolhe qual
 // usar. No futuro a loja de moedas também vai dar acessórios (docs/IDEIAS.md).
 
+import { cloudDirty } from './cloud.js';
+
 const KEY = 'brawl.colecao';
 
 export const ACCESSORIES = {
@@ -38,6 +40,7 @@ export function loadCollection() {
 function saveCollection(c) {
   try {
     localStorage.setItem(KEY, JSON.stringify(c));
+    cloudDirty();
   } catch {
     // navegação privada
   }

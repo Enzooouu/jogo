@@ -1,6 +1,7 @@
 // Ponto de entrada do navegador: troca de telas e o caminho
 // início -> modo -> carta do elemento -> versus -> partida -> resultado.
 
+import { cloudDirty, cloudUser, onCloudChange } from './cloud.js';
 import { ELEMENTS, HAZARDS, HAZARD_REACTION } from '/shared/elements.js';
 import { WEAPONS, weaponProfile } from '/shared/weapons.js';
 import { MAPS, getMap } from '/shared/maps.js';
@@ -123,6 +124,7 @@ document.addEventListener('click', (e) => {
 
 function setUser(user) {
   state.user = user;
+  cloudUser(user);
   renderAccountBox(user, {
     onLogin: () => openAuth('login'),
     onRegister: () => openAuth('register'),
@@ -1183,6 +1185,7 @@ function loadAch() {
 function saveAch(p) {
   try {
     localStorage.setItem(ACH_KEY, JSON.stringify(p));
+    cloudDirty();
   } catch {
     // navegação privada: vale só até fechar a página
   }
@@ -1972,6 +1975,11 @@ function init() {
   initAuthScreen((user) => {
     setUser(user);
     show('home');
+  });
+  onCloudChange(() => {
+    achProgress = loadAch();
+    homeMenu?.refresh();
+    renderProfileChip(state.user?.username);
   });
   setUser(null);
   show('home');
