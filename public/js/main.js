@@ -19,6 +19,7 @@ import { OnlineRunner } from './net/online-runner.js';
 import { OnlineScreen } from './screens/online.js';
 import { FriendsPanel } from './screens/friends.js';
 import { AdminPanel } from './screens/admin.js';
+import { initInstall } from './install.js';
 import { ONLINE_URL } from './config.js';
 import { iconSvg } from './icons.js';
 import { TOWER, botBrain, brainName, floorFoes, floorStep, carryAfterWin, towerXp, gravityFor, isGuardianFloor, guardianOf } from '/shared/tower.js';
@@ -1849,6 +1850,7 @@ function savePref(key, value) {
 function init() {
   buildCards();
   homeMenu = initHomeMenu($('.home-menu'), () => $('#welcome').hidden && $('#panel-backdrop').hidden);
+  initInstall({ onChange: () => homeMenu?.refresh() });
   $('#home-play').addEventListener('click', () => show('mode'));
   $('#home-tutorial').addEventListener('click', openTutorial);
   $('#welcome-yes').addEventListener('click', () => {
