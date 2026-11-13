@@ -4,7 +4,8 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { Game } from '../shared/game.js';
 import { BotController } from '../shared/ai.js';
-import { gameConfig, snapshotGame, applySnapshot, buildOnlineSetup, mapsFor } from '../shared/net.js';
+import { gameConfig, snapshotGame, applySnapshot, buildOnlineSetup, mapsFor, Predictor } from '../shared/net.js';
+import { decodeInput } from '../shared/input.js';
 import { HILL_MAPS } from '../shared/maps.js';
 
 const humans = (a = 'fogo', b = 'agua') => [{ id: 1, name: 'Ana', element: a }, { id: 2, name: 'Beto', element: b }];
@@ -72,4 +73,42 @@ test('online: Rei da Ilha manda os pontos (Map) certinho', () => {
   assert.ok(mirror.hill.scores instanceof Map);
   assert.equal(mirror.hill.scores.get('A'), 12);
   assert.equal(typeof mirror.hill.update, 'function', 'continua sendo o objeto do Rei da Ilha');
+});
+
+test('online: previsão local mexe o boneco na hora e bate com o servidor', () => {
+  const setup = buildOnlineSetup({ mode: '1x1', mapId: 'caldeira', humans: humans(), seed: 5 });
+  const server = new Game(gameConfig(setup));
+  const client = new Game(gameConfig(setup));
+  const pred = new Predictor(client, 1);
+  const LAG = 8;                 // ~130 ms de ida
+  const toServer = [];           // [{ chega, q, input }]
+  const toClient = [];           // [{ chega, s, a }]
+  let ack = null;
+  const right = decodeInput(2);  // bit 1 = direita
+  assert.ok(right.right);
+  let first = null;
+  for (let t = 0; t < 600; t++) {
+    const input = t > 300 ? right : decodeInput(t % 90 < 45 ? 2 : 1);
+    const before = client.players[0].x;
+    toServer.push({ chega: t + LAG, q: pred.step(input), input });
+    client.drainEvents();
+    if (first === null && server.phase === 'playing' && client.players[0].x !== before) first = t;
+    const msg = toServer[0]?.chega <= t ? toServer.shift() : null;
+    if (msg) ack = msg.q;
+    server.step({ 1: msg?.input ?? server.players[0].prevInput, 2: {} });
+    server.drainEvents();
+    if (t % 2 === 0) toClient.push({ chega: t + LAG, s: snapshotGame(server), a: ack });
+    while (toClient[0]?.chega <= t) {
+      const m = toClient.shift();
+      pred.reconcile(m.s, m.a);
+    }
+  }
+  assert.ok(first !== null, 'o boneco se mexe sem esperar o servidor');
+  // o servidor recebe o que faltava; com tudo confirmado a cópia fica igual
+  let last = ack;
+  for (const m of toServer) { server.step({ 1: m.input, 2: {} }); last = m.q; }
+  pred.reconcile(snapshotGame(server), last);
+  assert.equal(pred.history.length, 0);
+  assert.equal(client.players[0].x, server.players[0].x);
+  assert.equal(client.players[0].y, server.players[0].y);
 });

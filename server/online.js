@@ -197,6 +197,8 @@ export function createOnline(store, { lobbySeconds = LOBBY_SECONDS, rematchSecon
       m.pid = i + 1;
       m.held = 0;
       m.press = 0;
+      m.queue = [];
+      m.ack = null;
       m.ready = false;
       send(m, { t: 'start', setup, you: m.pid, code: room.code });
     });
@@ -230,6 +232,12 @@ export function createOnline(store, { lobbySeconds = LOBBY_SECONDS, rematchSecon
     const inputs = {};
     for (const m of room.members) {
       // botão apertado entre dois passos conta como apertado neste passo
+      // previsão local: cada comando numerado vale exatamente um passo
+      if (m.queue?.length) {
+        const it = m.queue.shift();
+        m.held = it.h;
+        m.ack = it.q;
+      }
       inputs[m.pid] = decodeInput((m.held | m.press) & BITS);
       m.press = 0;
     }
@@ -239,9 +247,10 @@ export function createOnline(store, { lobbySeconds = LOBBY_SECONDS, rematchSecon
     const ev = g.drainEvents();
     if (ev.length) match.events.push(...ev);
     if (match.tick % SNAP_EVERY === 0 || g.phase === 'ended') {
-      const msg = JSON.stringify({ t: 's', s: snapshotGame(g), e: match.events });
+      const body = `"s":${JSON.stringify(snapshotGame(g))},"e":${JSON.stringify(match.events)}`;
       match.events = [];
-      for (const m of room.members) send(m, msg);
+      // cada um recebe até que comando dele o servidor já usou ("a")
+      for (const m of room.members) send(m, `{"t":"s",${body},"a":${m.ack ?? null}}`);
     }
     if (g.phase === 'ended') endMatch(room, match);
   }
@@ -340,8 +349,20 @@ export function createOnline(store, { lobbySeconds = LOBBY_SECONDS, rematchSecon
   function handle(conn, msg) {
     switch (msg?.t) {
       case 'i':
-        conn.held = Number(msg.h) & BITS;
-        conn.press |= Number(msg.p) & BITS;
+        if (Number.isInteger(msg.q)) {
+          // comando numerado (um por passo). Se acumular demais (internet
+          // travou), junta os mais velhos para não ficar atrasado.
+          conn.queue ??= [];
+          conn.queue.push({ q: msg.q, h: Number(msg.h) & BITS });
+          while (conn.queue.length > 6) {
+            const old = conn.queue.shift();
+            conn.press |= old.h;
+          }
+        } else {
+          conn.queue = [];
+          conn.held = Number(msg.h) & BITS;
+          conn.press |= Number(msg.p) & BITS;
+        }
         break;
       case 'create': createRoom(conn); break;
       case 'join': joinRoom(conn, msg.code); break;

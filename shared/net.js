@@ -8,6 +8,7 @@
 //   buildOnlineSetup(...)   monta a partida online (bots completando os times)
 
 import { ELEMENTS, enabledElements } from './elements.js';
+import { EMPTY_INPUT } from './input.js';
 import { MAPS, HILL_MAPS } from './maps.js';
 import { TOWER, botBrain, floorFoes, floorStep, guardianOf, gravityFor } from './tower.js';
 
@@ -205,3 +206,50 @@ export function buildOnlineSetup({ mode, mapId, humans, rand = Math.random, towe
 
 export const onlineModeName = (mode) => ONLINE_MODES[mode]?.name ?? mode;
 export const elementName = (id) => ELEMENTS[id]?.name ?? id;
+
+// ------------------------------------------------------------ previsão local
+//
+// O navegador tem a sua própria cópia da partida e move o SEU boneco na hora
+// em que você aperta (sem esperar o servidor). Cada passo (1/60 s) o comando
+// vai numerado para o servidor; o servidor responde, junto com o estado, até
+// que número ele já usou ("ack"). Quando chega um estado do servidor:
+//   1. a cópia vira exatamente o estado do servidor (ele é o juiz);
+//   2. os comandos que o servidor ainda não usou são aplicados de novo.
+// Assim o seu boneco fica sempre na frente, e se o servidor discordar (ex.:
+// você levou um golpe), a cópia se corrige sozinha.
+// Os outros jogadores e os bots continuam com o último comando que tinham.
+
+
+export class Predictor {
+  constructor(game, localId) {
+    this.game = game;
+    this.localId = localId;
+    this.seq = 0;
+    this.history = [];   // [{ q, input }] comandos que o servidor ainda não usou
+    this.maxHistory = 120;
+  }
+
+  inputsFor(input) {
+    const inputs = {};
+    for (const p of this.game.players) inputs[p.id] = p.id === this.localId ? input : (p.prevInput ?? EMPTY_INPUT);
+    return inputs;
+  }
+
+  // Um passo local: devolve o número do comando (para mandar ao servidor)
+  step(input) {
+    const q = ++this.seq;
+    this.history.push({ q, input });
+    if (this.history.length > this.maxHistory) this.history.shift();
+    this.game.step(this.inputsFor(input));
+    return q;
+  }
+
+  // Chegou o estado do servidor (`ack` = último comando meu que ele usou)
+  reconcile(snap, ack) {
+    applySnapshot(this.game, snap);
+    if (ack != null) this.history = this.history.filter((h) => h.q > ack);
+    for (const h of this.history) this.game.step(this.inputsFor(h.input));
+    // os eventos refeitos aqui já vieram (ou virão) do servidor
+    this.game.drainEvents();
+  }
+}
