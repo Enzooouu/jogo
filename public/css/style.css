@@ -1566,3 +1566,17 @@ body.has-touch .training-hud { z-index: 25; }
 .tut-clock b .icon { width: 15px; height: 15px; margin-right: 5px; vertical-align: -2px; }
 .pad-title .icon, .pad-only .icon { vertical-align: -0.2em; }
 .pcol-q { color: rgba(255,255,255,.75); }
+
+/* ---------------------------------------------------------------- painel admin */
+.admin-panel { width: min(560px, 94vw); }
+.adm-row { width: 100%; background: none; border: 0; border-bottom: 1px solid rgba(255,255,255,.08); color: inherit; font: inherit; text-align: left; cursor: pointer; }
+.adm-row:hover, .adm-row:focus-visible { background: rgba(255,255,255,.06); }
+.adm-dot { width: 9px; height: 9px; border-radius: 50%; background: rgba(255,255,255,.25); flex: none; }
+.adm-dot.on { background: #45e08a; box-shadow: 0 0 8px #45e08a; }
+.adm-ach { display: flex; align-items: center; gap: 10px; padding: 4px 0; border-bottom: 1px solid rgba(255,255,255,.06); }
+.adm-ach > span { margin-right: auto; }
+.adm-ach .toggle { margin: 0; font-size: 13px; }
+.admin-panel .fr-add input[type=number] { width: 90px; flex: none; }
+.adm-msg { margin: 6px 0; color: #7dffb8; }
+.adm-msg.error { color: #ff8a7a; }
+.btn.danger { color: #ff8a7a; border-color: rgba(255,120,100,.5); }

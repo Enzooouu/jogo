@@ -48,3 +48,44 @@ test('progresso: fica na conta, e mudança do servidor ganha', async () => {
     server.close();
   }
 });
+
+test('admin: só enzoofoda entra; muda progresso, senha e apaga conta', async () => {
+  const app = createApp({ db: openDatabase(':memory:') });
+  const server = app.listen(0);
+  const base = `http://127.0.0.1:${server.address().port}/api`;
+  const client = () => {
+    let cookie = '';
+    return async (method, url, body) => {
+      const res = await fetch(base + url, { method, headers: { 'Content-Type': 'application/json', cookie }, body: body && JSON.stringify(body) });
+      cookie = res.headers.get('set-cookie')?.split(';')[0] ?? cookie;
+      return { status: res.status, body: res.status === 204 ? null : await res.json() };
+    };
+  };
+  try {
+    const bia = client();
+    const adm = client();
+    const bId = (await bia('POST', '/auth/register', { username: 'bia', password: 'senha-da-bia' })).body.user.id;
+    await bia('POST', '/progress', { data: perfil(100, 1), rev: null });
+    assert.equal((await bia('GET', '/admin/users')).status, 403, 'jogador comum não entra');
+    await adm('POST', '/auth/register', { username: 'enzoofoda', password: 'senha-do-adm' });
+    const list = (await adm('GET', '/admin/users?q=bi')).body;
+    assert.deepEqual(list.users.map((u) => [u.username, u.xp]), [['bia', 100]]);
+    assert.equal(list.total, 2);
+    assert.ok(!JSON.stringify(list).includes('password'), 'senha nunca aparece');
+    // muda o nível
+    assert.equal((await adm('POST', `/admin/users/${bId}/progress`, { data: perfil(5000, 1) })).status, 200);
+    const stale = await bia('POST', '/progress', { data: perfil(200, 2), rev: 1 });
+    assert.equal(stale.status, 409, 'o jogo da bia pega a versão do admin');
+    assert.equal(stale.body.data.perfil.xp, 5000);
+    // senha nova: a sessão antiga cai e a senha nova funciona
+    assert.equal((await adm('POST', `/admin/users/${bId}/password`, { password: 'nova-senha-1' })).status, 200);
+    assert.equal((await bia('GET', '/progress')).status, 401);
+    assert.equal((await bia('POST', '/auth/login', { username: 'bia', password: 'nova-senha-1' })).status, 200);
+    // apaga
+    assert.equal((await adm('POST', `/admin/users/${bId}/delete`, {})).status, 200);
+    assert.equal((await adm('GET', `/admin/users/${bId}`)).status, 404);
+    assert.equal((await bia('GET', '/progress')).status, 401);
+  } finally {
+    server.close();
+  }
+});

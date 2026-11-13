@@ -1,7 +1,8 @@
 // Rotas da API (/api/...). Respostas sempre em JSON.
 
 import express from 'express';
-import { checkProgress } from './progress.js';
+import { checkProgress, PROGRESS_PARTS, MAX_PROGRESS_BYTES } from './progress.js';
+import { isDeveloper } from '../shared/dev.js';
 import { ELEMENTS } from '../shared/elements.js';
 import { MODES, PLAYER } from '../shared/constants.js';
 import {
@@ -23,7 +24,7 @@ export function createApi(store, online = null) {
     next();
   });
   // o progresso é maior que o resto (tem o histórico do perfil)
-  api.use('/progress', express.json({ limit: '80kb' }));
+  api.use(['/progress', '/admin'], express.json({ limit: '80kb' }));
   api.use(express.json({ limit: '10kb' }));
 
   // login: só conta as tentativas erradas, por endereço + conta (quem tenta
@@ -123,6 +124,63 @@ export function createApi(store, online = null) {
     const next = store.saveProgress(req.user.id, data, old ? old.rev : null);
     if (next == null) return res.status(409).json({ error: 'Tente de novo.' });
     res.json({ rev: next });
+  });
+
+  // ------------------------------------------------------------ administrador
+  // Só as contas de desenvolvedor (shared/dev.js). Senhas nunca aparecem: o
+  // administrador só pode trocar por uma nova.
+
+  const requireAdmin = (req, res, next) => {
+    if (!req.user || !isDeveloper(req.user.username)) return res.status(403).json({ error: 'Só o administrador pode fazer isso.' });
+    next();
+  };
+  const target = (req, res) => {
+    const user = store.findUserById(Number(req.params.id));
+    if (!user) res.status(404).json({ error: 'Conta não encontrada.' });
+    return user;
+  };
+
+  api.get('/admin/users', requireUser, requireAdmin, (req, res) => {
+    const users = store.adminUsers(String(req.query.q ?? '').slice(0, 40))
+      .map((u) => ({ ...u, online: Boolean(online?.isOnline(u.id)) }));
+    res.json({ users, total: store.userCount() });
+  });
+
+  api.get('/admin/users/:id', requireUser, requireAdmin, (req, res) => {
+    const user = target(req, res);
+    if (!user) return;
+    const p = store.getProgress(user.id);
+    res.json({ user: { ...publicUser(user), online: Boolean(online?.isOnline(user.id)) }, data: p?.data ?? null });
+  });
+
+  api.post('/admin/users/:id/progress', requireUser, requireAdmin, (req, res) => {
+    const user = target(req, res);
+    if (!user) return;
+    const data = req.body?.data;
+    const ok = data && typeof data === 'object' && !Array.isArray(data)
+      && Object.keys(data).every((k) => PROGRESS_PARTS.includes(k))
+      && JSON.stringify(data).length <= MAX_PROGRESS_BYTES;
+    if (!ok) return res.status(400).json({ error: 'Progresso inválido.' });
+    store.adminSetProgress(user.id, data);
+    res.json({ ok: true });
+  });
+
+  api.post('/admin/users/:id/password', requireUser, requireAdmin, async (req, res) => {
+    const user = target(req, res);
+    if (!user) return;
+    const password = req.body?.password;
+    const problem = validatePassword(password);
+    if (problem) return res.status(400).json({ error: problem });
+    store.adminSetPassword(user.id, await hashPassword(password));
+    res.json({ ok: true });
+  });
+
+  api.post('/admin/users/:id/delete', requireUser, requireAdmin, (req, res) => {
+    const user = target(req, res);
+    if (!user) return;
+    if (isDeveloper(user.username)) return res.status(400).json({ error: 'Não dá para apagar a conta de administrador.' });
+    store.adminDeleteUser(user.id);
+    res.json({ ok: true });
   });
 
   // ------------------------------------------------------------ amigos

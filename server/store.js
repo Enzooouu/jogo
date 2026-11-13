@@ -53,6 +53,17 @@ export function createStore(db) {
       SELECT u.id, u.username FROM friendships f JOIN users u ON u.id = f.friend_id
       WHERE f.user_id = ? AND f.status = 'pendente' ORDER BY f.created_at`),
     friendCount: db.prepare("SELECT COUNT(*) AS n FROM friendships WHERE user_id = ?"),
+    adminUsers: db.prepare(`
+      SELECT u.id, u.username, u.created_at, p.data, p.updated_at FROM users u
+      LEFT JOIN progress p ON p.user_id = u.id
+      WHERE u.username LIKE ? ESCAPE '\\' ORDER BY u.id DESC LIMIT 100`),
+    userCount: db.prepare('SELECT COUNT(*) AS n FROM users'),
+    setPassword: db.prepare('UPDATE users SET password_hash = ? WHERE id = ?'),
+    userSessionsDelete: db.prepare('DELETE FROM sessions WHERE user_id = ?'),
+    deleteUser: db.prepare('DELETE FROM users WHERE id = ?'),
+    progressAdmin: db.prepare(`
+      INSERT INTO progress (user_id, data) VALUES (?, ?)
+      ON CONFLICT(user_id) DO UPDATE SET data = excluded.data, rev = rev + 1, updated_at = datetime('now')`),
     progressGet: db.prepare("SELECT data, rev, CAST(strftime('%s', updated_at) AS INTEGER) AS at FROM progress WHERE user_id = ?"),
     progressInsert: db.prepare('INSERT INTO progress (user_id, data) VALUES (?, ?)'),
     progressUpdate: db.prepare("UPDATE progress SET data = ?, rev = rev + 1, updated_at = datetime('now') WHERE user_id = ? AND rev = ?"),
@@ -74,6 +85,30 @@ export function createStore(db) {
         return 1;
       }
       return q.progressUpdate.run(json, userId, rev).changes ? rev + 1 : null;
+    },
+
+    // ------------------------------------------------ administrador
+    adminUsers(search = '') {
+      const like = `%${String(search).replace(/[\\%_]/g, (c) => `\\${c}`)}%`;
+      return q.adminUsers.all(like).map((r) => {
+        let xp = 0;
+        try { xp = JSON.parse(r.data ?? '{}')?.perfil?.xp ?? 0; } catch { /* sem progresso */ }
+        return { id: r.id, username: r.username, createdAt: r.created_at, xp, updatedAt: r.updated_at ?? null };
+      });
+    },
+    userCount: () => q.userCount.get().n,
+    adminSetProgress(userId, data) {
+      q.progressAdmin.run(userId, JSON.stringify(data));
+    },
+    adminSetPassword(userId, hash) {
+      transaction(db, () => {
+        q.setPassword.run(hash, userId);
+        q.userSessionsDelete.run(userId);
+      });
+    },
+    adminDeleteUser(userId) {
+      // apaga também sessões, amigos, partidas e progresso (ON DELETE CASCADE)
+      return q.deleteUser.run(userId).changes > 0;
     },
 
     // ------------------------------------------------ usuários
