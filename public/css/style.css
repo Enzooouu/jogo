@@ -1599,9 +1599,9 @@ body.has-touch .training-hud { z-index: 25; }
 }
 /* celular em pé mais baixinho (ex.: iPhone SE) */
 @media (max-width: 560px) and (orientation: portrait) and (max-height: 700px) {
-  .home-menu { padding: 76px 0 76px 24px; }
-  .home-band { height: 42px; }
-  .home-item { height: 42px; line-height: 42px; font-size: 18px; }
+  .home-menu { padding: 70px 0 70px 24px; }
+  .home-band { height: 39px; }
+  .home-item { height: 39px; line-height: 39px; font-size: 17px; }
   .home-item.on { font-size: 21px; }
   .logo { margin-bottom: 16px; }
   .logo b { font-size: clamp(36px, 11vw, 48px); }
