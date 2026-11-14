@@ -1,7 +1,7 @@
 // Service worker do app instalado. Sempre tenta a versão nova pela internet
 // (o jogo muda bastante); sem internet, abre a última versão guardada para
 // dar para jogar contra os bots. A API e o online nunca passam por aqui.
-const CACHE = 'elementum-v1';
+const CACHE = 'elementum-v2';
 
 self.addEventListener('install', () => self.skipWaiting());
 self.addEventListener('activate', (e) => e.waitUntil(self.clients.claim()));
