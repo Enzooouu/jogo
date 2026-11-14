@@ -92,6 +92,19 @@ export function createApi(store, online = null) {
     res.status(204).end();
   });
 
+  // o próprio jogador apaga a conta (pede a senha de novo)
+  api.post('/auth/delete', requireUser, loginIpLimit, async (req, res) => {
+    const password = req.body?.password;
+    const user = store.findUserByName(req.user.username);
+    if (typeof password !== 'string' || !user || !(await verifyPassword(password, user.password_hash))) {
+      return res.status(400).json({ error: 'Senha errada.' });
+    }
+    if (isDeveloper(user.username)) return res.status(400).json({ error: 'A conta de administrador não pode ser apagada por aqui.' });
+    store.adminDeleteUser(user.id);
+    clearSessionCookie(req, res);
+    res.status(204).end();
+  });
+
   api.get('/auth/me', (req, res) => {
     res.json({ user: req.user ? publicUser(req.user) : null });
   });

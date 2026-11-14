@@ -62,6 +62,7 @@ const demo = new DemoArena($('#menu-bg'));
 const controls = initControls($('#controls-panel'));
 const versus = new VersusScreen($('#versus-canvas'));
 let homeMenu = null;
+let adminPanel = null;
 // tela de mapas: ao continuar, guarda a escolha e vai para o versus
 const mapPicker = new MapPicker($('#screen-maps'), {
   onContinue(id) {
@@ -130,13 +131,24 @@ function setUser(user) {
   renderAccountBox(user, {
     onLogin: () => openAuth('login'),
     onRegister: () => openAuth('register'),
-    onProfile: openProfile,
     onLogout: async () => {
       try {
         await api.logout();
       } finally {
         setUser(null);
+        if (state.screen === 'profile') drawProfile();
       }
+    },
+    // conta apagada no servidor: vira convidado (o progresso de convidado volta)
+    onDelete: () => {
+      setUser(null);
+      if (state.screen === 'profile') drawProfile();
+    },
+    isAdmin: !state.offline && isDeveloper(user?.username),
+    onAdmin: () => {
+      show('home');
+      togglePanel('#admin-panel');
+      adminPanel?.open();
     },
   });
   if (state.offline) setOfflineMode();
@@ -156,7 +168,6 @@ function updateAdminAccess() {
   const allowed = state.offline || isDeveloper(state.user?.username);
   $('#adm-box').hidden = !allowed;
   // painel de administrador: só com servidor e conta de desenvolvedor
-  $('#home-admin').hidden = state.offline || !isDeveloper(state.user?.username);
   if (!allowed && state.admin) state.admin = false;
   if (allowed) state.admin = loadPref('adm', '0') === '1';
 }
@@ -164,7 +175,7 @@ function updateAdminAccess() {
 function setOfflineMode() {
   state.offline = true;
   $('#welcome-login').hidden = true;
-  $('#account-box').hidden = true;
+  $('#profile-account').hidden = true;
   $('#save-hint').textContent = 'Versão sem servidor: dá para jogar, mas contas e estatísticas ficam desligadas.';
   updateAdminAccess();
 }
@@ -1863,7 +1874,7 @@ function init() {
     openAuth('login');
   });
   $('#profile-chip').addEventListener('click', openProfile);
-  $('#home-controls').addEventListener('click', () => togglePanel('#controls-panel'));
+  $('#settings-controls').addEventListener('click', () => togglePanel('#controls-panel'));
   $('#panel-backdrop').addEventListener('click', closePanels);
   $('#home-settings').addEventListener('click', () => togglePanel('#settings-panel'));
   $('#home-exit').addEventListener('click', () => openExit());
@@ -1913,15 +1924,11 @@ function init() {
   $('.mode-tile[data-mode="ffa"]').addEventListener('click', () => chooseMode(1, 'ffa'));
   $('.mode-tile[data-mode="treino"]').addEventListener('click', () => chooseMode(1, 'treino'));
   $('.mode-tile[data-mode="online"]').addEventListener('click', openOnline);
-  const adminPanel = new AdminPanel({
+  adminPanel = new AdminPanel({
     // mexeu na própria conta: pega a versão nova do servidor
     onChangedSelf: (name) => {
       if (name === state.user?.username) cloudUser(null).then(() => cloudUser(state.user));
     },
-  });
-  $('#home-admin').addEventListener('click', () => {
-    togglePanel('#admin-panel');
-    if (!$('#admin-panel').hidden) adminPanel.open();
   });
   $('#home-friends').addEventListener('click', () => {
     togglePanel('#friends-panel');

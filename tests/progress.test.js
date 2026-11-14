@@ -89,3 +89,24 @@ test('admin: só enzoofoda entra; muda progresso, senha e apaga conta', async ()
     server.close();
   }
 });
+
+test('conta: o próprio jogador exclui a conta com a senha', async () => {
+  const app = createApp({ db: openDatabase(':memory:') });
+  const server = app.listen(0);
+  const base = `http://127.0.0.1:${server.address().port}/api`;
+  let cookie = '';
+  const call = async (method, url, body) => {
+    const res = await fetch(base + url, { method, headers: { 'Content-Type': 'application/json', cookie }, body: body && JSON.stringify(body) });
+    cookie = res.headers.get('set-cookie')?.split(';')[0] ?? cookie;
+    return { status: res.status, body: res.status === 204 ? null : await res.json() };
+  };
+  try {
+    await call('POST', '/auth/register', { username: 'caio', password: 'senha-do-caio' });
+    assert.equal((await call('POST', '/auth/delete', { password: 'errada' })).status, 400);
+    assert.equal((await call('POST', '/auth/delete', { password: 'senha-do-caio' })).status, 204);
+    assert.equal((await call('GET', '/auth/me')).body.user, null);
+    assert.equal((await call('POST', '/auth/login', { username: 'caio', password: 'senha-do-caio' })).status, 401);
+  } finally {
+    server.close();
+  }
+});

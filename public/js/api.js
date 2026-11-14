@@ -29,6 +29,7 @@ export const api = {
   me: () => request('GET', '/api/auth/me'),
   register: (username, password) => request('POST', '/api/auth/register', { username, password }),
   login: (username, password) => request('POST', '/api/auth/login', { username, password }),
+  deleteAccount: (password) => request('POST', '/api/auth/delete', { password }),
   logout: () => request('POST', '/api/auth/logout', {}),
   profile: () => request('GET', '/api/profile'),
   startMatch: (info) => request('POST', '/api/matches', info),

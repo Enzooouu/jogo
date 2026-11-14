@@ -149,13 +149,10 @@
         <button type="button" class="home-item" id="home-tutorial">TUTORIAL</button>
         <button type="button" class="home-item" id="home-ach">CONQUISTAS</button>
         <button type="button" class="home-item" id="home-friends">AMIGOS</button>
-        <button type="button" class="home-item" id="home-admin" hidden>ADMIN</button>
-        <button type="button" class="home-item" id="home-controls">CONTROLES</button>
         <button type="button" class="home-item" id="home-install" hidden>INSTALAR APP</button>
         <button type="button" class="home-item" id="home-settings">CONFIGURAÇÕES</button>
         <button type="button" class="home-item home-exit" id="home-exit">SAIR</button>
       </nav>
-      <div id="account-box" class="account-box"></div>
 
       <div id="panel-backdrop" class="panel-backdrop" hidden></div>
       <!-- Primeira vez no jogo: convite para o tutorial -->
@@ -222,6 +219,7 @@
         <h2>Configurações</h2>
         <label class="toggle"><input type="checkbox" id="opt-sound"> Som</label>
         <label class="toggle"><input type="checkbox" id="opt-demo"> Partida de demonstração no fundo</label>
+        <button type="button" class="btn small settings-link" id="settings-controls">Controles (teclado, controle e toque)</button>
         <div id="adm-box" hidden>
           <label class="toggle"><input type="checkbox" id="opt-admin"> Modo ADM (testes)</label>
           <p class="hint">No modo ADM cada golpe seu dá 999% de dano, nada te acerta (nem lava, água, espinhos ou vento) e você tem pulos e dashes infinitos. As partidas não contam nas estatísticas.</p>
@@ -564,6 +562,20 @@
         <div class="panel profile-collection">
           <h2>Coleção</h2>
           <div id="profile-collection"></div>
+        </div>
+        <div class="panel profile-account" id="profile-account">
+          <h2>Conta</h2>
+          <p class="hint" id="account-hint"></p>
+          <div id="account-box" class="account-box"></div>
+          <form id="delete-form" class="delete-form" hidden>
+            <p class="hint">Isso apaga sua conta, seu progresso salvo nela e seus amigos <b>para sempre</b>. Digite sua senha para confirmar.</p>
+            <input type="password" id="delete-password" autocomplete="current-password" placeholder="Sua senha" required>
+            <div class="panel-actions">
+              <button type="button" class="btn ghost small" id="delete-cancel">Cancelar</button>
+              <button type="submit" class="btn small danger">Excluir para sempre</button>
+            </div>
+            <p class="hint error" id="delete-error"></p>
+          </form>
         </div>
         <footer class="profile-foot">
           <p class="hint" id="profile-note"></p>

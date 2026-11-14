@@ -183,10 +183,14 @@ kbd {
 .home-band .fill::after { content: ""; position: absolute; inset: 0; border-radius: inherit; background: linear-gradient(180deg, rgba(255,255,255,.18), transparent 55%); }
 .home-band::before { content: ""; position: absolute; z-index: 1; left: 0; top: 0; bottom: 0; width: 4px; background: #ffd25a; border-radius: 3px; }
 
-.account-box {
-  position: fixed; left: 56px; bottom: 30px; z-index: 1;
-  display: flex; align-items: center; gap: 8px; flex-wrap: wrap; font-size: 15px;
-}
+.account-box { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; font-size: 15px; }
+.profile-account { margin-top: 16px; }
+.profile-account .hint { margin: 0 0 12px; }
+.delete-form { margin-top: 14px; padding-top: 14px; border-top: 1px solid rgba(255,255,255,.1); display: grid; gap: 10px; max-width: 420px; }
+.delete-form input { padding: 9px 11px; border-radius: 10px; border: 1px solid rgba(255,255,255,.2); background: rgba(0,0,0,.3); color: #fff; font: 600 15px var(--font); }
+.delete-form .panel-actions { justify-content: flex-start; }
+.hint.error { color: #ff8a7a; }
+.settings-link { margin: 6px 0 4px; }
 .account-box .who { color: var(--muted); }
 .account-box .who strong { color: #ffd25a; }
 
@@ -1594,7 +1598,6 @@ body.has-touch .training-hud { z-index: 25; }
   .logo small { margin-top: 10px; font-size: 10.5px; letter-spacing: .3em; }
   .home-item { height: 50px; line-height: 50px; font-size: 20px; padding-left: 26px; }
   .home-item.on { font-size: 24px; }
-  .account-box { left: 24px; bottom: calc(26px + env(safe-area-inset-bottom, 0px)); font-size: 14px; }
   .home-crest { width: 46px; height: 50px; right: 18px; bottom: calc(20px + env(safe-area-inset-bottom, 0px)); }
 }
 /* celular em pé mais baixinho (ex.: iPhone SE) */
@@ -1617,8 +1620,7 @@ body.has-touch .training-hud { z-index: 25; }
   .logo small { margin-top: 6px; font-size: 9px; letter-spacing: .3em; }
   .home-item { height: 34px; line-height: 34px; font-size: 16px; padding-left: 22px; }
   .home-item.on { font-size: 19px; }
-  .account-box { left: auto; right: calc(70px + env(safe-area-inset-right, 0px)); bottom: 14px; font-size: 13px; }
-  .account-box .btn { padding: 6px 12px; font-size: 13px; }
 }
 
 .sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0; }
+.btn.small.danger:not(.ghost) { background: #d93a45; border-color: #d93a45; color: #fff; }

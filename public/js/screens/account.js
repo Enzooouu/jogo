@@ -7,9 +7,10 @@ const $ = (sel) => document.querySelector(sel);
 
 // ------------------------------------------------------------ caixa no menu
 
-export function renderAccountBox(user, { onLogin, onRegister, onProfile, onLogout }) {
+export function renderAccountBox(user, { onLogin, onRegister, onLogout, onDelete, onAdmin, isAdmin = false }) {
   const box = $('#account-box');
   box.innerHTML = '';
+  $('#delete-form').hidden = true;
   const button = (label, cls, fn) => {
     const b = document.createElement('button');
     b.type = 'button';
@@ -19,22 +20,42 @@ export function renderAccountBox(user, { onLogin, onRegister, onProfile, onLogou
     box.appendChild(b);
   };
   if (user) {
-    const who = document.createElement('span');
-    who.className = 'who';
-    who.append('Olá, ');
-    const strong = document.createElement('strong');
-    strong.textContent = user.username;
-    who.append(strong);
-    box.appendChild(who);
-    button('Perfil', '', onProfile);
-    button('Sair', 'ghost', onLogout);
+    $('#account-hint').textContent = `Você está na conta ${user.username}. Seu nível, conquistas e coleção ficam salvos nela.`;
+    if (isAdmin) button('Painel de administrador', '', onAdmin);
+    button('Sair da conta', 'ghost', onLogout);
+    button('Excluir conta', 'ghost danger', () => {
+      $('#delete-form').hidden = false;
+      $('#delete-error').textContent = '';
+      $('#delete-password').value = '';
+      $('#delete-password').focus();
+    });
   } else {
+    $('#account-hint').textContent = 'Você está jogando como convidado: o progresso fica só neste aparelho. Entre ou crie uma conta para guardar e jogar em qualquer lugar.';
     button('Entrar', '', onLogin);
     button('Criar conta', 'ghost', onRegister);
   }
   $('#save-hint').textContent = user
     ? `Suas estatísticas serão salvas na conta ${user.username}.`
     : 'Jogando como convidado. Entre ou crie uma conta para salvar suas estatísticas.';
+  initDeleteForm(onDelete);
+}
+
+let deleteReady = false;
+function initDeleteForm(onDelete) {
+  initDeleteForm.onDelete = onDelete;
+  if (deleteReady) return;
+  deleteReady = true;
+  $('#delete-cancel').addEventListener('click', () => { $('#delete-form').hidden = true; });
+  $('#delete-form').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    try {
+      await api.deleteAccount($('#delete-password').value);
+      $('#delete-form').hidden = true;
+      initDeleteForm.onDelete?.();
+    } catch (err) {
+      $('#delete-error').textContent = err.message;
+    }
+  });
 }
 
 // ------------------------------------------------------------ login / cadastro
