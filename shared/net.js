@@ -17,6 +17,7 @@ import { TOWER, botBrain, floorFoes, floorStep, guardianOf, gravityFor } from '.
 export function gameConfig(setup) {
   return {
     players: setup.players, mode: setup.mode, seed: setup.seed, mapId: setup.mapId,
+    ...(setup.lives ? { lives: setup.lives } : {}),
     ...(setup.online ? { checkElements: false } : {}),
     // treino livre: ninguém perde vida, sem tempo e contagem curta
     ...(setup.practice ? { practice: true, timeLimit: 0, countdown: 1, items: false } : {}),

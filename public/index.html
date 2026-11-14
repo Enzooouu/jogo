@@ -237,6 +237,22 @@
         <ul id="ach-list" class="ach-list"></ul>
         <div class="panel-actions"><button type="button" class="btn ghost small" data-close>Fechar</button></div>
       </div>
+      <div id="watch-panel" class="side-panel watch-panel" hidden>
+        <h2>Assistir: bot contra bot</h2>
+        <p class="hint">Escolha os dois lutadores, o mapa e a dificuldade. Bom para gravar vídeos de "quem vai vencer?".</p>
+        <div class="watch-grid">
+          <label>Lutador 1<select id="w-a"></select></label>
+          <label>Lutador 2<select id="w-b"></select></label>
+          <label>Mapa<select id="w-map"></select></label>
+          <label>Dificuldade<select id="w-diff"><option value="facil">Fácil</option><option value="normal">Normal</option><option value="dificil" selected>Difícil</option></select></label>
+          <label>Vidas<select id="w-lives"><option>1</option><option>2</option><option selected>3</option><option>5</option></select></label>
+          <label>Placar no topo<select id="w-banner"><option value="1" selected>Mostrar</option><option value="0">Esconder</option></select></label>
+        </div>
+        <div class="panel-actions">
+          <button type="button" class="btn ghost small" data-close>Fechar</button>
+          <button type="button" class="btn small" id="w-go">Assistir</button>
+        </div>
+      </div>
       <div id="admin-panel" class="side-panel friends-panel admin-panel" hidden>
         <h2>Administrador</h2>
         <div id="admin-body"></div>
@@ -373,6 +389,16 @@
 
     <!-- ===================== PARTIDA ===================== -->
     <section id="screen-game" class="screen" hidden>
+      <!-- Assistir (só administrador): "FOGO vs ÁGUA" grande e o vencedor no fim -->
+      <div id="watch-banner" class="watch-banner" hidden><b class="wa"></b><i>VS</i><b class="wb"></b></div>
+      <div id="watch-end" class="watch-end" hidden>
+        <small>VENCEDOR</small><b id="watch-winner"></b>
+        <div class="watch-actions">
+          <button type="button" class="btn" id="watch-again">Revanche</button>
+          <button type="button" class="btn ghost" id="watch-change">Trocar lutadores</button>
+          <button type="button" class="btn ghost" id="watch-exit">Sair</button>
+        </div>
+      </div>
       <!-- Torre: andar atual e o aviso grande entre um andar e outro -->
       <div id="tower-hud" class="tower-hud" hidden><small>ANDAR</small><b>0</b><span></span></div>
       <div id="tower-banner" class="tower-banner" hidden>

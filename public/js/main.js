@@ -20,6 +20,7 @@ import { OnlineScreen } from './screens/online.js';
 import { FriendsPanel } from './screens/friends.js';
 import { AdminPanel } from './screens/admin.js';
 import { initInstall } from './install.js';
+import { WatchPanel, buildWatchSetup, elementColor } from './screens/watch.js';
 import { ONLINE_URL } from './config.js';
 import { iconSvg } from './icons.js';
 import { TOWER, botBrain, brainName, floorFoes, floorStep, carryAfterWin, towerXp, gravityFor, isGuardianFloor, guardianOf } from '/shared/tower.js';
@@ -86,6 +87,10 @@ export function show(name) {
   for (const s of SCREENS) $(`#screen-${s}`).hidden = s !== name;
   if (name !== 'tutorial' && tutorial?.active) tutorial.stop();
   state.screen = name;
+  if (name !== 'game') {
+    $('#watch-banner').hidden = true;
+    $('#watch-end').hidden = true;
+  }
   demo.setHome(name === 'home');
   $('#menu-bg').classList.toggle('home-lit', name === 'home');
   $('#menu-bg').classList.toggle('mode-lit', name === 'mode');
@@ -150,6 +155,7 @@ function setUser(user) {
       togglePanel('#admin-panel');
       adminPanel?.open();
     },
+    onWatch: openWatchPanel,
   });
   if (state.offline) setOfflineMode();
   updateAdminAccess();
@@ -635,6 +641,8 @@ async function startMatch(setup) {
   document.activeElement?.blur?.();
   show('game');
   $('#pause-overlay').hidden = true;
+  $('#watch-banner').hidden = true;
+  $('#watch-end').hidden = true;
   state.runner?.stop();
   const runner = new MatchRunner({
     canvas: $('#game-canvas'),
@@ -1165,6 +1173,13 @@ function quitMatch() {
     show('mode');
     return;
   }
+  if (runner.setup?.watch) {
+    runner.stop();
+    state.runner = null;
+    $('#pause-overlay').hidden = true;
+    show('home');
+    return;
+  }
   runner.game.forfeit(state.lastSetup.localPlayerId);
   // onEnd é chamado pelo próprio laço no próximo quadro
   runner.setPaused(false);
@@ -1181,6 +1196,59 @@ function endMatch(setup, result) {
   const outcome = showResult(setup, result);
   saveResult(setup, result, outcome);
   checkAchievements(setup, result, outcome);
+}
+
+// ------------------------------------------------------------ assistir (administrador)
+// Bot contra bot, sem ninguém jogar: para gravar vídeos. Não conta em nada
+// (nem estatísticas, nem conquistas, nem servidor).
+
+let watchPanel = null;
+
+function openWatchPanel() {
+  if (state.offline || !isDeveloper(state.user?.username)) return;
+  show('home');
+  togglePanel('#watch-panel');
+  watchPanel.open();
+}
+
+function startWatch(choices) {
+  const setup = buildWatchSetup(choices);
+  state.watch = choices;
+  state.lastSetup = setup;
+  unlockAudio();
+  goFullscreen();
+  document.activeElement?.blur?.();
+  show('game');
+  $('#pause-overlay').hidden = true;
+  $('#watch-end').hidden = true;
+  state.runner?.stop();
+  state.tracker = null;
+  state.matchTicket = null;
+  showTowerHud(setup);
+  const runner = new MatchRunner({ canvas: $('#game-canvas'), setup, debug: DEBUG, onEnd: (result) => watchEnd(setup, result) });
+  state.runner = runner;
+  runner.start();
+  $('#quit-btn').textContent = 'Parar e sair';
+  $('#quit-hint').textContent = '';
+  const banner = $('#watch-banner');
+  const [a, b] = setup.players;
+  banner.querySelector('.wa').textContent = a.name.toUpperCase();
+  banner.querySelector('.wa').style.color = elementColor(a.element);
+  banner.querySelector('.wb').textContent = b.name.toUpperCase();
+  banner.querySelector('.wb').style.color = elementColor(b.element);
+  banner.hidden = !choices.banner;
+  if (DEBUG) window.__brawl = { runner, state };
+}
+
+function watchEnd(setup, result) {
+  state.runner?.stop();
+  state.runner = null;
+  const winner = result.winnerTeam ? setup.players.find((p) => p.team === result.winnerTeam) : null;
+  const w = $('#watch-winner');
+  w.textContent = winner ? winner.name.toUpperCase() : 'EMPATE';
+  w.style.color = winner ? elementColor(winner.element) : '#ffffff';
+  $('#watch-end').hidden = false;
+  $('#watch-again').focus();
 }
 
 // ------------------------------------------------------------ conquistas
@@ -1924,6 +1992,15 @@ function init() {
   $('.mode-tile[data-mode="ffa"]').addEventListener('click', () => chooseMode(1, 'ffa'));
   $('.mode-tile[data-mode="treino"]').addEventListener('click', () => chooseMode(1, 'treino'));
   $('.mode-tile[data-mode="online"]').addEventListener('click', openOnline);
+  watchPanel = new WatchPanel({
+    onStart: (choices) => {
+      closePanels();
+      startWatch(choices);
+    },
+  });
+  $('#watch-again').addEventListener('click', () => startWatch(state.watch));
+  $('#watch-change').addEventListener('click', openWatchPanel);
+  $('#watch-exit').addEventListener('click', () => show('home'));
   adminPanel = new AdminPanel({
     // mexeu na própria conta: pega a versão nova do servidor
     onChangedSelf: (name) => {

@@ -7,7 +7,7 @@ const $ = (sel) => document.querySelector(sel);
 
 // ------------------------------------------------------------ caixa no menu
 
-export function renderAccountBox(user, { onLogin, onRegister, onLogout, onDelete, onAdmin, isAdmin = false }) {
+export function renderAccountBox(user, { onLogin, onRegister, onLogout, onDelete, onAdmin, onWatch, isAdmin = false }) {
   const box = $('#account-box');
   box.innerHTML = '';
   $('#delete-form').hidden = true;
@@ -22,7 +22,10 @@ export function renderAccountBox(user, { onLogin, onRegister, onLogout, onDelete
   };
   if (user) {
     $('#account-hint').textContent = `Você está na conta ${user.username}. Seu nível, conquistas e coleção ficam salvos nela.`;
-    if (isAdmin) button('Painel de administrador', '', onAdmin);
+    if (isAdmin) {
+      button('Painel de administrador', '', onAdmin);
+      button('Assistir: bot contra bot', '', onWatch);
+    }
     button('Trocar senha', 'ghost', () => {
       $('#delete-form').hidden = true;
       $('#password-form').hidden = false;
