@@ -61,7 +61,8 @@ export class Renderer {
     const dpr = Math.min(window.devicePixelRatio || 1, 2);
     const rect = this.canvas.getBoundingClientRect();
     this.cssW = this.canvas.clientWidth;
-    const w = Math.max(320, Math.round(rect.width * dpr));
+    // `maxCanvasW`: limite de pixels (no Assistir em pé o canvas fica bem largo)
+    const w = Math.min(this.maxCanvasW ?? Infinity, Math.max(320, Math.round(rect.width * dpr)));
     this.canvas.width = w;
     this.canvas.height = Math.round((w * VIEW_H) / VIEW_W);
     this.scale = this.canvas.width / VIEW_W;

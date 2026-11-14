@@ -390,7 +390,11 @@
     <!-- ===================== PARTIDA ===================== -->
     <section id="screen-game" class="screen" hidden>
       <!-- Assistir (só administrador): "FOGO vs ÁGUA" grande e o vencedor no fim -->
-      <div id="watch-banner" class="watch-banner" hidden><b class="wa"></b><i>VS</i><b class="wb"></b></div>
+      <div id="watch-banner" class="watch-banner" hidden>
+        <div class="ws" data-side="0"><b></b><span class="wst"><em>0%</em><span class="wl"></span></span></div>
+        <i>VS</i>
+        <div class="ws" data-side="1"><b></b><span class="wst"><em>0%</em><span class="wl"></span></span></div>
+      </div>
       <div id="watch-end" class="watch-end" hidden>
         <small>VENCEDOR</small><b id="watch-winner"></b>
         <div class="watch-actions">

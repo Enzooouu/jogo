@@ -90,6 +90,7 @@ export function show(name) {
   if (name !== 'game') {
     $('#watch-banner').hidden = true;
     $('#watch-end').hidden = true;
+    document.body.classList.remove('watch-portrait');
   }
   demo.setHome(name === 'home');
   $('#menu-bg').classList.toggle('home-lit', name === 'home');
@@ -1231,13 +1232,52 @@ function startWatch(choices) {
   $('#quit-btn').textContent = 'Parar e sair';
   $('#quit-hint').textContent = '';
   const banner = $('#watch-banner');
-  const [a, b] = setup.players;
-  banner.querySelector('.wa').textContent = a.name.toUpperCase();
-  banner.querySelector('.wa').style.color = elementColor(a.element);
-  banner.querySelector('.wb').textContent = b.name.toUpperCase();
-  banner.querySelector('.wb').style.color = elementColor(b.element);
+  setup.players.forEach((p, i) => {
+    const side = banner.querySelector(`.ws[data-side="${i}"]`);
+    side.querySelector('b').textContent = p.name.toUpperCase();
+    side.style.setProperty('--c', elementColor(p.element));
+  });
   banner.hidden = !choices.banner;
+  watchLayout();
+  watchTick();
   if (DEBUG) window.__brawl = { runner, state };
+}
+
+// tela em pé (vídeo para TikTok): o jogo ocupa a altura toda, a câmera chega
+// perto dos lutadores e o placar vai para o banner de cima
+const drawHudOriginal = Renderer.prototype.drawHud;
+function watchLayout() {
+  const runner = state.runner;
+  const portrait = Boolean(runner?.setup?.watch) && innerWidth / innerHeight < 0.9;
+  document.body.classList.toggle('watch-portrait', portrait);
+  if (!runner?.setup?.watch) return;
+  const r = runner.renderer;
+  r.camera.focus = portrait ? { frac: (innerWidth / innerHeight) / (16 / 9) } : null;
+  r.maxCanvasW = portrait ? 2600 : undefined;
+  r.drawHud = portrait ? () => {} : drawHudOriginal;
+  r.resize();
+}
+window.addEventListener('resize', () => {
+  if (state.runner?.setup?.watch || document.body.classList.contains('watch-portrait')) watchLayout();
+});
+
+// placar do banner (dano e vidas), atualizado enquanto a luta roda
+function watchTick() {
+  const runner = state.runner;
+  if (!runner?.setup?.watch) return;
+  const banner = $('#watch-banner');
+  runner.game.players.forEach((p, i) => {
+    const side = banner.querySelector(`.ws[data-side="${i}"]`);
+    if (!side) return;
+    const dmg = `${Math.round(p.damage)}%`;
+    const em = side.querySelector('em');
+    if (em.textContent !== dmg) em.textContent = dmg;
+    const lives = '●'.repeat(Math.max(0, p.lives));
+    const wl = side.querySelector('.wl');
+    if (wl.textContent !== lives) wl.textContent = lives;
+    side.classList.toggle('out', p.state === 'out' || p.lives <= 0);
+  });
+  requestAnimationFrame(watchTick);
 }
 
 function watchEnd(setup, result) {

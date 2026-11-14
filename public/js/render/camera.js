@@ -19,6 +19,23 @@ export class Camera {
   }
 
   target(players) {
+    // modo "foco" (Assistir com a tela em pé): só uma faixa do meio aparece
+    // (`focus.frac` da largura); a câmera chega perto e segue só os lutadores
+    if (this.focus && players.length) {
+      let l = Infinity;
+      let r = -Infinity;
+      let t = Infinity;
+      let b = -Infinity;
+      for (const p of players) {
+        l = Math.min(l, p.x - 70);
+        r = Math.max(r, p.x + p.w + 70);
+        t = Math.min(t, p.y - 110);
+        b = Math.max(b, p.y + p.h + 90);
+      }
+      const visW = this.viewW * this.focus.frac;
+      const zoom = Math.max(0.42, Math.min(1.7, visW / (r - l), this.viewH / (b - t)));
+      return { x: (l + r) / 2, y: (t + b) / 2, zoom };
+    }
     let { x: left, y: top } = this.home;
     let right = left + this.home.w;
     let bottom = top + this.home.h;
