@@ -28,6 +28,7 @@ export class BotController {
     this.wantThrow = false;
     this.idleTimer = 0;
     this.stage = null;
+    this.stall = 0;           // passos parado sem conseguir chegar no alvo
   }
 
   getInput(game) {
@@ -44,6 +45,7 @@ export class BotController {
       this.islands = islandsOf(now);
     }
 
+    this.checkStall(game, me);
     this.thinkTimer--;
     if (this.thinkTimer <= 0) {
       this.think(game, me);
@@ -146,6 +148,8 @@ export class BotController {
 
   // Decide o objetivo de tempos em tempos (simula tempo de reação).
   think(game, me) {
+    // mudando de lugar para destravar: termina o passeio antes de caçar de novo
+    if (this.goal?.type === 'roam' && game.tick < this.goal.until) return;
     const enemies = game.players.filter((p) => p.state === 'alive' && p.team !== me.team);
     const nearestEnemy = minBy(enemies, (e) => dist(me, e));
 
@@ -190,8 +194,9 @@ export class BotController {
     const dx = gx - cx;
     const dy = (goal.y + goal.h) - (me.y + me.h);   // diferença na altura dos pés
 
-    if (this.goal.type === 'item') {
+    if (this.goal.type === 'item' || this.goal.type === 'roam') {
       if (Math.abs(dx) > 8) dir = Math.sign(dx);
+      else if (this.goal.type === 'roam' && Math.abs(dy) < 40) this.goal.until = 0;   // chegou
     } else if (this.goal.type === 'hill') {
       // anda até a área e fica lá dentro (cada bot num cantinho dela)
       if (Math.abs(dx) > 34) dir = Math.sign(dx);
@@ -277,7 +282,9 @@ export class BotController {
         if (!this.landingIsSafe(game, me, probeX)) {
           const goal = this.resolveGoal(game);
           const goalAhead = goal && Math.sign(goal.x + goal.w / 2 - cx) === dir && Math.abs(goal.x + goal.w / 2 - cx) > 60;
-          const landing = goalAhead && me.standingOn === 'solid' ? this.landingAcross(game, me, probeX, dir) : null;
+          const landing = !goalAhead ? null
+            : me.standingOn === 'solid' ? this.landingAcross(game, me, probeX, dir)
+              : this.landingBelow(game, me, probeX, dir);
           if (landing !== null) {
             jump = true;
             this.crossing = { x: landing, until: game.tick + 110 };
@@ -324,6 +331,18 @@ export class BotController {
     return null;
   }
 
+  // Em cima de uma plataforma com perigo embaixo da borda: existe chão seguro
+  // mais adiante (mais baixo) para onde dá para pular por cima do perigo?
+  landingBelow(game, me, fromX, dir) {
+    const feet = me.y + me.h;
+    for (let d = 40; d <= 300; d += 20) {
+      const x = fromX + dir * d;
+      const solid = currentMap(game).solids.some((s) => x >= s.x && x <= s.x + s.w && s.y > feet - 10 && s.y < feet + 260);
+      if (solid && this.landingIsSafe(game, me, x) && this.landingIsSafe(game, me, x + dir * 30)) return x + dir * 30;
+    }
+    return null;
+  }
+
   itemIsDeadly(game, me, item) {
     return game.hazardsNow().some((h) => rectsOverlap(item, h) && hazardReaction(me.element, h.type) !== 'imune');
   }
@@ -361,6 +380,43 @@ export class BotController {
     return { x: best.x - 15, y: best.y - 66, w: 30, h: 66 };
   }
 
+  // Anti-travamento: parado no chão sem chegar no alvo (ex.: o inimigo está
+  // numa plataforma em cima de uma piscina mortal e eu na beira dela, e ele
+  // também não desce) -> vai para outro lugar do mapa por um tempinho e
+  // depois volta a caçar de outro ângulo.
+  checkStall(game, me) {
+    const g = this.goal;
+    if (!g || (g.type !== 'enemy' && g.type !== 'item' && g.type !== 'roam')) {
+      this.stall = 0;
+      return;
+    }
+    const target = this.resolveGoal(game);
+    const stuck = target && me.onGround && Math.abs(me.vx) < 20 && !me.attack
+      && Math.hypot(target.x - me.x, target.y - me.y) > (g.type === 'roam' ? 40 : 110);
+    this.stall = stuck ? this.stall + 1 : Math.max(0, this.stall - 3);
+    if (this.stall < (g.type === 'roam' ? 35 : 50)) return;
+    this.stall = 0;
+    const spot = this.roamSpot(game, me);
+    if (spot) this.goal = { type: 'roam', x: spot.x, y: spot.y, until: game.tick + this.rng.int(100, 190) };
+  }
+
+  // um lugar seguro (para o meu elemento) longe de onde estou: chão das
+  // ilhas ou o topo de uma plataforma
+  roamSpot(game, me) {
+    const map = currentMap(game);
+    const cx = me.x + me.w / 2;
+    const spots = [];
+    for (const isl of this.islands) {
+      for (let x = isl.left + 40; x <= isl.right - 40; x += 50) spots.push({ x, y: isl.top });
+    }
+    for (const p of game.platforms) {
+      if (!game.platformGone(p)) spots.push({ x: p.x + p.w / 2, y: p.y });
+    }
+    const safe = spots.filter((s) => Math.abs(s.x - cx) > 160
+      && !map.hazards.some((h) => s.x >= h.x - 30 && s.x <= h.x + h.w + 30 && Math.abs(h.y - s.y) < 60 && hazardReaction(me.element, h.type) !== 'imune'));
+    return safe.length ? safe[this.rng.int(0, safe.length - 1)] : null;
+  }
+
   resolveGoal(game) {
     if (!this.goal) return null;
     if (this.goal.type === 'hill') {
@@ -369,6 +425,14 @@ export class BotController {
       const spread = ((this.playerId * 37) % 5 - 2) * 22;
       const target = { x: r.x + r.w / 2 - 15 + spread, y: r.y + r.h - 66, w: 30, h: 66 };
       return this.stepTowards(game, target) ?? target;
+    }
+    if (this.goal.type === 'roam') {
+      if (game.tick >= this.goal.until) {
+        this.goal = null;
+        this.thinkTimer = 0;
+        return null;
+      }
+      return { x: this.goal.x - 15, y: this.goal.y - 66, w: 30, h: 66 };
     }
     if (this.goal.type === 'enemy') {
       const e = game.playerById(this.goal.id);
