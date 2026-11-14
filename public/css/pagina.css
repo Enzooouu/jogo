@@ -1,0 +1,19 @@
+/* páginas de texto (privacidade, sobre o jogo) */
+:root { color-scheme: dark; --bg: #140a20; --card: #1e1030; --text: #ece8f6; --muted: #b3a9c9; --gold: #ffd25a; --orange: #ff6a1f; }
+* { box-sizing: border-box; }
+body { margin: 0; background: radial-gradient(1200px 600px at 50% -10%, #3a1d52, var(--bg) 70%) fixed, var(--bg); color: var(--text);
+  font: 400 17px/1.65 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; }
+main { max-width: 760px; margin: 0 auto; padding: 32px 16px 64px; }
+.top { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; margin-bottom: 28px; }
+.logo { font: italic 900 32px/1 system-ui, sans-serif; text-decoration: none; background: linear-gradient(90deg, #ffd25a, #ff6a1f 42%, #c77dff 62%, #4fb0ff); -webkit-background-clip: text; background-clip: text; color: transparent; }
+.play { display: inline-block; padding: 10px 20px; border-radius: 999px; background: var(--orange); color: #fff; font-weight: 800; text-decoration: none; }
+.play:hover { filter: brightness(1.1); }
+h1 { font-size: 34px; line-height: 1.15; margin: 0 0 6px; }
+h2 { font-size: 21px; margin: 32px 0 8px; color: var(--gold); }
+p, li { color: var(--text); }
+.muted { color: var(--muted); font-size: 15px; }
+ul { padding-left: 22px; }
+li { margin: 4px 0; }
+a { color: #8fc8ff; }
+.card { background: var(--card); border: 1px solid rgba(255,255,255,.08); border-radius: 14px; padding: 4px 20px; margin: 18px 0; }
+footer { margin-top: 40px; padding-top: 16px; border-top: 1px solid rgba(255,255,255,.1); font-size: 15px; color: var(--muted); }

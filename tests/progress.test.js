@@ -110,3 +110,32 @@ test('conta: o próprio jogador exclui a conta com a senha', async () => {
     server.close();
   }
 });
+
+test('conta: o jogador troca a própria senha', async () => {
+  const app = createApp({ db: openDatabase(':memory:') });
+  const server = app.listen(0);
+  const base = `http://127.0.0.1:${server.address().port}/api`;
+  const client = () => {
+    let cookie = '';
+    return async (method, url, body) => {
+      const res = await fetch(base + url, { method, headers: { 'Content-Type': 'application/json', cookie }, body: body && JSON.stringify(body) });
+      cookie = res.headers.get('set-cookie')?.split(';')[0] ?? cookie;
+      return { status: res.status, body: res.status === 204 ? null : await res.json() };
+    };
+  };
+  try {
+    const pc = client();
+    const cel = client();
+    await pc('POST', '/auth/register', { username: 'duda', password: 'senha-velha-1' });
+    await cel('POST', '/auth/login', { username: 'duda', password: 'senha-velha-1' });
+    assert.equal((await pc('POST', '/auth/password', { current: 'errada', password: 'senha-nova-1' })).status, 400);
+    assert.equal((await pc('POST', '/auth/password', { current: 'senha-velha-1', password: '123' })).status, 400);
+    assert.equal((await pc('POST', '/auth/password', { current: 'senha-velha-1', password: 'senha-nova-1' })).status, 200);
+    assert.equal((await pc('GET', '/auth/me')).body.user.username, 'duda', 'continua entrado neste aparelho');
+    assert.equal((await cel('GET', '/auth/me')).body.user, null, 'o outro aparelho sai');
+    assert.equal((await cel('POST', '/auth/login', { username: 'duda', password: 'senha-velha-1' })).status, 401);
+    assert.equal((await cel('POST', '/auth/login', { username: 'duda', password: 'senha-nova-1' })).status, 200);
+  } finally {
+    server.close();
+  }
+});

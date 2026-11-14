@@ -228,7 +228,7 @@ export function renderLocalProfile({ username, achievements, onReset }) {
     ? `Jogando desde ${formatDate(s.since)} · ${formatTime(s.time)} de jogo`
     : 'Nenhuma partida ainda: jogue uma para começar seu perfil.';
   $('#profile-note').textContent = username
-    ? 'Estes números ficam guardados neste aparelho.'
+    ? 'Estes números ficam guardados na sua conta (e neste aparelho).'
     : 'Jogando como convidado: os números ficam guardados neste aparelho.';
 
   // herói: personagem mais usado

@@ -37,7 +37,7 @@ export function createApp({ db, store = createStore(db), online = null }) {
   // /shared roda no navegador e no servidor (mesma simulação dos dois lados)
   // no-cache: o navegador sempre confere se o arquivo mudou (senão, depois de
   // atualizar o servidor, alguns jogadores ficavam com o jogo velho)
-  const fresh = { setHeaders: (res) => res.setHeader('Cache-Control', 'no-cache') };
+  const fresh = { setHeaders: (res) => res.setHeader('Cache-Control', 'no-cache'), extensions: ['html'] };
   app.use('/shared', express.static(path.join(ROOT, 'shared'), fresh));
   app.use(express.static(path.join(ROOT, 'public'), fresh));
 

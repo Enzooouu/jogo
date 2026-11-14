@@ -92,6 +92,20 @@ export function createApi(store, online = null) {
     res.status(204).end();
   });
 
+  // trocar a senha: pede a atual; desconecta os outros aparelhos e mantém este
+  api.post('/auth/password', requireUser, loginIpLimit, async (req, res) => {
+    const { current, password } = req.body ?? {};
+    const user = store.findUserByName(req.user.username);
+    if (typeof current !== 'string' || !user || !(await verifyPassword(current, user.password_hash))) {
+      return res.status(400).json({ error: 'A senha atual está errada.' });
+    }
+    const problem = validatePassword(password);
+    if (problem) return res.status(400).json({ error: problem });
+    store.adminSetPassword(user.id, await hashPassword(password));
+    setSessionCookie(req, res, store.createSession(user.id));
+    res.json({ ok: true });
+  });
+
   // o próprio jogador apaga a conta (pede a senha de novo)
   api.post('/auth/delete', requireUser, loginIpLimit, async (req, res) => {
     const password = req.body?.password;

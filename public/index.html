@@ -224,6 +224,7 @@
           <label class="toggle"><input type="checkbox" id="opt-admin"> Modo ADM (testes)</label>
           <p class="hint">No modo ADM cada golpe seu dá 999% de dano, nada te acerta (nem lava, água, espinhos ou vento) e você tem pulos e dashes infinitos. As partidas não contam nas estatísticas.</p>
         </div>
+        <p class="legal-links"><a href="https://jogaelementum.com.br/sobre" target="_blank" rel="noopener">Sobre o jogo</a> · <a href="https://jogaelementum.com.br/privacidade" target="_blank" rel="noopener">Privacidade</a></p>
         <div class="panel-actions"><button type="button" class="btn ghost small" data-close>Fechar</button></div>
       </div>
 
@@ -567,6 +568,17 @@
           <h2>Conta</h2>
           <p class="hint" id="account-hint"></p>
           <div id="account-box" class="account-box"></div>
+          <form id="password-form" class="delete-form" hidden>
+            <p class="hint">Digite a senha atual e a nova. Os outros aparelhos onde você entrou vão sair da conta.</p>
+            <input type="password" id="pw-current" autocomplete="current-password" placeholder="Senha atual" required>
+            <input type="password" id="pw-new" autocomplete="new-password" placeholder="Senha nova (6 ou mais letras)" required>
+            <input type="password" id="pw-again" autocomplete="new-password" placeholder="Repita a senha nova" required>
+            <div class="panel-actions">
+              <button type="button" class="btn ghost small" id="pw-cancel">Cancelar</button>
+              <button type="submit" class="btn small">Trocar senha</button>
+            </div>
+            <p class="hint" id="pw-msg"></p>
+          </form>
           <form id="delete-form" class="delete-form" hidden>
             <p class="hint">Isso apaga sua conta, seu progresso salvo nela e seus amigos <b>para sempre</b>. Digite sua senha para confirmar.</p>
             <input type="password" id="delete-password" autocomplete="current-password" placeholder="Sua senha" required>
@@ -576,6 +588,7 @@
             </div>
             <p class="hint error" id="delete-error"></p>
           </form>
+          <p class="legal-links"><a href="https://jogaelementum.com.br/sobre" target="_blank" rel="noopener">Sobre o jogo</a> · <a href="https://jogaelementum.com.br/privacidade" target="_blank" rel="noopener">Privacidade</a></p>
         </div>
         <footer class="profile-foot">
           <p class="hint" id="profile-note"></p>

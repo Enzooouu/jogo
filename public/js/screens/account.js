@@ -11,6 +11,7 @@ export function renderAccountBox(user, { onLogin, onRegister, onLogout, onDelete
   const box = $('#account-box');
   box.innerHTML = '';
   $('#delete-form').hidden = true;
+  $('#password-form').hidden = true;
   const button = (label, cls, fn) => {
     const b = document.createElement('button');
     b.type = 'button';
@@ -22,8 +23,16 @@ export function renderAccountBox(user, { onLogin, onRegister, onLogout, onDelete
   if (user) {
     $('#account-hint').textContent = `Você está na conta ${user.username}. Seu nível, conquistas e coleção ficam salvos nela.`;
     if (isAdmin) button('Painel de administrador', '', onAdmin);
+    button('Trocar senha', 'ghost', () => {
+      $('#delete-form').hidden = true;
+      $('#password-form').hidden = false;
+      $('#password-form').reset();
+      $('#pw-msg').textContent = '';
+      $('#pw-current').focus();
+    });
     button('Sair da conta', 'ghost', onLogout);
     button('Excluir conta', 'ghost danger', () => {
+      $('#password-form').hidden = true;
       $('#delete-form').hidden = false;
       $('#delete-error').textContent = '';
       $('#delete-password').value = '';
@@ -46,6 +55,25 @@ function initDeleteForm(onDelete) {
   if (deleteReady) return;
   deleteReady = true;
   $('#delete-cancel').addEventListener('click', () => { $('#delete-form').hidden = true; });
+  $('#pw-cancel').addEventListener('click', () => { $('#password-form').hidden = true; });
+  $('#password-form').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const msg = $('#pw-msg');
+    msg.classList.add('error');
+    if ($('#pw-new').value !== $('#pw-again').value) {
+      msg.textContent = 'A senha nova e a repetição não são iguais.';
+      return;
+    }
+    try {
+      await api.changePassword($('#pw-current').value, $('#pw-new').value);
+      $('#password-form').reset();
+      msg.classList.remove('error');
+      msg.textContent = 'Senha trocada!';
+      setTimeout(() => { $('#password-form').hidden = true; }, 1800);
+    } catch (err) {
+      msg.textContent = err.message;
+    }
+  });
   $('#delete-form').addEventListener('submit', async (e) => {
     e.preventDefault();
     try {
