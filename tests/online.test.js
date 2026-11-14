@@ -112,3 +112,33 @@ test('online: previsão local mexe o boneco na hora e bate com o servidor', () =
   assert.equal(client.players[0].x, server.players[0].x);
   assert.equal(client.players[0].y, server.players[0].y);
 });
+
+test('online: só o que mudou (delta) remonta o estado igualzinho e gasta bem menos', async () => {
+  const { roundSnap, diffSnap, patchSnap } = await import('../shared/net.js');
+  const setup = buildOnlineSetup({ mode: '3x3', mapId: 'navio', humans: humans() });
+  const g = new Game(gameConfig(setup));
+  const bots = setup.players.map((p) => new BotController(p.id, { difficulty: 'normal', seed: p.id }));
+  let prev = null;
+  let mirror = null;
+  let full = 0;
+  let sent = 0;
+  for (let t = 0; t < 1800; t++) {
+    const inputs = {};
+    for (const b of bots) inputs[b.playerId] = b.getInput(g);
+    g.step(inputs);
+    g.drainEvents();
+    if (t % 2) continue;
+    const snap = roundSnap(snapshotGame(g));
+    const wire = (v) => JSON.parse(JSON.stringify(v));   // como chega pela internet
+    if (!prev) mirror = wire(snap);
+    else {
+      const d = diffSnap(prev, snap) ?? {};
+      sent += JSON.stringify(d).length;
+      full += JSON.stringify(snap).length;
+      mirror = patchSnap(mirror, wire(d));
+    }
+    prev = snap;
+    assert.deepEqual(mirror, wire(snap));
+  }
+  assert.ok(sent < full * 0.35, `delta ${sent} x inteiro ${full}`);
+});

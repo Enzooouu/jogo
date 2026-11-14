@@ -4,6 +4,7 @@
 import { test, before, after } from 'node:test';
 import assert from 'node:assert/strict';
 import WebSocket from 'ws';
+import { patchSnap } from '../shared/net.js';
 import { openDatabase } from '../server/db.js';
 import { createApp } from '../server/index.js';
 import { createStore } from '../server/store.js';
@@ -36,8 +37,15 @@ function player(cookie = '') {
   const ws = new WebSocket(`ws://${base}/ws`, { headers: cookie ? { Cookie: cookie } : {} });
   const inbox = [];
   const waiters = [];
+  let snap = null;
   ws.on('message', (data) => {
     const msg = JSON.parse(data);
+    // estado: inteiro (s) ou só o que mudou (d); o teste vê sempre o inteiro
+    if (msg.t === 's') {
+      snap = msg.s ?? patchSnap(snap, msg.d);
+      msg.full = Boolean(msg.s);
+      msg.s = snap;
+    }
     inbox.push(msg);
     for (const w of [...waiters]) {
       if (w.match(msg)) {

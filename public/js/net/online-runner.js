@@ -5,7 +5,7 @@
 
 import { Game } from '/shared/game.js';
 import { MATCH } from '/shared/constants.js';
-import { gameConfig, Predictor } from '/shared/net.js';
+import { gameConfig, Predictor, patchSnap } from '/shared/net.js';
 import { encodeInput, EMPTY_INPUT } from '/shared/input.js';
 import { Renderer } from '../render/renderer.js';
 import { KeyboardController } from '../input/keyboard.js';
@@ -48,8 +48,12 @@ export class OnlineRunner {
     window.addEventListener('keyup', this.onKeyUp);
   }
 
-  onSnapshot({ s, e, a }) {
-    this.predictor.reconcile(s, a);
+  // chega o estado inteiro (`s`) ou só o que mudou (`d`) desde o anterior
+  onSnapshot({ s, d, e, a }) {
+    if (s) this.base = s;
+    else if (d && this.base) this.base = patchSnap(this.base, d);
+    else return;
+    this.predictor.reconcile(this.base, a);
     const g = this.game;
     if (g.phase === 'countdown') {
       const n = Math.ceil(g.phaseTimer);

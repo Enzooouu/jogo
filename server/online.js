@@ -20,7 +20,7 @@ import { BotController } from '../shared/ai.js';
 import { DT } from '../shared/constants.js';
 import { ELEMENTS, enabledElements } from '../shared/elements.js';
 import { decodeInput } from '../shared/input.js';
-import { gameConfig, snapshotGame, buildOnlineSetup, ONLINE_MODES, mapsFor, RANDOM } from '../shared/net.js';
+import { gameConfig, snapshotGame, buildOnlineSetup, ONLINE_MODES, mapsFor, RANDOM, roundSnap, diffSnap } from '../shared/net.js';
 import { carryAfterWin, isGuardianFloor, guardianOf } from '../shared/tower.js';
 import { readCookie, SESSION_COOKIE } from './auth.js';
 
@@ -29,6 +29,7 @@ const REMATCH_SECONDS = 45;       // depois de uma partida: tempo para ver o res
 const SNAP_EVERY = 2;             // manda o estado a cada 2 passos (30 por segundo)
 const MAX_ROOMS = 500;
 const HATS = new Set(['capacete', 'coroa', 'pirata']);
+const KEYFRAME_EVERY = 90;         // estado inteiro a cada 3 s (o resto é só o que mudou)
 const BITS = 127;                 // 7 botões (ver INPUT_KEYS)
 
 export function createOnline(store, { lobbySeconds = LOBBY_SECONDS, rematchSeconds = REMATCH_SECONDS } = {}) {
@@ -191,7 +192,7 @@ export function createOnline(store, { lobbySeconds = LOBBY_SECONDS, rematchSecon
     const game = new Game(gameConfig(setup));
     const bots = setup.players.filter((p) => p.isBot)
       .map((p) => new BotController(p.id, { difficulty: setup.difficulty, brain: p.brain ?? null, seed: setup.seed + p.id * 7919 }));
-    room.match = { setup, game, bots, tick: 0, events: [], acc: 0, last: performance.now(), ended: false };
+    room.match = { setup, game, bots, tick: 0, events: [], acc: 0, last: performance.now(), ended: false, lastSnap: null, snaps: 0 };
     room.phase = 'match';
     room.members.forEach((m, i) => {
       m.pid = i + 1;
@@ -247,7 +248,12 @@ export function createOnline(store, { lobbySeconds = LOBBY_SECONDS, rematchSecon
     const ev = g.drainEvents();
     if (ev.length) match.events.push(...ev);
     if (match.tick % SNAP_EVERY === 0 || g.phase === 'ended') {
-      const body = `"s":${JSON.stringify(snapshotGame(g))},"e":${JSON.stringify(match.events)}`;
+      // só o que mudou; o estado inteiro a cada KEYFRAME_EVERY (e no começo)
+      const snap = roundSnap(snapshotGame(g));
+      const full = !match.lastSnap || match.snaps++ % KEYFRAME_EVERY === 0;
+      const part = full ? `"s":${JSON.stringify(snap)}` : `"d":${JSON.stringify(diffSnap(match.lastSnap, snap) ?? {})}`;
+      match.lastSnap = snap;
+      const body = `${part},"e":${JSON.stringify(match.events)}`;
       match.events = [];
       // cada um recebe até que comando dele o servidor já usou ("a")
       for (const m of room.members) send(m, `{"t":"s",${body},"a":${m.ack ?? null}}`);

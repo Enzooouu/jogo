@@ -253,3 +253,80 @@ export class Predictor {
     this.game.drainEvents();
   }
 }
+
+// ------------------------------------------------------------ economia de dados
+//
+// O servidor manda o estado ~30 vezes por segundo. Para gastar menos internet:
+//   - números com até 3 casas depois da vírgula (ninguém nota a diferença);
+//   - só o que mudou desde o estado anterior ("delta"). De vez em quando vai
+//     o estado inteiro ("quadro-chave"), por segurança.
+// Formato do delta: objeto com só as chaves que mudaram; { __x: [...] } lista
+// as chaves que sumiram; lista vira { __a: tamanho, índice: mudança };
+// { __v: valor } troca o valor inteiro.
+
+export function roundSnap(v) {
+  if (typeof v === 'number') return Number.isInteger(v) ? v : Math.round(v * 1000) / 1000;
+  if (v === null || typeof v !== 'object') return v;
+  if (Array.isArray(v)) return v.map(roundSnap);
+  const out = {};
+  for (const k of Object.keys(v)) out[k] = roundSnap(v[k]);
+  return out;
+}
+
+const isPlainObj = (v) => v !== null && typeof v === 'object' && !Array.isArray(v);
+const NO_CHANGE = undefined;
+
+export function diffSnap(a, b) {
+  if (a === b) return NO_CHANGE;
+  if (Array.isArray(a) && Array.isArray(b)) {
+    const out = { __a: b.length };
+    let changed = a.length !== b.length;
+    for (let i = 0; i < b.length; i++) {
+      const d = i < a.length ? diffSnap(a[i], b[i]) : wrap(b[i]);
+      if (d !== NO_CHANGE) {
+        out[i] = d;
+        changed = true;
+      }
+    }
+    return changed ? out : NO_CHANGE;
+  }
+  if (isPlainObj(a) && isPlainObj(b)) {
+    const out = {};
+    let changed = false;
+    for (const k of Object.keys(b)) {
+      const d = k in a ? diffSnap(a[k], b[k]) : wrap(b[k]);
+      if (d !== NO_CHANGE) {
+        out[k] = d;
+        changed = true;
+      }
+    }
+    const gone = Object.keys(a).filter((k) => !(k in b));
+    if (gone.length) {
+      out.__x = gone;
+      changed = true;
+    }
+    return changed ? out : NO_CHANGE;
+  }
+  if (typeof a === 'number' && typeof b === 'number' && Number.isNaN(a) && Number.isNaN(b)) return NO_CHANGE;
+  return wrap(b);
+}
+
+// valor novo inteiro: objetos e listas vão embrulhados para não parecerem delta
+const wrap = (v) => (v !== null && typeof v === 'object' ? { __v: v } : v);
+
+// aplica o delta e devolve o estado novo (não mexe em `a`)
+export function patchSnap(a, d) {
+  if (d === NO_CHANGE) return a;
+  if (!isPlainObj(d)) return d;
+  if ('__v' in d) return d.__v;
+  if ('__a' in d) {
+    const base = Array.isArray(a) ? a : [];
+    const out = [];
+    for (let i = 0; i < d.__a; i++) out.push(i in d ? patchSnap(base[i], d[i]) : base[i]);
+    return out;
+  }
+  const out = isPlainObj(a) ? { ...a } : {};
+  for (const k of Object.keys(d)) if (k !== '__x') out[k] = patchSnap(out[k], d[k]);
+  for (const k of d.__x ?? []) delete out[k];
+  return out;
+}
