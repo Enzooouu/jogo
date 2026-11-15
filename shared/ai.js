@@ -103,11 +103,23 @@ export class BotController {
     }
 
     // Mestre: táticas de lutador de verdade
-    if (this.cfg.expert && !offStage && !underStage && this.idleTimer <= 0) {
+    // (só quando o objetivo é o inimigo: indo pegar arma ou mudando de lugar, não)
+    if (this.cfg.expert && !offStage && !underStage && this.idleTimer <= 0 && this.goal?.type === 'enemy') {
       const t = this.tactics(game, me, dir, jump);
       dir = t.dir;
       jump = t.jump;
       if (t.dash) dash = t.dash;
+    }
+
+    // Mestre: não fica trocando de lado a cada instante (o "tremilique" que
+    // fazia errar golpes). Depois de escolher um lado, mantém por ~0,15 s.
+    if (this.cfg.expert && !offStage && !underStage && !dash) {
+      this.moveHold = Math.max(0, (this.moveHold ?? 0) - 1);
+      if (dir !== 0 && this.moveDir && dir !== this.moveDir && this.moveHold > 0) dir = this.moveDir;
+      else if (dir !== 0 && dir !== this.moveDir) {
+        this.moveDir = dir;
+        this.moveHold = 9;
+      }
     }
 
     // Reflexos de sobrevivência (podem falhar um pouco nos bots mais fáceis).
@@ -247,7 +259,8 @@ export class BotController {
     }
 
     // Alvo mais alto: pula. Alvo mais baixo e eu numa plataforma: desce.
-    if (dy < -60 && Math.abs(dx) < 280) {
+    const jumpRange = this.cfg.expert ? 170 : 280;
+    if (dy < -60 && Math.abs(dx) < jumpRange) {
       if (me.onGround) jump = true;
       else if (me.vy > 60 && me.jumpsLeft > 0 && (goal.y + goal.h) < me.y) jump = true;
     } else if (dy > 70 && me.onGround && me.standingOn === 'platform' && Math.abs(dx) < 140) {
@@ -255,7 +268,7 @@ export class BotController {
     }
 
     // Pulinho aleatório de vez em quando.
-    if (me.onGround && this.rng.chance(0.004)) jump = true;
+    if (!this.cfg.expert && me.onGround && this.rng.chance(0.004)) jump = true;
     return { dir, jump };
   }
 
@@ -424,7 +437,6 @@ export class BotController {
         this.dodged = ea;
         if (this.rng.chance(0.35)) {
           if (me.onGround && game.dashReady(me) && safeDash(-side)) return { dir: -side, jump: false, dash: { dir: -side } };
-          if (me.jumpsLeft > 0) return { dir: -side, jump: true, dash: null };
         }
       }
     }
@@ -433,6 +445,12 @@ export class BotController {
     if (!ea && e.cooldown > 0.12 && Math.abs(dx) < reach && Math.abs(dy) < 50 && me.cooldown <= 0 && !me.attack) {
       if (Math.sign(dx) === me.facing || Math.abs(dx) < 4) this.wantAttack = true;
       else dir = side;
+    }
+
+    // perto e na mesma altura: para de andar (só vira se precisar) e bate
+    if (Math.abs(dx) <= reach * 0.9 && Math.abs(dy) < 50 && myProfile.kind !== 'ranged') {
+      dir = Math.sign(dx) === me.facing || Math.abs(dx) < 6 ? 0 : side;
+      jump = false;
     }
 
     // 3) Avança com dash quando está a meia distância no mesmo andar
@@ -499,7 +517,9 @@ export class BotController {
       return this.stepTowards(game, target) ?? target;
     }
     if (this.goal.type === 'roam') {
-      if (game.tick >= this.goal.until) {
+      const me = game.playerById(this.playerId);
+      const near = me && game.players.some((p) => p.state === 'alive' && p.team !== me.team && Math.abs(p.x - me.x) < 120 && Math.abs(p.y - me.y) < 60);
+      if (game.tick >= this.goal.until || near) {
         this.goal = null;
         this.thinkTimer = 0;
         return null;
