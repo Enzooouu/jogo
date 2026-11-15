@@ -2053,7 +2053,10 @@ function openTutorial() {
 function openWelcome() {
   $('#welcome').hidden = false;
   // os 5 personagens lado a lado, se mexendo de leve
-  const ids = ['fogo', 'agua', 'terra', 'ar', 'mortal'];
+  const all = ['fogo', 'agua', 'terra', 'ar', 'mortal'];
+  // celular em pé: um personagem sorteado, bem grande
+  const solo = innerWidth < 600 && innerHeight > innerWidth;
+  const ids = solo ? [all[Math.floor(Math.random() * all.length)]] : all;
   cancelAnimationFrame(state.welcomeFrame);
   const draw = (now) => {
     if ($('#welcome').hidden) return;
@@ -2061,11 +2064,11 @@ function openWelcome() {
     ctx.clearRect(0, 0, w, h);
     // os bonecos ficam numa faixa no meio; a aura de cada um (um círculo
     // de ~100 unidades) precisa caber inteira, sem encostar nas bordas
-    const band = Math.min(w - 16, 1100, h * 5);
+    const band = solo ? w : Math.min(w - 16, 1100, h * 5);
     const gap = band / ids.length;
     const left = (w - band) / 2;
     // no celular em pé as auras podem se encostar um pouco (bonecos maiores)
-    const scale = Math.min(h / 104, gap / (w < 600 ? 62 : 82));
+    const scale = solo ? h / 104 : Math.min(h / 104, gap / (w < 600 ? 62 : 82));
     const footY = h - 18 * scale;
     ids.forEach((id, i) => {
       const x = left + gap * (i + 0.5);
@@ -2075,7 +2078,7 @@ function openWelcome() {
       ctx.ellipse(x, footY, 17 * scale, 3.4 * scale, 0, 0, Math.PI * 2);
       ctx.fill();
       ctx.restore();
-      drawPortrait(ctx, id, x, footY, id === 'mortal' ? scale * 1.12 : scale, { facing: i < 2 ? 1 : -1, time: now / 1000 + i * 0.7 });
+      drawPortrait(ctx, id, x, footY, id === 'mortal' ? scale * 1.12 : scale, { facing: solo || i < 2 ? 1 : -1, time: now / 1000 + i * 0.7 });
     });
     state.welcomeFrame = requestAnimationFrame(draw);
   };

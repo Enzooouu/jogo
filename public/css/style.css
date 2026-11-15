@@ -751,7 +751,9 @@ body.pad-nav .mode-tile:focus { outline: none !important; }
   .welcome-kicker { font-size: 12px; letter-spacing: .4em; }
   .welcome-actions { flex-direction: column; align-items: center; gap: 12px; }
   .welcome-go { padding: 14px 30px; }
-  .welcome-art { height: 26vh; margin-bottom: 4vh; }
+  .welcome-hero { grid-template-rows: auto minmax(0, 1fr); }
+  .welcome-main { padding-top: 9vh; }
+  .welcome-art { height: 100%; min-height: 0; margin: 2vh 0 3vh; }
 }
 /* celular deitado: tudo menor para caber */
 @media (max-height: 520px) {
