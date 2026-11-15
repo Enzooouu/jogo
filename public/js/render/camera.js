@@ -33,7 +33,8 @@ export class Camera {
         b = Math.max(b, p.y + p.h + 90);
       }
       const visW = this.viewW * this.focus.frac;
-      const zoom = Math.max(0.42, Math.min(1.7, visW / (r - l), this.viewH / (b - t)));
+      // um pouco afastado (0,85) para ver mais do cenário em volta da luta
+      const zoom = Math.max(0.4, Math.min(1.45, 0.85 * Math.min(visW / (r - l), this.viewH / (b - t))));
       return { x: (l + r) / 2, y: (t + b) / 2, zoom };
     }
     let { x: left, y: top } = this.home;
