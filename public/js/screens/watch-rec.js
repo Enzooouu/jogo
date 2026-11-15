@@ -70,11 +70,6 @@ export class WatchRecorder {
       }
     }
     const info = this.info();
-    // no fim: escurece a luta, mas o placar continua bem visível por cima
-    if (info.winner) {
-      ctx.fillStyle = 'rgba(10,6,18,.55)';
-      ctx.fillRect(0, 0, W, H);
-    }
     this.drawMark();
     if (info.banner) this.drawBanner(info.players);
     if (info.intro) this.drawIntro(info.intro);
@@ -198,35 +193,60 @@ export class WatchRecorder {
     ctx.restore();
   }
 
+  // VENCEDOR entrando junto com a animação de vitória (sem escurecer)
   drawWinner(w) {
     const { ctx, out } = this;
     const W = out.width;
     const H = out.height;
+    const t = (performance.now() - (w.start ?? 0)) / 1000;
+    const ease = (x) => 1 - (1 - Math.min(1, Math.max(0, x))) ** 3;
+    const portrait = this.portraitMode;
     ctx.save();
     ctx.textAlign = 'center';
-    ctx.font = `800 ${this.portraitMode ? 44 : 34}px system-ui, sans-serif`;
-    ctx.fillStyle = '#ffd25a';
-    ctx.fillText('V E N C E D O R', W / 2, H / 2 - (this.portraitMode ? 110 : 90));
-    const size = this.portraitMode ? 190 : 170;
-    ctx.font = `italic 900 ${size}px system-ui, sans-serif`;
-    ctx.fillStyle = 'rgba(0,0,0,.55)';
-    ctx.fillText(w.name, W / 2, H / 2 + size * 0.35 + 8);
-    ctx.fillStyle = w.color;
-    ctx.fillText(w.name, W / 2, H / 2 + size * 0.35);
-    // legenda: o site e o @, como legenda de vídeo
-    const lines = [['jogaelementum.com.br', this.portraitMode ? 50 : 40], ['@jogaelementum', this.portraitMode ? 40 : 32]];
-    let y = H / 2 + size * 0.35 + (this.portraitMode ? 110 : 90);
-    for (const [text, fs] of lines) {
-      ctx.font = `800 ${fs}px system-ui, sans-serif`;
-      const tw = ctx.measureText(text).width;
-      ctx.fillStyle = 'rgba(0,0,0,.62)';
-      roundRect(ctx, W / 2 - tw / 2 - fs * 0.45, y - fs * 0.78, tw + fs * 0.9, fs * 1.32, fs * 0.28);
-      ctx.fill();
-      ctx.fillStyle = '#ffffff';
-      ctx.textBaseline = 'middle';
-      ctx.fillText(text, W / 2, y - fs * 0.12);
-      ctx.textBaseline = 'alphabetic';
-      y += fs * 1.6;
+    ctx.textBaseline = 'alphabetic';
+    ctx.lineJoin = 'round';
+    const outlined = (text, x, y, fill, size) => {
+      ctx.lineWidth = Math.max(4, size * 0.12);
+      ctx.strokeStyle = 'rgba(0,0,0,.75)';
+      ctx.strokeText(text, x, y);
+      ctx.fillStyle = fill;
+      ctx.fillText(text, x, y);
+    };
+    // "V E N C E D O R"
+    const a1 = ease(t / 0.35);
+    ctx.globalAlpha = a1;
+    const s1 = portrait ? 44 : 34;
+    ctx.font = `800 ${s1}px system-ui, sans-serif`;
+    outlined('V E N C E D O R', W / 2, H / 2 - (portrait ? 110 : 90) - (1 - a1) * 30, '#ffd25a', s1);
+    // nome do vencedor: entra crescendo
+    const a2 = ease((t - 0.25) / 0.4);
+    if (a2 > 0) {
+      const size = portrait ? 190 : 170;
+      const sc = 0.6 + 0.4 * a2 + Math.sin(Math.min(1, (t - 0.25) / 0.6) * Math.PI) * 0.08;
+      ctx.globalAlpha = a2;
+      ctx.save();
+      ctx.translate(W / 2, H / 2 + size * 0.35);
+      ctx.scale(sc, sc);
+      ctx.font = `italic 900 ${size}px system-ui, sans-serif`;
+      ctx.shadowColor = 'rgba(0,0,0,.6)';
+      ctx.shadowBlur = 24;
+      outlined(w.name, 0, 0, w.color, size);
+      ctx.restore();
+    }
+    // legenda (site e @): texto branco com contorno, sem fundo
+    const a3 = ease((t - 0.8) / 0.4);
+    if (a3 > 0) {
+      ctx.globalAlpha = a3;
+      const lines = [['jogaelementum.com.br', portrait ? 50 : 40], ['@jogaelementum', portrait ? 40 : 32]];
+      let y = H / 2 + (portrait ? 190 : 170) * 0.35 + (portrait ? 110 : 90);
+      for (const [text, fs] of lines) {
+        ctx.font = `800 ${fs}px system-ui, sans-serif`;
+        ctx.shadowColor = 'rgba(0,0,0,.7)';
+        ctx.shadowBlur = 10;
+        outlined(text, W / 2, y, '#ffffff', fs);
+        ctx.shadowBlur = 0;
+        y += fs * 1.45;
+      }
     }
     ctx.restore();
   }

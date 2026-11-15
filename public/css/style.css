@@ -1660,7 +1660,15 @@ body.watch-portrait .watch-end > b { font-size: min(18vw, 10vh); }
 .watch-rec[hidden] { display: none; }
 .watch-saved { margin: 4px 0 0; color: #7dffb8; font-weight: 700; }
 body.watch-portrait .watch-banner .ws.out { opacity: .4; }
-.watch-end { position: fixed; inset: 0; z-index: 6; display: grid; place-content: center; justify-items: center; gap: 10px; background: rgba(10,6,18,.55); text-align: center; }
+.watch-end { position: fixed; inset: 0; z-index: 6; display: grid; place-content: center; justify-items: center; gap: 10px; text-align: center; pointer-events: none; }
+.watch-end .watch-actions:not(.later) { pointer-events: auto; }
+.watch-end small { text-shadow: 0 2px 0 rgba(0,0,0,.7), 0 0 10px rgba(0,0,0,.6); }
+/* entra junto com a animação de vitória */
+.watch-end.show small { animation: wIn .35s ease-out both; }
+.watch-end.show > b { animation: wPop .6s .25s cubic-bezier(.2,1.4,.4,1) both; }
+.watch-end.show .watch-caption { animation: wIn .4s .8s ease-out both; }
+@keyframes wIn { from { opacity: 0; transform: translateY(14px); } to { opacity: 1; transform: none; } }
+@keyframes wPop { from { opacity: 0; transform: scale(.55); } to { opacity: 1; transform: scale(1); } }
 .watch-end[hidden] { display: none; }
 .watch-end small { font: 800 18px var(--font); letter-spacing: .4em; color: #ffd25a; }
 .watch-end > b { font: italic 900 clamp(48px, 10vw, 120px)/1 var(--font); text-shadow: 0 5px 0 rgba(0,0,0,.5), 0 0 30px rgba(0,0,0,.6); }
@@ -1681,7 +1689,8 @@ body.watch-portrait .watch-intro { position: absolute; width: 90%; font-size: mi
 
 /* legenda embaixo do VENCEDOR (site e @), estilo legenda de vídeo */
 .watch-caption { display: grid; justify-items: center; gap: 8px; margin-top: 8px; }
-.watch-caption span { padding: 4px 12px 5px; border-radius: 8px; background: rgba(0,0,0,.62); color: #fff; font: 800 clamp(16px, 2.2vw, 26px)/1.2 var(--font); }
+.watch-caption span { color: #fff; font: 800 clamp(16px, 2.2vw, 26px)/1.2 var(--font);
+  text-shadow: 0 2px 0 rgba(0,0,0,.8), 0 0 3px rgba(0,0,0,.9), 0 0 12px rgba(0,0,0,.7); }
 .watch-caption span + span { font-size: clamp(13px, 1.8vw, 21px); }
 body.watch-portrait .watch-caption span { font-size: min(5vw, 2.8vh); }
 body.watch-portrait .watch-caption span + span { font-size: min(4vw, 2.25vh); }

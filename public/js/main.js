@@ -1231,6 +1231,8 @@ function startWatch(choices) {
   show('game');
   $('#pause-overlay').hidden = true;
   $('#watch-end').hidden = true;
+  $('#watch-end').classList.remove('show');
+  clearTimeout(state.watchActionsTimer);
   state.runner?.stop();
   state.tracker = null;
   state.matchTicket = null;
@@ -1241,7 +1243,8 @@ function startWatch(choices) {
   // para saber qual é o golpe final)
   runner.onEvents = (events) => {
     for (const e of events) {
-      if (e.type === 'ko') watchSlowmo(runner, { hold: true });
+      if (e.type === 'matchEnd') watchShowWinner(setup, e.winnerTeam);
+      else if (e.type === 'ko') watchSlowmo(runner, { hold: true });
       else if (e.type === 'hit' && e.kb >= 1000) watchSlowmo(runner, { hold: false });
     }
   };
@@ -1374,18 +1377,20 @@ function stopWatchRecording() {
   }).catch(() => null);
 }
 
-function watchEnd(setup, result) {
-  state.runner?.stop();
-  state.runner = null;
-  const winner = result.winnerTeam ? setup.players.find((p) => p.team === result.winnerTeam) : null;
-  state.watchWinner = { name: winner ? winner.name.toUpperCase() : 'EMPATE', color: winner ? elementColor(winner.element) : '#ffffff' };
-  // o vídeo continua uns segundos mostrando o vencedor
-  if (state.watchRec) state.watchRecTimer = setTimeout(stopWatchRecording, 2800);
+// o VENCEDOR entra junto com a animação de vitória (sem escurecer a tela)
+function watchShowWinner(setup, winnerTeam) {
+  if (state.watchWinner) return;
+  const winner = winnerTeam != null ? setup.players.find((p) => p.team === winnerTeam) : null;
+  state.watchWinner = { name: winner ? winner.name.toUpperCase() : 'EMPATE', color: winner ? elementColor(winner.element) : '#ffffff', start: performance.now() };
   const w = $('#watch-winner');
-  w.textContent = winner ? winner.name.toUpperCase() : 'EMPATE';
-  w.style.color = winner ? elementColor(winner.element) : '#ffffff';
-  $('#watch-end').hidden = false;
-  // os botões só aparecem depois de 5 s (para não saírem em quem grava a tela)
+  w.textContent = state.watchWinner.name;
+  w.style.color = state.watchWinner.color;
+  const end = $('#watch-end');
+  end.hidden = false;
+  end.classList.remove('show');
+  void end.offsetWidth;   // recomeça a animação
+  end.classList.add('show');
+  // os botões só aparecem 5 s depois (para não saírem em quem grava a tela)
   const actions = $('#watch-end .watch-actions');
   actions.classList.add('later');
   clearTimeout(state.watchActionsTimer);
@@ -1393,6 +1398,14 @@ function watchEnd(setup, result) {
     actions.classList.remove('later');
     $('#watch-again').focus({ preventScroll: true });
   }, 5000);
+}
+
+function watchEnd(setup, result) {
+  state.runner?.stop();
+  state.runner = null;
+  watchShowWinner(setup, result.winnerTeam);
+  // o vídeo continua uns segundos mostrando o vencedor
+  if (state.watchRec) state.watchRecTimer = setTimeout(stopWatchRecording, 2800);
 }
 
 // ------------------------------------------------------------ conquistas
