@@ -42,15 +42,31 @@ export class WatchRecorder {
   }
 
   start() {
-    const stream = this.out.captureStream(30);
+    // captureStream(0): cada quadro entra no vídeo na hora exata em que é
+    // desenhado (requestFrame), para o som não se desencontrar da imagem
+    const stream = this.out.captureStream(0);
+    this.track = stream.getVideoTracks()[0];
     const audio = audioStream();
     for (const t of audio?.getAudioTracks() ?? []) stream.addTrack(t);
     this.type = TYPES.find((t) => MediaRecorder.isTypeSupported(t)) ?? '';
-    this.rec = new MediaRecorder(stream, { mimeType: this.type || undefined, videoBitsPerSecond: 10_000_000 });
+    this.rec = new MediaRecorder(stream, { mimeType: this.type || undefined, videoBitsPerSecond: 16_000_000, audioBitsPerSecond: 160_000 });
     this.rec.ondataavailable = (e) => { if (e.data.size) this.chunks.push(e.data); };
     this.running = true;
     this.draw();
     this.rec.start(1000);
+  }
+
+  // liga no laço do jogo: copia cada quadro logo depois que ele é desenhado
+  attach(runner) {
+    this.attached = runner;
+    cancelAnimationFrame(this.frame);
+    runner.afterFrame = this.draw;
+  }
+
+  detach() {
+    if (this.attached) this.attached.afterFrame = null;
+    this.attached = null;
+    if (this.running) this.frame = requestAnimationFrame(this.draw);
   }
 
   draw = () => {
@@ -62,8 +78,9 @@ export class WatchRecorder {
     ctx.fillRect(0, 0, W, H);
     if (source.width && source.height) {
       if (this.portraitMode) {
-        // o meio do jogo (a parte que aparece no celular em pé)
-        const vw = source.height * (W / H);
+        // o canvas do jogo já é a faixa em pé; se a proporção não bater
+        // exatamente, corta o que sobrar dos lados
+        const vw = Math.min(source.width, source.height * (W / H));
         ctx.drawImage(source, (source.width - vw) / 2, 0, vw, source.height, 0, 0, W, H);
       } else {
         ctx.drawImage(source, 0, 0, W, H);
@@ -74,7 +91,9 @@ export class WatchRecorder {
     if (info.banner) this.drawBanner(info.players);
     if (info.intro) this.drawIntro(info.intro);
     if (info.winner) this.drawWinner(info.winner);
-    this.frame = requestAnimationFrame(this.draw);
+    this.track?.requestFrame?.();
+    // sem partida rodando (fim): continua sozinho
+    if (!this.attached) this.frame = requestAnimationFrame(this.draw);
   };
 
   drawBanner(players) {

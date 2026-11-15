@@ -108,6 +108,7 @@ export class MatchRunner {
     }
 
     this.renderer.frame(this.paused ? 0 : dt, this.paused ? 1 : this.acc / DT);
+    this.afterFrame?.();
 
     if (this.game.phase === 'ended' && !this.endNotified) {
       this.endNotified = true;

@@ -61,11 +61,22 @@ export class Renderer {
     const dpr = Math.min(window.devicePixelRatio || 1, 2);
     const rect = this.canvas.getBoundingClientRect();
     this.cssW = this.canvas.clientWidth;
-    // `maxCanvasW`: limite de pixels (no Assistir em pé o canvas fica bem largo)
-    const w = Math.min(this.maxCanvasW ?? Infinity, Math.max(320, Math.round(rect.width * dpr)));
-    this.canvas.width = w;
-    this.canvas.height = Math.round((w * VIEW_H) / VIEW_W);
-    this.scale = this.canvas.width / VIEW_W;
+    // `crop` (0..1): o canvas mostra só a faixa do meio desta largura (Assistir
+    // em pé). O mundo é desenhado como se a tela fosse inteira, deslocado para
+    // a esquerda, então só os pixels da faixa são calculados.
+    const crop = this.crop ?? 1;
+    // `maxCanvasW`/`minCanvasW`: limites de pixels da tela inteira
+    // (gravando vídeo: mais pixels para o vídeo sair nítido)
+    const full = Math.min(this.maxCanvasW ?? Infinity, Math.max(this.minCanvasW ?? 320, Math.round((rect.width * dpr) / crop)));
+    this.canvas.width = Math.round(full * crop);
+    this.canvas.height = Math.round((full * VIEW_H) / VIEW_W);
+    this.scale = full / VIEW_W;
+    this.cropOffset = -(full - this.canvas.width) / 2;
+    if (!this.ctx.__setT) {
+      const ctx = this.ctx;
+      ctx.__setT = ctx.setTransform.bind(ctx);
+      ctx.setTransform = (a, b, c, d, e, f) => ctx.__setT(a, b, c, d, e + (this.cropOffset ?? 0), f);
+    }
     this.stage.setScale(this.scale);
   }
 

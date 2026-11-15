@@ -1280,7 +1280,9 @@ function startWatch(choices) {
       }),
     });
     try {
+      watchLayout();
       state.watchRec.start();
+      state.watchRec.attach(runner);
       $('#watch-rec').hidden = false;
     } catch {
       state.watchRec = null;
@@ -1301,8 +1303,14 @@ function watchLayout() {
   if (!runner?.setup?.watch) return;
   const r = runner.renderer;
   const box = $('#screen-game').getBoundingClientRect();
-  r.camera.focus = portrait ? { frac: (box.width / box.height) / (16 / 9) } : null;
-  r.maxCanvasW = portrait ? 2600 : undefined;
+  const frac = Math.min(1, (box.width / box.height) / (16 / 9));
+  r.camera.focus = portrait ? { frac } : null;
+  // em pé o canvas só desenha a faixa que aparece (mais leve e mais nítido)
+  r.crop = portrait ? frac : 1;
+  // gravando: tela "inteira" grande o bastante para o vídeo sair em 1080x1920
+  const recording = Boolean(state.watchRec);
+  r.minCanvasW = recording ? (portrait ? 3414 : 1920) : undefined;
+  r.maxCanvasW = recording ? (portrait ? 3414 : 1920) : (portrait ? 3600 : undefined);
   r.drawHud = portrait ? () => {} : drawHudOriginal;
   r.resize();
 }
@@ -1401,6 +1409,7 @@ function watchShowWinner(setup, winnerTeam) {
 }
 
 function watchEnd(setup, result) {
+  state.watchRec?.detach();
   state.runner?.stop();
   state.runner = null;
   watchShowWinner(setup, result.winnerTeam);
