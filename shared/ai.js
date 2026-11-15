@@ -148,6 +148,15 @@ export class BotController {
       if (bz?.state === 'ativo' && hazardReaction(me.element, 'vento') !== 'imune') dir = -bz.dir;
     }
 
+    // andando contra uma parede/degrau sem sair do lugar (ex.: fundo de uma
+    // piscina): pula para subir
+    if (me.onGround && dir !== 0 && Math.abs(me.vx) < 15) this.pushing = (this.pushing ?? 0) + 1;
+    else this.pushing = 0;
+    if (this.pushing > 10) {
+      jump = true;
+      this.pushing = 0;
+    }
+
     if (dir < 0) out.left = true;
     if (dir > 0) out.right = true;
 
@@ -204,6 +213,16 @@ export class BotController {
         const dItem = dist(me, item);
         const dEnemy = nearestEnemy ? dist(me, nearestEnemy) : Infinity;
         if (dItem < 380 || dItem < dEnemy * 0.9) goal = { type: 'item', id: item.id };
+      }
+    }
+    // o inimigo está dentro de um perigo que me mata (ex.: Fogo na lava e eu
+    // sou Água): espero num chão neutro perto dele, para ele sair e lutar
+    if (goal?.type === 'enemy') {
+      const e = game.playerById(goal.id);
+      const deadly = e && game.hazardsNow().some((h) => rectsOverlap(e, h) && hazardReaction(me.element, h.type) === 'morre');
+      if (deadly) {
+        const spot = this.waitSpot(game, me, e);
+        if (spot) goal = { type: 'roam', x: spot.x, y: spot.y, until: game.tick + 90 };
       }
     }
     this.goal = goal;
@@ -502,9 +521,23 @@ export class BotController {
     for (const p of game.platforms) {
       if (!game.platformGone(p)) spots.push({ x: p.x + p.w / 2, y: p.y });
     }
+    // longe de QUALQUER perigo (mesmo os que não me machucam): ficar dentro
+    // da própria piscina deixa o outro sem como chegar e a luta para
     const safe = spots.filter((s) => Math.abs(s.x - cx) > 160
-      && !map.hazards.some((h) => s.x >= h.x - 30 && s.x <= h.x + h.w + 30 && Math.abs(h.y - s.y) < 60 && hazardReaction(me.element, h.type) !== 'imune'));
+      && !map.hazards.some((h) => s.x >= h.x - 30 && s.x <= h.x + h.w + 30 && Math.abs(h.y - s.y) < 60));
     return safe.length ? safe[this.rng.int(0, safe.length - 1)] : null;
+  }
+
+  // chão neutro (fora de qualquer perigo) mais perto do inimigo
+  waitSpot(game, me, e) {
+    const map = currentMap(game);
+    const ex = e.x + e.w / 2;
+    const spots = [];
+    for (const isl of this.islands) {
+      for (let x = isl.left + 30; x <= isl.right - 30; x += 30) spots.push({ x, y: isl.top });
+    }
+    const safe = spots.filter((s) => !map.hazards.some((h) => s.x >= h.x - 40 && s.x <= h.x + h.w + 40 && Math.abs(h.y - s.y) < 60));
+    return minBy(safe, (s) => Math.abs(s.x - ex)) ?? null;
   }
 
   resolveGoal(game) {
