@@ -92,6 +92,7 @@ export function show(name) {
     $('#watch-banner').hidden = true;
     $('#watch-end').hidden = true;
     $('#watch-rec').hidden = true;
+    $('#watch-intro').hidden = true;
     document.body.classList.remove('watch-portrait', 'watching');
     stopWatchRecording();
   }
@@ -1245,6 +1246,9 @@ function startWatch(choices) {
     side.style.setProperty('--c', elementColor(p.element));
   });
   banner.hidden = !choices.banner;
+  // frase dourada no começo ("QUEM VAI GANHAR?"), some sozinha
+  state.watchIntro = choices.intro ? { text: choices.intro.toUpperCase(), start: performance.now() } : null;
+  $('#watch-intro').textContent = state.watchIntro?.text ?? '';
   watchLayout();
   watchTick();
   if (choices.record && canRecord()) {
@@ -1256,6 +1260,7 @@ function startWatch(choices) {
       info: () => ({
         banner: choices.banner,
         winner: state.watchWinner,
+        intro: state.watchIntro?.alpha ? state.watchIntro : null,
         players: (state.runner?.game ?? state.watchGame)?.players.map((p) => ({
           name: p.name.toUpperCase(), color: elementColor(p.element), damage: Math.round(p.damage), lives: p.lives, out: p.lives <= 0,
         })) ?? [],
@@ -1297,6 +1302,17 @@ function watchTick() {
   const runner = state.runner;
   if (!runner?.setup?.watch) return;
   const banner = $('#watch-banner');
+  // frase do começo: aparece, fica ~3 s e some devagar
+  const intro = state.watchIntro;
+  const introEl = $('#watch-intro');
+  if (intro) {
+    const t = (performance.now() - intro.start) / 1000;
+    intro.alpha = t < 0.3 ? t / 0.3 : t < 3 ? 1 : Math.max(0, 1 - (t - 3) / 0.6);
+    intro.scale = 0.85 + 0.15 * Math.min(1, t / 0.3);
+    introEl.hidden = intro.alpha <= 0;
+    introEl.style.opacity = intro.alpha;
+    introEl.style.transform = `translate(-50%, -50%) scale(${intro.scale})`;
+  } else introEl.hidden = true;
   // acabou a luta: a câmera abre para a animação de vitória
   const cam = runner.renderer.camera;
   if (cam.focus) cam.focus.wide = runner.game.phase === 'ending' || runner.game.phase === 'ended';

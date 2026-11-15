@@ -84,6 +84,7 @@ export class WatchPanel {
     if (v.lives) $('#w-lives').value = String(v.lives);
     if (v.banner != null) $('#w-banner').value = v.banner ? '1' : '0';
     if (v.format) $('#w-format').value = v.format;
+    $('#w-intro').value = v.intro ?? 'Quem vai ganhar?';
     if (v.record != null) $('#w-record').value = v.record ? '1' : '0';
     $('#w-record-box').hidden = !this.canRecord;
   }
@@ -97,6 +98,7 @@ export class WatchPanel {
       lives: Number($('#w-lives').value) || 3,
       banner: $('#w-banner').value === '1',
       format: $('#w-format').value,
+      intro: $('#w-intro').value.trim().slice(0, 40),
       record: this.canRecord && $('#w-record').value === '1',
     };
   }

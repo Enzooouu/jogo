@@ -1665,3 +1665,13 @@ body.watch-portrait .watch-banner .ws.out { opacity: .4; }
 .watch-end small { font: 800 18px var(--font); letter-spacing: .4em; color: #ffd25a; }
 .watch-end > b { font: italic 900 clamp(48px, 10vw, 120px)/1 var(--font); text-shadow: 0 5px 0 rgba(0,0,0,.5), 0 0 30px rgba(0,0,0,.6); }
 .watch-actions { display: flex; gap: 10px; flex-wrap: wrap; justify-content: center; margin-top: 18px; }
+
+/* frase dourada do começo do Assistir ("QUEM VAI GANHAR?") */
+.watch-intro { position: fixed; z-index: 5; left: 50%; top: 50%; transform: translate(-50%, -50%); width: 90vw; text-align: center; pointer-events: none;
+  font: italic 900 clamp(40px, 9vw, 120px)/1.05 var(--font); color: #ffd25a;
+  background: linear-gradient(180deg, #fff2a8, #ffd25a 50%, #f0a020); -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent;
+  -webkit-text-stroke: .06em rgba(40,18,0,.85); paint-order: stroke fill; filter: drop-shadow(0 0 24px rgba(255,190,60,.55)); }
+.watch-intro[hidden] { display: none; }
+body.watch-portrait .watch-intro { position: absolute; width: 90%; font-size: min(14vw, 7.9vh); }
+.watch-grid label.wide { grid-column: 1 / -1; }
+.watch-grid input { padding: 9px 10px; border-radius: 10px; border: 1px solid rgba(255,255,255,.2); background: #1e1030; color: #fff; font: 700 15px var(--font); }

@@ -76,6 +76,7 @@ export class WatchRecorder {
       ctx.fillRect(0, 0, W, H);
     }
     if (info.banner) this.drawBanner(info.players);
+    if (info.intro) this.drawIntro(info.intro);
     if (info.winner) this.drawWinner(info.winner);
     this.frame = requestAnimationFrame(this.draw);
   };
@@ -128,6 +129,57 @@ export class WatchRecorder {
         ctx.fillText(dots, left + dw + 14, y + 196);
         ctx.textAlign = 'center';
       }
+    });
+    ctx.restore();
+  }
+
+  // frase dourada do começo
+  drawIntro({ text, alpha, scale = 1 }) {
+    const { ctx, out } = this;
+    const W = out.width;
+    const H = out.height;
+    ctx.save();
+    ctx.globalAlpha = alpha;
+    ctx.translate(W / 2, H / 2);
+    ctx.scale(scale, scale);
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    let size = this.portraitMode ? 120 : 130;
+    ctx.font = `italic 900 ${size}px system-ui, sans-serif`;
+    // quebra em duas linhas se não couber
+    const maxW = W * 0.86;
+    const words = text.split(' ');
+    let lines = [text];
+    if (ctx.measureText(text).width > maxW && words.length > 1) {
+      let best = null;
+      for (let i = 1; i < words.length; i++) {
+        const a = words.slice(0, i).join(' ');
+        const b = words.slice(i).join(' ');
+        const w = Math.max(ctx.measureText(a).width, ctx.measureText(b).width);
+        if (!best || w < best.w) best = { w, lines: [a, b] };
+      }
+      lines = best.lines;
+    }
+    const widest = Math.max(...lines.map((l) => ctx.measureText(l).width));
+    if (widest > maxW) {
+      size = Math.floor(size * maxW / widest);
+      ctx.font = `italic 900 ${size}px system-ui, sans-serif`;
+    }
+    const grad = ctx.createLinearGradient(0, -size, 0, size);
+    grad.addColorStop(0, '#fff2a8');
+    grad.addColorStop(0.5, '#ffd25a');
+    grad.addColorStop(1, '#f0a020');
+    lines.forEach((line, i) => {
+      const y = (i - (lines.length - 1) / 2) * size * 1.05;
+      ctx.lineWidth = size * 0.14;
+      ctx.strokeStyle = 'rgba(40,18,0,.85)';
+      ctx.lineJoin = 'round';
+      ctx.strokeText(line, 0, y);
+      ctx.shadowColor = 'rgba(255,190,60,.7)';
+      ctx.shadowBlur = size * 0.35;
+      ctx.fillStyle = grad;
+      ctx.fillText(line, 0, y);
+      ctx.shadowBlur = 0;
     });
     ctx.restore();
   }
