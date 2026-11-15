@@ -13,6 +13,9 @@ export const DIFFICULTIES = {
   facil: { name: 'Fácil', thinkEvery: 16, attackChance: 0.3, reflex: 0.75, itemGreed: 0.4 },
   normal: { name: 'Normal', thinkEvery: 10, attackChance: 0.55, reflex: 0.93, itemGreed: 0.7 },
   dificil: { name: 'Difícil', thinkEvery: 5, attackChance: 0.85, reflex: 1, itemGreed: 0.9 },
+  // só no modo Assistir: desvia, avança com dash, castiga erros e caça quem
+  // está voltando para a arena (lutas mais emocionantes para vídeo)
+  mestre: { name: 'Mestre', thinkEvery: 3, attackChance: 1, reflex: 1, itemGreed: 0.95, expert: true },
 };
 
 export class BotController {
@@ -99,6 +102,14 @@ export class BotController {
       ({ dir, jump } = this.chase(game, me));
     }
 
+    // Mestre: táticas de lutador de verdade
+    if (this.cfg.expert && !offStage && !underStage && this.idleTimer <= 0) {
+      const t = this.tactics(game, me, dir, jump);
+      dir = t.dir;
+      jump = t.jump;
+      if (t.dash) dash = t.dash;
+    }
+
     // Reflexos de sobrevivência (podem falhar um pouco nos bots mais fáceis).
     if (!offStage && !underStage && this.rng.chance(this.cfg.reflex)) {
       const safety = this.avoidDanger(game, me, dir);
@@ -140,6 +151,12 @@ export class BotController {
       out.dash = !this.lastOut.dash;
       if (dash.up) out.up = true;
       if (dash.up && dash.straight) out.left = out.right = false;
+      if (dash.dir) {
+        out.left = dash.dir < 0;
+        out.right = dash.dir > 0;
+        out.up = false;
+        out.attack = false;
+      }
     }
 
     this.lastOut = out;
@@ -180,7 +197,7 @@ export class BotController {
     this.goal = goal;
 
     // Às vezes fica parado um instante (deixa o bot menos robótico).
-    if (this.rng.chance(0.04)) this.idleTimer = this.rng.int(10, 30);
+    if (!this.cfg.expert && this.rng.chance(0.04)) this.idleTimer = this.rng.int(10, 30);
   }
 
   chase(game, me) {
@@ -378,6 +395,61 @@ export class BotController {
     if (!best) return null;
     this.step = { x: best.x, y: best.y, until: game.tick + 120 };
     return { x: best.x - 15, y: best.y - 66, w: 30, h: 66 };
+  }
+
+  // Táticas do Mestre. Devolve { dir, jump, dash }.
+  tactics(game, me, dir, jump) {
+    const cx = me.x + me.w / 2;
+    const feet = me.y + me.h;
+    const enemies = game.players.filter((p) => p.state === 'alive' && p.team !== me.team);
+    const goal = this.goal?.type === 'enemy' ? game.playerById(this.goal.id) : null;
+    const e = goal?.state === 'alive' ? goal : minBy(enemies, (o) => dist(me, o));
+    if (!e) return { dir, jump, dash: null };
+    const ex = e.x + e.w / 2;
+    const dx = ex - cx;
+    const dy = (e.y + e.h) - feet;
+    const side = Math.sign(dx) || me.facing;
+    const myProfile = weaponProfile(me.weapon?.id ?? null, me.element);
+    const reach = myProfile.kind === 'ranged' ? 520 : myProfile.reach + me.w * 0.4;
+    const safeAt = (x) => this.landingIsSafe(game, me, x);
+    const safeDash = (d) => [60, 120, 180].every((k) => safeAt(cx + d * k));
+
+    // 1) Desvia: o inimigo começou um golpe virado para mim e eu estou no
+    // alcance -> dash para trás (ou pulo). Uma vez por golpe.
+    const ea = e.attack;
+    if (ea && !ea.fired && ea !== this.dodged && Math.sign(-dx) === e.facing) {
+      const eProfile = weaponProfile(ea.weapon ?? null, e.element);
+      const eReach = eProfile.kind === 'ranged' ? 520 : eProfile.reach + e.w * 0.6 + 20;
+      if (Math.abs(dx) < eReach && Math.abs(dy) < 80) {
+        this.dodged = ea;
+        if (this.rng.chance(0.35)) {
+          if (me.onGround && game.dashReady(me) && safeDash(-side)) return { dir: -side, jump: false, dash: { dir: -side } };
+          if (me.jumpsLeft > 0) return { dir: -side, jump: true, dash: null };
+        }
+      }
+    }
+
+    // 2) Castiga: o inimigo acabou de errar (sem golpe e esperando recarga)
+    if (!ea && e.cooldown > 0.12 && Math.abs(dx) < reach && Math.abs(dy) < 50 && me.cooldown <= 0 && !me.attack) {
+      if (Math.sign(dx) === me.facing || Math.abs(dx) < 4) this.wantAttack = true;
+      else dir = side;
+    }
+
+    // 3) Avança com dash quando está a meia distância no mesmo andar
+    if (me.onGround && Math.abs(dy) < 40 && Math.abs(dx) > reach + 60 && Math.abs(dx) < 340
+      && game.dashReady(me) && !e.attack && this.rng.chance(0.09) && safeDash(side)) {
+      this.wantAttack = true;
+      return { dir: side, jump: false, dash: { dir: side } };
+    }
+
+    // 4) Caça quem está voltando para a arena: vai para a beira e bate/arremessa
+    const eHome = this.islands.some((i) => ex >= i.left - 2 && ex <= i.right + 2);
+    if (!eHome) {
+      if (me.weapon && Math.abs(dx) < 380 && Math.abs(dy) < 120 && Math.sign(dx) === me.facing && this.rng.chance(0.08)) this.wantThrow = true;
+      else if (Math.abs(dx) < reach + 10 && Math.abs(dy) < 70 && me.cooldown <= 0 && !me.attack) this.wantAttack = true;
+    }
+
+    return { dir, jump, dash: null };
   }
 
   // Anti-travamento: parado no chão sem chegar no alvo (ex.: o inimigo está
