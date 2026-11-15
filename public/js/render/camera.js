@@ -21,6 +21,12 @@ export class Camera {
   target(players) {
     // modo "foco" (Assistir com a tela em pé): só uma faixa do meio aparece
     // (`focus.frac` da largura); a câmera chega perto e segue só os lutadores
+    // fim da luta (animação de vitória): abre para mostrar o mapa
+    if (this.focus?.wide) {
+      const visW = this.viewW * this.focus.frac;
+      const zoom = Math.max(0.36, Math.min(1, visW / (this.home.w * 0.72)));
+      return { x: this.home.x + this.home.w / 2, y: this.home.y + this.home.h * 0.55, zoom };
+    }
     if (this.focus && players.length) {
       let l = Infinity;
       let r = -Infinity;

@@ -1297,6 +1297,9 @@ function watchTick() {
   const runner = state.runner;
   if (!runner?.setup?.watch) return;
   const banner = $('#watch-banner');
+  // acabou a luta: a câmera abre para a animação de vitória
+  const cam = runner.renderer.camera;
+  if (cam.focus) cam.focus.wide = runner.game.phase === 'ending' || runner.game.phase === 'ended';
   runner.game.players.forEach((p, i) => {
     const side = banner.querySelector(`.ws[data-side="${i}"]`);
     if (!side) return;
