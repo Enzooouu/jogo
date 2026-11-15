@@ -23,7 +23,7 @@ import { initInstall } from './install.js';
 import { WatchPanel, buildWatchSetup, elementColor } from './screens/watch.js';
 import { WatchRecorder, canRecord } from './screens/watch-rec.js';
 import { ONLINE_URL } from './config.js';
-import { iconSvg } from './icons.js';
+import { iconSvg, iconEl } from './icons.js';
 import { TOWER, botBrain, brainName, floorFoes, floorStep, carryAfterWin, towerXp, gravityFor, isGuardianFloor, guardianOf } from '/shared/tower.js';
 import { ACCESSORIES, grantAccessory, equippedAccessory } from './collection.js';
 import { FRAMES } from '/shared/profile-stats.js';
@@ -2052,10 +2052,34 @@ function openTutorial() {
 // Cartão de boas-vindas (só na primeira vez que abre o jogo)
 function openWelcome() {
   $('#welcome').hidden = false;
-  requestAnimationFrame(() => {
+  for (const li of document.querySelectorAll('.welcome-chips li[data-icon]')) {
+    if (!li.querySelector('svg')) li.prepend(iconEl(li.dataset.icon));
+  }
+  // os 5 personagens lado a lado, se mexendo de leve
+  const ids = ['fogo', 'agua', 'terra', 'ar', 'mortal'];
+  cancelAnimationFrame(state.welcomeFrame);
+  const draw = (now) => {
+    if ($('#welcome').hidden) return;
     const { ctx, w, h } = fitCanvas($('#welcome-art'));
-    drawPortrait(ctx, 'agua', w / 2, h - 6, h / 82, { extra: { skin: 'manequim' } });
-  });
+    ctx.clearRect(0, 0, w, h);
+    // os bonecos ficam numa faixa no meio (o canvas ocupa a largura toda)
+    const band = Math.min(w, h * 3.2);
+    const gap = band / ids.length;
+    const left = (w - band) / 2;
+    const scale = Math.min(h / 92, gap / 52);
+    ids.forEach((id, i) => {
+      const x = left + gap * (i + 0.5);
+      ctx.save();
+      ctx.fillStyle = 'rgba(0,0,0,.35)';
+      ctx.beginPath();
+      ctx.ellipse(x, h - 6, gap * 0.3, 6, 0, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.restore();
+      drawPortrait(ctx, id, x, h - 6, id === 'mortal' ? scale * 1.18 : scale, { facing: i < 2 ? 1 : -1, time: now / 1000 + i * 0.7 });
+    });
+    state.welcomeFrame = requestAnimationFrame(draw);
+  };
+  state.welcomeFrame = requestAnimationFrame(draw);
   $('#welcome-yes').focus();
 }
 
