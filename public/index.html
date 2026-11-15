@@ -247,6 +247,8 @@
           <label>Dificuldade<select id="w-diff"><option value="facil">Fácil</option><option value="normal">Normal</option><option value="dificil" selected>Difícil</option></select></label>
           <label>Vidas<select id="w-lives"><option>1</option><option>2</option><option selected>3</option><option>5</option></select></label>
           <label>Placar no topo<select id="w-banner"><option value="1" selected>Mostrar</option><option value="0">Esconder</option></select></label>
+          <label>Formato<select id="w-format"><option value="pe" selected>Em pé (TikTok, Reels)</option><option value="deitado">Deitado (YouTube)</option></select></label>
+          <label id="w-record-box">Gravar vídeo<select id="w-record"><option value="1" selected>Sim, baixar no fim</option><option value="0">Não</option></select></label>
         </div>
         <div class="panel-actions">
           <button type="button" class="btn ghost small" data-close>Fechar</button>
@@ -395,8 +397,10 @@
         <i>VS</i>
         <div class="ws" data-side="1"><b></b><span class="wst"><em>0%</em><span class="wl"></span></span></div>
       </div>
+      <div id="watch-rec" class="watch-rec" hidden>GRAVANDO</div>
       <div id="watch-end" class="watch-end" hidden>
         <small>VENCEDOR</small><b id="watch-winner"></b>
+        <p id="watch-saved" class="watch-saved" hidden></p>
         <div class="watch-actions">
           <button type="button" class="btn" id="watch-again">Revanche</button>
           <button type="button" class="btn ghost" id="watch-change">Trocar lutadores</button>

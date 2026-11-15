@@ -1202,7 +1202,7 @@ body.has-touch .no-touch { display: none !important; }
 /* celular de pé: pede para girar */
 .rotate-hint { display: none; }
 @media (orientation: portrait) {
-  body.has-touch.phone.in-fight:not(.rotate-ok) .rotate-hint {
+  body.has-touch.phone.in-fight:not(.rotate-ok):not(.watching) .rotate-hint {
     display: grid; place-items: center; position: fixed; inset: 0; z-index: 60; background: rgba(10,6,18,.94); color: #fff; text-align: center;
   }
   .rotate-hint div { display: grid; gap: 8px; justify-items: center; }
@@ -1639,15 +1639,26 @@ body.has-touch .training-hud { z-index: 25; }
 .watch-banner .ws b { font: italic 900 clamp(22px, 3.4vw, 40px)/1 var(--font); letter-spacing: .02em; text-shadow: 0 3px 0 rgba(0,0,0,.5); }
 .watch-banner .wst { display: none; }
 .watch-banner > i { font: italic 900 clamp(16px, 2.2vw, 26px)/1 var(--font); color: #ffd25a; }
-/* tela em pé: o jogo ocupa a altura toda (as laterais ficam de fora) */
+/* tela em pé: o jogo ocupa a altura toda (as laterais ficam de fora). No
+   computador vira uma faixa 9:16 no meio, igual ao celular */
+body.watch-portrait { background: #000; }
+body.watch-portrait #menu-bg { visibility: hidden; }
+body.watch-portrait #screen-game { position: relative; width: min(100vw, calc(100vh * 9 / 16)); margin: 0 auto; }
 body.watch-portrait .stage-wrap { width: calc(100vh * 16 / 9); height: 100vh; flex: none; }
-body.watch-portrait .watch-banner { top: max(14px, 3vh); width: calc(100vw - 24px); justify-content: space-between; padding: 10px 18px 12px; border-radius: 22px; gap: 8px; }
+body.watch-portrait .watch-banner { position: absolute; top: max(14px, 3vh); width: calc(100% - 24px); justify-content: space-between; padding: 10px 18px 12px; border-radius: 22px; gap: 8px; }
 body.watch-portrait .watch-banner .ws { flex: 1; min-width: 0; }
-body.watch-portrait .watch-banner .ws b { font-size: clamp(24px, 8.4vw, 54px); }
-body.watch-portrait .watch-banner > i { font-size: clamp(18px, 5.6vw, 34px); }
+body.watch-portrait .watch-banner .ws b { font-size: min(8.4vw, 4.7vh); }
+body.watch-portrait .watch-banner > i { font-size: min(5.6vw, 3.15vh); }
 body.watch-portrait .watch-banner .wst { display: flex; align-items: baseline; gap: 8px; margin-top: 4px; }
-body.watch-portrait .watch-banner em { font: 900 clamp(22px, 7.4vw, 46px)/1 var(--font); font-style: normal; color: #fff; text-shadow: 0 3px 0 rgba(0,0,0,.5); }
-body.watch-portrait .watch-banner .wl { font-size: clamp(12px, 3.6vw, 22px); letter-spacing: .1em; color: var(--c, #fff); }
+body.watch-portrait .watch-banner em { font: 900 min(7.4vw, 4.15vh)/1 var(--font); font-style: normal; color: #fff; text-shadow: 0 3px 0 rgba(0,0,0,.5); }
+body.watch-portrait .watch-banner .wl { font-size: min(3.6vw, 2vh); letter-spacing: .1em; color: var(--c, #fff); }
+body.watch-portrait .watch-end { position: absolute; }
+body.watch-portrait .watch-end > b { font-size: min(18vw, 10vh); }
+.watch-rec { position: fixed; z-index: 7; right: 12px; bottom: 12px; padding: 5px 10px 5px 24px; border-radius: 999px; background: rgba(0,0,0,.55);
+  color: #fff; font: 800 11px var(--font); letter-spacing: .14em; pointer-events: none; }
+.watch-rec::before { content: ""; position: absolute; left: 9px; top: 50%; width: 9px; height: 9px; margin-top: -4.5px; border-radius: 50%; background: #ff3b4e; animation: liveDot 1.4s ease-in-out infinite; }
+.watch-rec[hidden] { display: none; }
+.watch-saved { margin: 4px 0 0; color: #7dffb8; font-weight: 700; }
 body.watch-portrait .watch-banner .ws.out { opacity: .4; }
 .watch-end { position: fixed; inset: 0; z-index: 6; display: grid; place-content: center; justify-items: center; gap: 10px; background: rgba(10,6,18,.55); text-align: center; }
 .watch-end[hidden] { display: none; }

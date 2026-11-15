@@ -26,6 +26,18 @@ function ensure() {
   return ctx;
 }
 
+// som do jogo como "trilha" para gravar vídeo (modo Assistir)
+let recDest = null;
+export function audioStream() {
+  const c = ensure();
+  if (!c || !c.createMediaStreamDestination) return null;
+  if (!recDest) {
+    recDest = c.createMediaStreamDestination();
+    master.connect(recDest);
+  }
+  return recDest.stream;
+}
+
 export function unlockAudio() {
   const c = ensure();
   if (c && c.state === 'suspended') c.resume();

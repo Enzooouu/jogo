@@ -21,6 +21,7 @@ import { FriendsPanel } from './screens/friends.js';
 import { AdminPanel } from './screens/admin.js';
 import { initInstall } from './install.js';
 import { WatchPanel, buildWatchSetup, elementColor } from './screens/watch.js';
+import { WatchRecorder, canRecord } from './screens/watch-rec.js';
 import { ONLINE_URL } from './config.js';
 import { iconSvg } from './icons.js';
 import { TOWER, botBrain, brainName, floorFoes, floorStep, carryAfterWin, towerXp, gravityFor, isGuardianFloor, guardianOf } from '/shared/tower.js';
@@ -90,7 +91,9 @@ export function show(name) {
   if (name !== 'game') {
     $('#watch-banner').hidden = true;
     $('#watch-end').hidden = true;
-    document.body.classList.remove('watch-portrait');
+    $('#watch-rec').hidden = true;
+    document.body.classList.remove('watch-portrait', 'watching');
+    stopWatchRecording();
   }
   demo.setHome(name === 'home');
   $('#menu-bg').classList.toggle('home-lit', name === 'home');
@@ -1213,7 +1216,11 @@ function openWatchPanel() {
 }
 
 function startWatch(choices) {
+  stopWatchRecording();
   const setup = buildWatchSetup(choices);
+  state.watchWinner = null;
+  document.body.classList.add('watching');
+  $('#watch-saved').hidden = true;
   state.watch = choices;
   state.lastSetup = setup;
   unlockAudio();
@@ -1240,6 +1247,28 @@ function startWatch(choices) {
   banner.hidden = !choices.banner;
   watchLayout();
   watchTick();
+  if (choices.record && canRecord()) {
+    const name = `elementum-${setup.players[0].element}-vs-${setup.players[1].element}`;
+    state.watchRec = new WatchRecorder({
+      source: $('#game-canvas'),
+      portrait: () => document.body.classList.contains('watch-portrait'),
+      name,
+      info: () => ({
+        banner: choices.banner,
+        winner: state.watchWinner,
+        players: (state.runner?.game ?? state.watchGame)?.players.map((p) => ({
+          name: p.name.toUpperCase(), color: elementColor(p.element), damage: Math.round(p.damage), lives: p.lives, out: p.lives <= 0,
+        })) ?? [],
+      }),
+    });
+    try {
+      state.watchRec.start();
+      $('#watch-rec').hidden = false;
+    } catch {
+      state.watchRec = null;
+    }
+  }
+  state.watchGame = runner.game;
   if (DEBUG) window.__brawl = { runner, state };
 }
 
@@ -1248,11 +1277,13 @@ function startWatch(choices) {
 const drawHudOriginal = Renderer.prototype.drawHud;
 function watchLayout() {
   const runner = state.runner;
-  const portrait = Boolean(runner?.setup?.watch) && innerWidth / innerHeight < 0.9;
+  // em pé: no celular ocupa a tela; no computador, uma faixa 9:16 no meio
+  const portrait = Boolean(runner?.setup?.watch) && state.watch?.format !== 'deitado';
   document.body.classList.toggle('watch-portrait', portrait);
   if (!runner?.setup?.watch) return;
   const r = runner.renderer;
-  r.camera.focus = portrait ? { frac: (innerWidth / innerHeight) / (16 / 9) } : null;
+  const box = $('#screen-game').getBoundingClientRect();
+  r.camera.focus = portrait ? { frac: (box.width / box.height) / (16 / 9) } : null;
   r.maxCanvasW = portrait ? 2600 : undefined;
   r.drawHud = portrait ? () => {} : drawHudOriginal;
   r.resize();
@@ -1280,10 +1311,30 @@ function watchTick() {
   requestAnimationFrame(watchTick);
 }
 
+// para a gravação (se tiver) e baixa o vídeo
+function stopWatchRecording() {
+  const rec = state.watchRec;
+  if (!rec) return null;
+  state.watchRec = null;
+  clearTimeout(state.watchRecTimer);
+  $('#watch-rec').hidden = true;
+  return rec.stop().then((r) => {
+    if (r && !$('#watch-end').hidden) {
+      const saved = $('#watch-saved');
+      saved.textContent = `Vídeo salvo (${r.ext.toUpperCase()}). Veja na pasta Downloads.`;
+      saved.hidden = false;
+    }
+    return r;
+  }).catch(() => null);
+}
+
 function watchEnd(setup, result) {
   state.runner?.stop();
   state.runner = null;
   const winner = result.winnerTeam ? setup.players.find((p) => p.team === result.winnerTeam) : null;
+  state.watchWinner = { name: winner ? winner.name.toUpperCase() : 'EMPATE', color: winner ? elementColor(winner.element) : '#ffffff' };
+  // o vídeo continua uns segundos mostrando o vencedor
+  if (state.watchRec) state.watchRecTimer = setTimeout(stopWatchRecording, 2800);
   const w = $('#watch-winner');
   w.textContent = winner ? winner.name.toUpperCase() : 'EMPATE';
   w.style.color = winner ? elementColor(winner.element) : '#ffffff';
@@ -1611,13 +1662,14 @@ function syncTouch() {
   document.body.classList.toggle('in-fight', inFight);
   const fighting = (state.screen === 'game' && state.runner && !state.runner.paused && state.runner.game.phase !== 'ended')
     || (state.screen === 'tutorial' && tutorial.running && !document.querySelector('.tut-overlay:not([hidden])'));
-  const want = touchMode && Boolean(fighting);
+  const watching = Boolean(state.runner?.setup?.watch);
+  const want = touchMode && Boolean(fighting) && !watching;
   if (want !== !touch.root.hidden) touch.show(want);
   // no treino o botão de placar não serve
   touch.root.querySelector('.tc-scores').hidden = state.screen !== 'game' || Boolean(training && state.runner === training?.runner);
   // virou o celular de pé no meio da luta: pausa sozinho
   const portrait = touchMode && isPhoneScreen() && !document.body.classList.contains('rotate-ok') && window.innerHeight > window.innerWidth;
-  if (portrait && !wasPortrait && fighting) {
+  if (portrait && !wasPortrait && fighting && !watching) {
     if (state.screen === 'game') setPaused(true);
     else tutorial.setPaused(true);
   }
@@ -2033,12 +2085,21 @@ function init() {
   $('.mode-tile[data-mode="treino"]').addEventListener('click', () => chooseMode(1, 'treino'));
   $('.mode-tile[data-mode="online"]').addEventListener('click', openOnline);
   watchPanel = new WatchPanel({
+    canRecord: canRecord(),
     onStart: (choices) => {
       closePanels();
       startWatch(choices);
     },
   });
   $('#watch-again').addEventListener('click', () => startWatch(state.watch));
+  // no celular não tem Esc: dois toques na tela pausam
+  let lastTap = 0;
+  $('#screen-game').addEventListener('pointerdown', () => {
+    if (!state.runner?.setup?.watch) return;
+    const now = performance.now();
+    if (now - lastTap < 350) setPaused(true);
+    lastTap = now;
+  });
   $('#watch-change').addEventListener('click', openWatchPanel);
   $('#watch-exit').addEventListener('click', () => show('home'));
   adminPanel = new AdminPanel({

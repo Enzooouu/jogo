@@ -68,8 +68,9 @@ export function buildWatchSetup({ a, b, map, difficulty, lives }) {
 }
 
 export class WatchPanel {
-  constructor({ onStart }) {
+  constructor({ onStart, canRecord = false }) {
     this.onStart = onStart;
+    this.canRecord = canRecord;
     $('#w-go').addEventListener('click', () => this.start());
   }
 
@@ -82,6 +83,9 @@ export class WatchPanel {
     if (v.difficulty) $('#w-diff').value = v.difficulty;
     if (v.lives) $('#w-lives').value = String(v.lives);
     if (v.banner != null) $('#w-banner').value = v.banner ? '1' : '0';
+    if (v.format) $('#w-format').value = v.format;
+    if (v.record != null) $('#w-record').value = v.record ? '1' : '0';
+    $('#w-record-box').hidden = !this.canRecord;
   }
 
   choices() {
@@ -92,6 +96,8 @@ export class WatchPanel {
       difficulty: $('#w-diff').value,
       lives: Number($('#w-lives').value) || 3,
       banner: $('#w-banner').value === '1',
+      format: $('#w-format').value,
+      record: this.canRecord && $('#w-record').value === '1',
     };
   }
 
