@@ -93,6 +93,7 @@ export function show(name) {
     $('#watch-end').hidden = true;
     $('#watch-rec').hidden = true;
     $('#watch-intro').hidden = true;
+    $('#watch-mark').hidden = true;
     document.body.classList.remove('watch-portrait', 'watching');
     stopWatchRecording();
   }
@@ -1236,6 +1237,14 @@ function startWatch(choices) {
   showTowerHud(setup);
   const runner = new MatchRunner({ canvas: $('#game-canvas'), setup, debug: DEBUG, onEnd: (result) => watchEnd(setup, result) });
   state.runner = runner;
+  // câmera lenta em todo nocaute e nos golpes muito fortes (assim não dá
+  // para saber qual é o golpe final)
+  runner.onEvents = (events) => {
+    for (const e of events) {
+      if (e.type === 'ko') watchSlowmo(runner, { hold: true });
+      else if (e.type === 'hit' && e.kb >= 1000) watchSlowmo(runner, { hold: false });
+    }
+  };
   runner.start();
   $('#quit-btn').textContent = 'Parar e sair';
   $('#quit-hint').textContent = '';
@@ -1246,6 +1255,7 @@ function startWatch(choices) {
     side.style.setProperty('--c', elementColor(p.element));
   });
   banner.hidden = !choices.banner;
+  $('#watch-mark').hidden = false;
   // frase dourada no começo ("QUEM VAI GANHAR?"), some sozinha
   state.watchIntro = choices.intro ? { text: choices.intro.toUpperCase(), start: performance.now() } : null;
   $('#watch-intro').textContent = state.watchIntro?.text ?? '';
@@ -1296,6 +1306,23 @@ function watchLayout() {
 window.addEventListener('resize', () => {
   if (state.runner?.setup?.watch || document.body.classList.contains('watch-portrait')) watchLayout();
 });
+
+function watchSlowmo(runner, { hold }) {
+  const cam = runner.renderer.camera;
+  runner.speed = 0.3;
+  if (cam.focus) {
+    cam.focus.hold = hold;
+    cam.focus.punch = hold ? 1 : 1.18;
+  }
+  clearTimeout(state.slowmoTimer);
+  state.slowmoTimer = setTimeout(() => {
+    runner.speed = 1;
+    if (cam.focus) {
+      cam.focus.hold = false;
+      cam.focus.punch = 1;
+    }
+  }, hold ? 750 : 600);
+}
 
 // placar do banner (dano e vidas), atualizado enquanto a luta roda
 function watchTick() {

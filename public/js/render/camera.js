@@ -57,7 +57,10 @@ export class Camera {
   }
 
   update(dt, players) {
+    // câmera lenta num nocaute (Assistir): a câmera fica parada no lugar
+    if (this.focus?.hold) return;
     const t = this.target(players);
+    if (this.focus?.punch) t.zoom *= this.focus.punch;
     const k = 1 - Math.exp(-SMOOTH * dt);
     // Afasta rápido (ninguém some da tela) e volta mais devagar.
     const kz = t.zoom < this.zoom ? 1 - Math.exp(-SMOOTH * 2 * dt) : k;

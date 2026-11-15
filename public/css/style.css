@@ -1678,3 +1678,16 @@ body.watch-portrait .watch-intro { position: absolute; width: 90%; font-size: mi
 .watch-actions { transition: opacity .4s; }
 .watch-actions.later { opacity: 0; pointer-events: none; }
 .watch-end:has(.watch-actions.later) .watch-saved { opacity: 0; }
+
+/* legenda embaixo do VENCEDOR (site e @), estilo legenda de vídeo */
+.watch-caption { display: grid; justify-items: center; gap: 8px; margin-top: 8px; }
+.watch-caption span { padding: 4px 12px 5px; border-radius: 8px; background: rgba(0,0,0,.62); color: #fff; font: 800 clamp(16px, 2.2vw, 26px)/1.2 var(--font); }
+.watch-caption span + span { font-size: clamp(13px, 1.8vw, 21px); }
+body.watch-portrait .watch-caption span { font-size: min(5vw, 2.8vh); }
+body.watch-portrait .watch-caption span + span { font-size: min(4vw, 2.25vh); }
+/* marca d'água bem discreta em cima do placar */
+.watch-mark { position: fixed; z-index: 4; left: 50%; top: 44px; transform: translateX(-50%); pointer-events: none;
+  color: rgba(255,255,255,.32); font: 700 13px var(--font); letter-spacing: .04em; white-space: nowrap; }
+.watch-mark[hidden] { display: none; }
+body.watch-portrait .watch-mark { position: absolute; top: max(4px, .8vh); font-size: min(2.6vw, 1.45vh); }
+body.watch-portrait .watch-banner { top: max(24px, 3.4vh); }

@@ -75,6 +75,7 @@ export class WatchRecorder {
       ctx.fillStyle = 'rgba(10,6,18,.55)';
       ctx.fillRect(0, 0, W, H);
     }
+    this.drawMark();
     if (info.banner) this.drawBanner(info.players);
     if (info.intro) this.drawIntro(info.intro);
     if (info.winner) this.drawWinner(info.winner);
@@ -130,6 +131,19 @@ export class WatchRecorder {
         ctx.textAlign = 'center';
       }
     });
+    ctx.restore();
+  }
+
+  // marca d'água bem discreta, em cima do placar
+  drawMark() {
+    const { ctx, out } = this;
+    ctx.save();
+    ctx.globalAlpha = 0.32;
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.font = `700 ${this.portraitMode ? 26 : 22}px system-ui, sans-serif`;
+    ctx.fillStyle = '#ffffff';
+    ctx.fillText('@jogaelementum', out.width / 2, this.portraitMode ? 46 : 18);
     ctx.restore();
   }
 
@@ -199,6 +213,21 @@ export class WatchRecorder {
     ctx.fillText(w.name, W / 2, H / 2 + size * 0.35 + 8);
     ctx.fillStyle = w.color;
     ctx.fillText(w.name, W / 2, H / 2 + size * 0.35);
+    // legenda: o site e o @, como legenda de vídeo
+    const lines = [['jogaelementum.com.br', this.portraitMode ? 50 : 40], ['@jogaelementum', this.portraitMode ? 40 : 32]];
+    let y = H / 2 + size * 0.35 + (this.portraitMode ? 110 : 90);
+    for (const [text, fs] of lines) {
+      ctx.font = `800 ${fs}px system-ui, sans-serif`;
+      const tw = ctx.measureText(text).width;
+      ctx.fillStyle = 'rgba(0,0,0,.62)';
+      roundRect(ctx, W / 2 - tw / 2 - fs * 0.45, y - fs * 0.78, tw + fs * 0.9, fs * 1.32, fs * 0.28);
+      ctx.fill();
+      ctx.fillStyle = '#ffffff';
+      ctx.textBaseline = 'middle';
+      ctx.fillText(text, W / 2, y - fs * 0.12);
+      ctx.textBaseline = 'alphabetic';
+      y += fs * 1.6;
+    }
     ctx.restore();
   }
 
