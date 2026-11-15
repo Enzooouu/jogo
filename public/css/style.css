@@ -1675,3 +1675,6 @@ body.watch-portrait .watch-banner .ws.out { opacity: .4; }
 body.watch-portrait .watch-intro { position: absolute; width: 90%; font-size: min(14vw, 7.9vh); }
 .watch-grid label.wide { grid-column: 1 / -1; }
 .watch-grid input { padding: 9px 10px; border-radius: 10px; border: 1px solid rgba(255,255,255,.2); background: #1e1030; color: #fff; font: 700 15px var(--font); }
+.watch-actions { transition: opacity .4s; }
+.watch-actions.later { opacity: 0; pointer-events: none; }
+.watch-end:has(.watch-actions.later) .watch-saved { opacity: 0; }

@@ -1358,7 +1358,14 @@ function watchEnd(setup, result) {
   w.textContent = winner ? winner.name.toUpperCase() : 'EMPATE';
   w.style.color = winner ? elementColor(winner.element) : '#ffffff';
   $('#watch-end').hidden = false;
-  $('#watch-again').focus();
+  // os botões só aparecem depois de 5 s (para não saírem em quem grava a tela)
+  const actions = $('#watch-end .watch-actions');
+  actions.classList.add('later');
+  clearTimeout(state.watchActionsTimer);
+  state.watchActionsTimer = setTimeout(() => {
+    actions.classList.remove('later');
+    $('#watch-again').focus({ preventScroll: true });
+  }, 5000);
 }
 
 // ------------------------------------------------------------ conquistas
