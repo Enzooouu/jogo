@@ -2059,20 +2059,23 @@ function openWelcome() {
     if ($('#welcome').hidden) return;
     const { ctx, w, h } = fitCanvas($('#welcome-art'));
     ctx.clearRect(0, 0, w, h);
-    // os bonecos ficam numa faixa no meio (o canvas ocupa a largura toda)
-    const band = Math.min(w, h * 4.4);
+    // os bonecos ficam numa faixa no meio; a aura de cada um (um círculo
+    // de ~100 unidades) precisa caber inteira, sem encostar nas bordas
+    const band = Math.min(w - 16, 1100, h * 5);
     const gap = band / ids.length;
     const left = (w - band) / 2;
-    const scale = Math.min(h / 92, gap / 52);
+    // no celular em pé as auras podem se encostar um pouco (bonecos maiores)
+    const scale = Math.min(h / 104, gap / (w < 600 ? 62 : 82));
+    const footY = h - 18 * scale;
     ids.forEach((id, i) => {
       const x = left + gap * (i + 0.5);
       ctx.save();
       ctx.fillStyle = 'rgba(0,0,0,.35)';
       ctx.beginPath();
-      ctx.ellipse(x, h - 6, gap * 0.3, Math.max(6, h * 0.035), 0, 0, Math.PI * 2);
+      ctx.ellipse(x, footY, 17 * scale, 3.4 * scale, 0, 0, Math.PI * 2);
       ctx.fill();
       ctx.restore();
-      drawPortrait(ctx, id, x, h - 6, id === 'mortal' ? scale * 1.18 : scale, { facing: i < 2 ? 1 : -1, time: now / 1000 + i * 0.7 });
+      drawPortrait(ctx, id, x, footY, id === 'mortal' ? scale * 1.12 : scale, { facing: i < 2 ? 1 : -1, time: now / 1000 + i * 0.7 });
     });
     state.welcomeFrame = requestAnimationFrame(draw);
   };

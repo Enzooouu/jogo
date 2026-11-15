@@ -745,13 +745,13 @@ body.pad-nav .mode-tile:focus { outline: none !important; }
 .welcome-login { margin-top: 4px; padding: 0; border: 0; background: none; color: #b3a9c9; font: 500 15px var(--font); cursor: pointer; animation: wIn .4s .55s ease-out both; }
 .welcome-login b { color: #ffd25a; text-decoration: underline; text-underline-offset: 3px; }
 .welcome-login:hover b { color: #ffe58a; }
-.welcome-art { display: block; width: min(1100px, 100vw); height: min(30vh, 270px); margin: 0 auto; animation: wIn .5s .3s ease-out both; }
+.welcome-art { display: block; width: 100vw; height: min(36vh, 330px); margin: 0 auto 3vh; animation: wIn .5s .3s ease-out both; }
 /* celular em pé: bonecos menores e os botões um embaixo do outro */
 @media (max-width: 560px) {
   .welcome-kicker { font-size: 12px; letter-spacing: .4em; }
   .welcome-actions { flex-direction: column; align-items: center; gap: 12px; }
   .welcome-go { padding: 14px 30px; }
-  .welcome-art { height: 22vh; }
+  .welcome-art { height: 26vh; margin-bottom: 4vh; }
 }
 /* celular deitado: tudo menor para caber */
 @media (max-height: 520px) {
@@ -763,7 +763,7 @@ body.pad-nav .mode-tile:focus { outline: none !important; }
   .welcome-go { padding: 10px 22px; font-size: 18px; }
   .welcome-skip { padding: 10px 18px; font-size: 15px; }
   .welcome-login { font-size: 13px; }
-  .welcome-art { height: 26vh; }
+  .welcome-art { height: 30vh; margin-bottom: 0; }
 }
 
 @media (max-width: 760px) {
