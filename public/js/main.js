@@ -2052,9 +2052,6 @@ function openTutorial() {
 // Cartão de boas-vindas (só na primeira vez que abre o jogo)
 function openWelcome() {
   $('#welcome').hidden = false;
-  for (const li of document.querySelectorAll('.welcome-chips li[data-icon]')) {
-    if (!li.querySelector('svg')) li.prepend(iconEl(li.dataset.icon));
-  }
   // os 5 personagens lado a lado, se mexendo de leve
   const ids = ['fogo', 'agua', 'terra', 'ar', 'mortal'];
   cancelAnimationFrame(state.welcomeFrame);
@@ -2063,7 +2060,7 @@ function openWelcome() {
     const { ctx, w, h } = fitCanvas($('#welcome-art'));
     ctx.clearRect(0, 0, w, h);
     // os bonecos ficam numa faixa no meio (o canvas ocupa a largura toda)
-    const band = Math.min(w, h * 3.2);
+    const band = Math.min(w, h * 4.4);
     const gap = band / ids.length;
     const left = (w - band) / 2;
     const scale = Math.min(h / 92, gap / 52);
@@ -2072,7 +2069,7 @@ function openWelcome() {
       ctx.save();
       ctx.fillStyle = 'rgba(0,0,0,.35)';
       ctx.beginPath();
-      ctx.ellipse(x, h - 6, gap * 0.3, 6, 0, 0, Math.PI * 2);
+      ctx.ellipse(x, h - 6, gap * 0.3, Math.max(6, h * 0.035), 0, 0, Math.PI * 2);
       ctx.fill();
       ctx.restore();
       drawPortrait(ctx, id, x, h - 6, id === 'mortal' ? scale * 1.18 : scale, { facing: i < 2 ? 1 : -1, time: now / 1000 + i * 0.7 });

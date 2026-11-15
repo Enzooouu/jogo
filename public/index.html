@@ -172,24 +172,18 @@
         </div>
       </div>
       <div id="welcome" class="welcome" hidden>
-        <div class="welcome-card" role="dialog" aria-labelledby="welcome-title">
-          <span class="welcome-tag">PRIMEIRA VEZ?</span>
-          <canvas id="welcome-art" class="welcome-art" aria-hidden="true"></canvas>
-          <div class="welcome-body">
-            <h2 id="welcome-title"><small>BEM-VINDO AO</small><b>ELEMENTUM</b></h2>
-            <p class="welcome-lead">Aprenda a lutar em <strong>5 minutos</strong> no Campo de Treino.</p>
-            <ul class="welcome-chips">
-              <li data-icon="controle">Andar e pular</li>
-              <li data-icon="nivel">Dash e paredes</li>
-              <li data-icon="espada">Armas</li>
-              <li data-icon="chama">Perigos de cada elemento</li>
-            </ul>
+        <div class="welcome-hero" role="dialog" aria-labelledby="welcome-title">
+          <div class="welcome-main">
+            <small class="welcome-kicker">PRIMEIRA VEZ AQUI?</small>
+            <h2 id="welcome-title" class="welcome-logo">ELEMENTUM</h2>
+            <p class="welcome-lead">Escolha um elemento, pegue armas e jogue todo mundo para fora da arena.</p>
             <div class="welcome-actions">
-              <button type="button" class="welcome-go" id="welcome-yes">FAZER O TUTORIAL</button>
-              <button type="button" class="welcome-skip" id="welcome-no">JOGAR DIRETO</button>
+              <button type="button" class="welcome-go" id="welcome-yes">APRENDER A JOGAR</button>
+              <button type="button" class="welcome-skip" id="welcome-no">JÁ SEI, JOGAR</button>
             </div>
             <button type="button" class="welcome-login" id="welcome-login">Já tem conta? <b>Entrar</b></button>
           </div>
+          <canvas id="welcome-art" class="welcome-art" aria-hidden="true"></canvas>
         </div>
       </div>
       <div id="controls-panel" class="side-panel controls-panel" hidden>
