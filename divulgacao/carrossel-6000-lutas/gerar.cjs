@@ -48,7 +48,7 @@ const bgs = Object.fromEntries(MAPS.map(([m]) => [m, 'data:image/png;base64,' + 
   const example = { a: 'fogo', b: 'agua', x: 53 };
   const cover = frame(`
     <div style="position:absolute;top:60px;left:56px;right:56px">
-      <div style="display:flex;justify-content:space-between;align-items:center">${pill('ELEMENTUM · ESTATÍSTICAS')}<span style="font:700 22px ${FONT};color:${MUTED}">1/7</span></div>
+      <div style="display:flex;justify-content:space-between;align-items:center">${pill('ELEMENTUM · ESTATÍSTICAS')}<span style="font:700 22px ${FONT};color:${MUTED}">1/8</span></div>
       <div style="margin-top:56px;font:800 30px ${FONT};letter-spacing:.2em;color:${GOLD}">SIMULEI</div>
       <div style="font:italic 900 150px/0.92 ${FONT};letter-spacing:-.03em;margin-top:6px">6.000<br>LUTAS</div>
       <div style="font:700 40px/1.25 ${FONT};margin-top:26px;max-width:880px">Quem ganha de quem em cada mapa?</div>
@@ -111,7 +111,7 @@ const bgs = Object.fromEntries(MAPS.map(([m]) => [m, 'data:image/png;base64,' + 
     const [bestEl, bestPct] = rank[0];
     const html = frame(`
       <div style="position:absolute;top:56px;left:56px;right:56px">
-        <div style="display:flex;justify-content:space-between;align-items:center">${pill('MAPA')}<span style="font:700 22px ${FONT};color:${MUTED}">${n}/7</span></div>
+        <div style="display:flex;justify-content:space-between;align-items:center">${pill('MAPA')}<span style="font:700 22px ${FONT};color:${MUTED}">${n}/8</span></div>
         <div style="font:italic 900 92px/1 ${FONT};letter-spacing:-.02em;margin-top:22px;text-shadow:0 4px 18px rgba(0,0,0,.6)">${title.toUpperCase()}</div>
       </div>
       <div style="position:absolute;top:250px;left:56px;right:56px;display:flex;align-items:center;gap:20px;padding:18px 26px;border-radius:22px;background:rgba(20,10,32,.78);border:1px solid rgba(255,210,90,.45)">
@@ -125,5 +125,34 @@ const bgs = Object.fromEntries(MAPS.map(([m]) => [m, 'data:image/png;base64,' + 
     await shoot(`${n}-${m}.png`, html);
     n++;
   }
+
+  // ---------------------------------------------------------------- final
+  const crest = fs.readFileSync(SP + '/crest.svg', 'utf8').replace('<svg', '<svg width="100%" height="100%"');
+  const step = (num, icon, title, sub) => `<div style="display:flex;align-items:center;gap:24px;padding:22px 28px;border-radius:22px;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.12)">
+      <div style="width:64px;height:64px;flex:none;border-radius:50%;background:${GOLD};color:#140a20;display:grid;place-items:center;font:900 34px ${FONT}">${num}</div>
+      <div style="flex:1"><div style="font:800 36px/1.15 ${FONT}">${title}</div><div style="font:500 23px/1.35 ${FONT};color:${MUTED};margin-top:4px">${sub}</div></div>
+      <div style="width:56px;height:56px;flex:none;color:${INK}">${icon}</div>
+    </div>`;
+  const svg = (d) => `<svg viewBox="0 0 24 24" width="56" height="56" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${d}</svg>`;
+  const heart = svg('<path d="M12 20s-7-4.4-7-10a4 4 0 0 1 7-2.6A4 4 0 0 1 19 10c0 5.6-7 10-7 10z"/>');
+  const person = svg('<path d="M10 11a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7z"/><path d="M3.5 20c0-3.3 2.9-5.5 6.5-5.5s6.5 2.2 6.5 5.5"/><path d="M19 8v6M16 11h6"/>');
+  const pad = svg('<path d="M7.5 8h9a4 4 0 0 1 3.9 3.2l1 5a2.2 2.2 0 0 1-3.8 1.9L15.5 16h-7l-2.1 2.1a2.2 2.2 0 0 1-3.8-1.9l1-5A4 4 0 0 1 7.5 8z"/><path d="M8 10.5v3M6.5 12h3"/>');
+  const finalHtml = frame(`
+    <div style="position:absolute;top:60px;left:56px;right:56px">
+      <div style="display:flex;justify-content:space-between;align-items:center">${pill('ELEMENTUM')}<span style="font:700 22px ${FONT};color:${MUTED}">8/8</span></div>
+      <div style="font:700 34px/1.3 ${FONT};margin-top:56px;color:${MUTED};max-width:600px">Agora você já sabe o <b style="color:${INK}">melhor personagem</b> pra cada mapa.</div>
+      <div style="font:italic 900 120px/0.95 ${FONT};letter-spacing:-.03em;margin-top:22px">BORA<br>PROVAR?</div>
+    </div>
+    <div style="position:absolute;top:175px;right:50px;width:300px;height:330px;filter:drop-shadow(0 18px 30px rgba(0,0,0,.55))">${crest}</div>
+    <div style="position:absolute;top:560px;left:56px;right:56px;display:grid;gap:18px">
+      ${step(1, heart, 'Curte', 'Ajuda o post a chegar em mais gente')}
+      ${step(2, person, 'Segue @jogaelementum', 'Vem mais estatística, luta e novidade')}
+      ${step(3, pad, 'Joga de graça', 'No navegador, no PC ou no celular')}
+    </div>
+    <div style="position:absolute;top:1040px;left:56px;right:56px;padding:30px 20px;border-radius:26px;background:linear-gradient(90deg,#ff6a1f,#ffb03a);text-align:center;box-shadow:0 14px 40px rgba(255,106,31,.35)">
+      <div style="font:800 22px ${FONT};letter-spacing:.2em;color:#3a1500">JOGUE EM</div>
+      <div style="font:900 66px/1.05 ${FONT};color:#1a0a00;margin-top:6px">jogaelementum.com.br</div>
+    </div>`, null);
+  await shoot('8-final.png', finalHtml);
   await b.close();
 })();
