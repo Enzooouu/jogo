@@ -26,15 +26,20 @@ function ensure() {
   return ctx;
 }
 
-// som do jogo como "trilha" para gravar vídeo (modo Assistir)
+// som do jogo como "trilha" para gravar vídeo (modo Assistir). `delayMs`
+// atrasa só o som que vai para o vídeo (em alguns computadores a imagem do
+// vídeo sai um pouco atrasada e o som parece adiantado)
 let recDest = null;
-export function audioStream() {
+let recDelay = null;
+export function audioStream(delayMs = 0) {
   const c = ensure();
   if (!c || !c.createMediaStreamDestination) return null;
   if (!recDest) {
     recDest = c.createMediaStreamDestination();
-    master.connect(recDest);
+    recDelay = c.createDelay(2);
+    master.connect(recDelay).connect(recDest);
   }
+  recDelay.delayTime.value = Math.max(0, Math.min(1.5, delayMs / 1000));
   return recDest.stream;
 }
 

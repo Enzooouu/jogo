@@ -87,6 +87,8 @@ export class WatchPanel {
     $('#w-intro').value = v.intro ?? 'Quem vai ganhar?';
     if (v.record != null) $('#w-record').value = v.record ? '1' : '0';
     $('#w-record-box').hidden = !this.canRecord;
+    $('#w-sync-box').hidden = !this.canRecord;
+    if (v.sync != null) $('#w-sync').value = String(v.sync);
   }
 
   choices() {
@@ -100,6 +102,7 @@ export class WatchPanel {
       format: $('#w-format').value,
       intro: $('#w-intro').value.trim().slice(0, 40),
       record: this.canRecord && $('#w-record').value === '1',
+      sync: Number($('#w-sync').value) || 0,
     };
   }
 

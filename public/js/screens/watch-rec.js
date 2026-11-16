@@ -28,7 +28,8 @@ export class WatchRecorder {
    * @param {() => {players, banner, winner}} o.info placar e vencedor
    * @param {string} o.name nome do arquivo (sem extensão)
    */
-  constructor({ source, portrait, info, name }) {
+  constructor({ source, portrait, info, name, audioDelay = 0 }) {
+    this.audioDelay = audioDelay;
     this.source = source;
     this.portraitMode = portrait();
     this.info = info;
@@ -46,7 +47,7 @@ export class WatchRecorder {
     // desenhado (requestFrame), para o som não se desencontrar da imagem
     const stream = this.out.captureStream(0);
     this.track = stream.getVideoTracks()[0];
-    const audio = audioStream();
+    const audio = audioStream(this.audioDelay);
     for (const t of audio?.getAudioTracks() ?? []) stream.addTrack(t);
     this.type = TYPES.find((t) => MediaRecorder.isTypeSupported(t)) ?? '';
     this.rec = new MediaRecorder(stream, { mimeType: this.type || undefined, videoBitsPerSecond: 16_000_000, audioBitsPerSecond: 160_000 });

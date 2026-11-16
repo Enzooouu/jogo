@@ -1271,6 +1271,7 @@ function startWatch(choices) {
       source: $('#game-canvas'),
       portrait: () => document.body.classList.contains('watch-portrait'),
       name,
+      audioDelay: choices.sync ?? 0,
       info: () => ({
         banner: choices.banner,
         winner: state.watchWinner,
