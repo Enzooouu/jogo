@@ -1219,6 +1219,7 @@ function openWatchPanel() {
 
 function startWatch(choices) {
   stopWatchRecording();
+  watchLastDmg.clear();
   const setup = buildWatchSetup(choices);
   state.watchWinner = null;
   document.body.classList.add('watching');
@@ -1275,7 +1276,7 @@ function startWatch(choices) {
         winner: state.watchWinner,
         intro: state.watchIntro?.alpha ? state.watchIntro : null,
         players: (state.runner?.game ?? state.watchGame)?.players.map((p) => ({
-          name: p.name.toUpperCase(), color: elementColor(p.element), damage: Math.round(p.damage), lives: p.lives, out: p.lives <= 0,
+          name: p.name.toUpperCase(), color: elementColor(p.element), damage: watchDamage(p), lives: p.lives, out: p.lives <= 0,
         })) ?? [],
       }),
     });
@@ -1335,6 +1336,14 @@ function watchSlowmo(runner, { hold }) {
   }, hold ? 750 : 600);
 }
 
+// dano para o placar: quem já foi eliminado continua mostrando com quanto
+// morreu (e não 0%)
+const watchLastDmg = new Map();
+function watchDamage(p) {
+  if (p.state === 'alive' && p.lives > 0) watchLastDmg.set(p.id, Math.round(p.damage));
+  return p.lives <= 0 || p.state === 'out' ? (watchLastDmg.get(p.id) ?? Math.round(p.damage)) : Math.round(p.damage);
+}
+
 // placar do banner (dano e vidas), atualizado enquanto a luta roda
 function watchTick() {
   const runner = state.runner;
@@ -1357,7 +1366,7 @@ function watchTick() {
   runner.game.players.forEach((p, i) => {
     const side = banner.querySelector(`.ws[data-side="${i}"]`);
     if (!side) return;
-    const dmg = `${Math.round(p.damage)}%`;
+    const dmg = `${watchDamage(p)}%`;
     const em = side.querySelector('em');
     if (em.textContent !== dmg) em.textContent = dmg;
     const lives = '●'.repeat(Math.max(0, p.lives));
