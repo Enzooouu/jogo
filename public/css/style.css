@@ -1711,3 +1711,8 @@ body.watch-portrait .watch-banner { top: max(24px, 3.4vh); }
 .watch-export .wx-bar { width: min(320px, 70vw); height: 10px; border-radius: 999px; background: rgba(0,0,0,.55); border: 1px solid rgba(255,255,255,.2); overflow: hidden; }
 .watch-export .wx-bar i { display: block; height: 100%; width: 0; background: linear-gradient(90deg, #ff6a1f, #ffd25a); transition: width .2s; }
 .watch-export small { font: 700 13px var(--font); color: #e9e1f0; }
+
+.watch-intro .wi-text { display: block; }
+.watch-intro .wi-sub { display: block; margin-top: .35em; font: 800 .32em/1.2 var(--font), "Segoe UI Emoji", "Apple Color Emoji", "Noto Color Emoji";
+  -webkit-text-fill-color: #fff; color: #fff; -webkit-text-stroke: .12em rgba(0,0,0,.85); paint-order: stroke fill; font-style: normal; }
+body.watch-portrait .watch-intro { top: 30%; }

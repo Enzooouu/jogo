@@ -22,7 +22,7 @@ import { AdminPanel } from './screens/admin.js';
 import { initInstall } from './install.js';
 import { WatchPanel, buildWatchSetup, elementColor } from './screens/watch.js';
 import { WatchRecorder, canRecord } from './screens/watch-rec.js';
-import { exportWatchVideo, canExport } from './screens/watch-export.js';
+import { exportWatchVideo, canExport, commentPrompt } from './screens/watch-export.js';
 import { ONLINE_URL } from './config.js';
 import { iconSvg, iconEl } from './icons.js';
 import { TOWER, botBrain, brainName, floorFoes, floorStep, carryAfterWin, towerXp, gravityFor, isGuardianFloor, guardianOf } from '/shared/tower.js';
@@ -1271,7 +1271,8 @@ function startWatch(choices) {
   $('#watch-mark').hidden = false;
   // frase dourada no começo ("QUEM VAI GANHAR?"), some sozinha
   state.watchIntro = choices.intro ? { text: choices.intro.toUpperCase(), start: performance.now() } : null;
-  $('#watch-intro').textContent = state.watchIntro?.text ?? '';
+  $('#watch-intro .wi-text').textContent = state.watchIntro?.text ?? '';
+  $('#watch-intro .wi-sub').textContent = state.watchIntro ? commentPrompt(setup.players) : '';
   watchLayout();
   watchTick();
   if (choices.record && !canExport() && canRecord()) {

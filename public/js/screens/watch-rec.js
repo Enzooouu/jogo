@@ -167,13 +167,14 @@ export class WatchRecorder {
   }
 
   // frase dourada do começo
-  drawIntro({ text, alpha, scale = 1 }) {
+  drawIntro({ text, alpha, scale = 1, sub = '' }) {
     const { ctx, out } = this;
     const W = out.width;
     const H = out.height;
     ctx.save();
     ctx.globalAlpha = alpha;
-    ctx.translate(W / 2, H / 2);
+    // no terço de cima (a luta fica livre no meio)
+    ctx.translate(W / 2, H * (this.portraitMode ? 0.3 : 0.4));
     ctx.scale(scale, scale);
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
@@ -214,6 +215,17 @@ export class WatchRecorder {
       ctx.fillText(line, 0, y);
       ctx.shadowBlur = 0;
     });
+    // pedido de comentário embaixo da frase
+    if (sub) {
+      const fs = Math.round(size * 0.42);
+      const y = ((lines.length - 1) / 2) * size * 1.05 + size * 0.95;
+      ctx.font = `800 ${fs}px system-ui, "Segoe UI Emoji", "Apple Color Emoji", "Noto Color Emoji", sans-serif`;
+      ctx.lineWidth = fs * 0.22;
+      ctx.strokeStyle = 'rgba(0,0,0,.85)';
+      ctx.strokeText(sub, 0, y);
+      ctx.fillStyle = '#ffffff';
+      ctx.fillText(sub, 0, y);
+    }
     ctx.restore();
   }
 

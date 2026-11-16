@@ -16,6 +16,12 @@ import { renderAudioOffline } from '../audio.js';
 import { WatchRecorder } from './watch-rec.js';
 
 const FPS = 30;
+const EMOJI = { fogo: '🔥', agua: '💧', terra: '🪨', ar: '🌪️', mortal: '⚔️' };
+// pede comentário: "Comenta pra quem você torce: 🔥 ou 💧"
+export function commentPrompt(players) {
+  const [a, b] = players;
+  return `Comenta pra quem você torce: ${EMOJI[a.element] ?? a.name} ou ${EMOJI[b.element] ?? b.name}`;
+}
 const AFTER_END = 2.8;          // segundos depois do fim (vencedor na tela)
 const MAX_SECONDS = 6 * 60;     // trava de segurança
 
@@ -121,6 +127,33 @@ export async function exportWatchVideo({ setup, choices, color, onProgress = () 
   let endedAt = null;
   const intro = choices.intro ? choices.intro.toUpperCase() : '';
 
+  // o vídeo começa já na luta: a contagem regressiva acontece fora do vídeo
+  // (a câmera também se ajeita nesse tempo)
+  while (game.phase === 'countdown') {
+    for (let k = 0; k < 2 && game.phase === 'countdown'; k++) {
+      const inputs = {};
+      for (const b of bots) inputs[b.playerId] = b.getInput(game);
+      game.step(inputs);
+      r.handleEvents(game.drainEvents());
+    }
+    r.frame(1 / FPS, 1);
+  }
+  // e começa quando os dois já estão perto (câmera fechada neles), no
+  // máximo 1,5 s depois do início da luta
+  for (let f = 0; f < FPS * 1.5 && game.phase === 'playing'; f++) {
+    const [a, b] = game.players;
+    if (Math.abs(a.x - b.x) < 260 && Math.abs(a.y - b.y) < 160) break;
+    for (let k = 0; k < 2 && game.phase === 'playing'; k++) {
+      const inputs = {};
+      for (const bt of bots) inputs[bt.playerId] = bt.getInput(game);
+      game.step(inputs);
+      const ev = game.drainEvents();
+      r.handleEvents(ev);
+    }
+    r.frame(1 / FPS, 1);
+  }
+  const sub = choices.intro ? commentPrompt(setup.players) : '';
+
   let frame = 0;
   try {
     for (;;) {
@@ -185,7 +218,7 @@ export async function exportWatchVideo({ setup, choices, color, onProgress = () 
       let introInfo = null;
       if (intro) {
         const alpha = t < 0.3 ? t / 0.3 : t < 3 ? 1 : Math.max(0, 1 - (t - 3) / 0.6);
-        if (alpha > 0) introInfo = { text: intro, alpha, scale: 0.85 + 0.15 * Math.min(1, t / 0.3) };
+        if (alpha > 0) introInfo = { text: intro, sub, alpha, scale: 0.85 + 0.15 * Math.min(1, t / 0.3) };
       }
       info = {
         banner: choices.banner,
