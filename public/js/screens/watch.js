@@ -68,7 +68,8 @@ export function buildWatchSetup({ a, b, map, difficulty, lives }) {
 }
 
 export class WatchPanel {
-  constructor({ onStart, canRecord = false }) {
+  constructor({ onStart, canRecord = false, exact = false }) {
+    this.exact = exact;
     this.onStart = onStart;
     this.canRecord = canRecord;
     $('#w-go').addEventListener('click', () => this.start());
@@ -87,7 +88,8 @@ export class WatchPanel {
     $('#w-intro').value = v.intro ?? 'Quem vai ganhar?';
     if (v.record != null) $('#w-record').value = v.record ? '1' : '0';
     $('#w-record-box').hidden = !this.canRecord;
-    $('#w-sync-box').hidden = !this.canRecord;
+    // quadro por quadro o som já sai certinho: o ajuste só vale no gravador ao vivo
+    $('#w-sync-box').hidden = !this.canRecord || this.exact;
     if (v.sync != null) $('#w-sync').value = String(v.sync);
   }
 

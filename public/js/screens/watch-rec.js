@@ -72,26 +72,7 @@ export class WatchRecorder {
 
   draw = () => {
     if (!this.running) return;
-    const { ctx, out, source } = this;
-    const W = out.width;
-    const H = out.height;
-    ctx.fillStyle = '#000';
-    ctx.fillRect(0, 0, W, H);
-    if (source.width && source.height) {
-      if (this.portraitMode) {
-        // o canvas do jogo já é a faixa em pé; se a proporção não bater
-        // exatamente, corta o que sobrar dos lados
-        const vw = Math.min(source.width, source.height * (W / H));
-        ctx.drawImage(source, (source.width - vw) / 2, 0, vw, source.height, 0, 0, W, H);
-      } else {
-        ctx.drawImage(source, 0, 0, W, H);
-      }
-    }
-    const info = this.info();
-    this.drawMark();
-    if (info.banner) this.drawBanner(info.players);
-    if (info.intro) this.drawIntro(info.intro);
-    if (info.winner) this.drawWinner(info.winner);
+    this.compose(this.info());
     this.track?.requestFrame?.();
     // sem partida rodando (fim): continua sozinho
     if (!this.attached) this.frame = requestAnimationFrame(this.draw);
@@ -147,6 +128,29 @@ export class WatchRecorder {
       }
     });
     ctx.restore();
+  }
+
+  // monta um quadro do vídeo: o jogo, a marca, o placar, a frase e o vencedor
+  compose(info) {
+    const { ctx, out, source } = this;
+    const W = out.width;
+    const H = out.height;
+    ctx.fillStyle = '#000';
+    ctx.fillRect(0, 0, W, H);
+    if (source.width && source.height) {
+      if (this.portraitMode) {
+        // o canvas do jogo já é a faixa em pé; se a proporção não bater
+        // exatamente, corta o que sobrar dos lados
+        const vw = Math.min(source.width, source.height * (W / H));
+        ctx.drawImage(source, (source.width - vw) / 2, 0, vw, source.height, 0, 0, W, H);
+      } else {
+        ctx.drawImage(source, 0, 0, W, H);
+      }
+    }
+    this.drawMark();
+    if (info.banner) this.drawBanner(info.players);
+    if (info.intro) this.drawIntro(info.intro);
+    if (info.winner) this.drawWinner(info.winner);
   }
 
   // marca d'água bem discreta, em cima do placar
@@ -218,7 +222,7 @@ export class WatchRecorder {
     const { ctx, out } = this;
     const W = out.width;
     const H = out.height;
-    const t = (performance.now() - (w.start ?? 0)) / 1000;
+    const t = w.elapsed ?? (performance.now() - (w.start ?? 0)) / 1000;
     const ease = (x) => 1 - (1 - Math.min(1, Math.max(0, x))) ** 3;
     const portrait = this.portraitMode;
     ctx.save();

@@ -1703,3 +1703,11 @@ body.watch-portrait .watch-caption span + span { font-size: min(4vw, 2.25vh); }
 .watch-mark[hidden] { display: none; }
 body.watch-portrait .watch-mark { position: absolute; top: max(4px, .8vh); font-size: min(2.6vw, 1.45vh); }
 body.watch-portrait .watch-banner { top: max(24px, 3.4vh); }
+
+/* gerando o vídeo do Assistir (quadro por quadro) */
+.watch-export { display: grid; justify-items: center; gap: 8px; margin-top: 18px; pointer-events: none; }
+.watch-export[hidden] { display: none; }
+.watch-export b { font: 800 16px var(--font); color: #fff; text-shadow: 0 2px 0 rgba(0,0,0,.7); }
+.watch-export .wx-bar { width: min(320px, 70vw); height: 10px; border-radius: 999px; background: rgba(0,0,0,.55); border: 1px solid rgba(255,255,255,.2); overflow: hidden; }
+.watch-export .wx-bar i { display: block; height: 100%; width: 0; background: linear-gradient(90deg, #ff6a1f, #ffd25a); transition: width .2s; }
+.watch-export small { font: 700 13px var(--font); color: #e9e1f0; }

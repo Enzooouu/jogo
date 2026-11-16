@@ -15,7 +15,14 @@ function readMuted() {
   }
 }
 
+// Exportar vídeo: o som é "desenhado" num OfflineAudioContext (fora do tempo
+// real), cada efeito na hora exata do quadro em que acontece
+let offline = null;   // { ctx, master, time }
+const out = () => (offline ? offline.master : master);
+const at = (c) => (offline ? offline.time : c.currentTime);
+
 function ensure() {
+  if (offline) return offline.ctx;
   if (ctx) return ctx;
   const AC = window.AudioContext || window.webkitAudioContext;
   if (!AC) return null;
@@ -65,8 +72,8 @@ export function toggleMute() {
 
 function tone({ freq = 440, to = freq, dur = 0.12, type = 'square', vol = 0.3, delay = 0 }) {
   const c = ensure();
-  if (!c || muted) return;
-  const t = c.currentTime + delay;
+  if (!c || (muted && !offline)) return;
+  const t = at(c) + delay;
   const osc = c.createOscillator();
   const gain = c.createGain();
   osc.type = type;
@@ -74,15 +81,15 @@ function tone({ freq = 440, to = freq, dur = 0.12, type = 'square', vol = 0.3, d
   osc.frequency.exponentialRampToValueAtTime(Math.max(20, to), t + dur);
   gain.gain.setValueAtTime(vol, t);
   gain.gain.exponentialRampToValueAtTime(0.001, t + dur);
-  osc.connect(gain).connect(master);
+  osc.connect(gain).connect(out());
   osc.start(t);
   osc.stop(t + dur + 0.02);
 }
 
 function noise({ dur = 0.15, vol = 0.3, freq = 1200, delay = 0 }) {
   const c = ensure();
-  if (!c || muted) return;
-  const t = c.currentTime + delay;
+  if (!c || (muted && !offline)) return;
+  const t = at(c) + delay;
   const len = Math.floor(c.sampleRate * dur);
   const buffer = c.createBuffer(1, len, c.sampleRate);
   const data = buffer.getChannelData(0);
@@ -94,7 +101,7 @@ function noise({ dur = 0.15, vol = 0.3, freq = 1200, delay = 0 }) {
   filter.frequency.value = freq;
   const gain = c.createGain();
   gain.gain.value = vol;
-  src.connect(filter).connect(gain).connect(master);
+  src.connect(filter).connect(gain).connect(out());
   src.start(t);
 }
 
@@ -115,7 +122,11 @@ export function setAmbience(kind) {
   }
   const c = ensure();
   if (!c || kind !== 'torcida') return;
-  // ruído filtrado em loop: parece um monte de gente conversando longe
+  crowdLoop = crowdMurmur(c);
+}
+
+// ruído filtrado em loop: parece um monte de gente conversando longe
+function crowdMurmur(c) {
   const len = c.sampleRate * 2;
   const buffer = c.createBuffer(1, len, c.sampleRate);
   const data = buffer.getChannelData(0);
@@ -129,17 +140,46 @@ export function setAmbience(kind) {
   band.Q.value = 0.8;
   const gain = c.createGain();
   gain.gain.value = 0.05;
-  src.connect(band).connect(gain).connect(master);
+  src.connect(band).connect(gain).connect(out());
   src.start();
-  crowdLoop = src;
+  return src;
+}
+
+/**
+ * Gera o som de um vídeo fora do tempo real.
+ * @param {number} duration segundos
+ * @param {{t: number, beep?: boolean, events?: object[]}[]} items o que tocar e quando
+ * @param {string|null} amb barulho de fundo ('torcida' no Coliseu)
+ * @returns {Promise<AudioBuffer>}
+ */
+export async function renderAudioOffline({ duration, items, ambience: amb = null, sampleRate = 48000 }) {
+  const oc = new OfflineAudioContext(2, Math.max(1, Math.ceil(duration * sampleRate)), sampleRate);
+  const m = oc.createGain();
+  m.gain.value = 0.35;
+  m.connect(oc.destination);
+  const savedAmb = ambience;
+  offline = { ctx: oc, master: m, time: 0 };
+  try {
+    ambience = amb;
+    if (amb === 'torcida') crowdMurmur(oc);
+    for (const it of items) {
+      offline.time = it.t;
+      if (it.beep) beep();
+      if (it.events?.length) playEvents(it.events, null);
+    }
+  } finally {
+    offline = null;
+    ambience = savedAmb;
+  }
+  return oc.startRendering();
 }
 
 // Grito da torcida: ruído filtrado na faixa da voz que cresce, fica um
 // tempo e some devagar, com um monte de "êêê!" de vozes diferentes no meio
 function crowdRoar(vol = 0.5, dur = 2.2, delay = 0) {
   const c = ensure();
-  if (!c || muted) return;
-  const t = c.currentTime + delay;
+  if (!c || (muted && !offline)) return;
+  const t = at(c) + delay;
   const len = Math.floor(c.sampleRate * dur);
   const buffer = c.createBuffer(1, len, c.sampleRate);
   const data = buffer.getChannelData(0);
@@ -156,7 +196,7 @@ function crowdRoar(vol = 0.5, dur = 2.2, delay = 0) {
     gain.gain.exponentialRampToValueAtTime(vol * share, t + 0.25);
     gain.gain.setValueAtTime(vol * share, t + dur * 0.45);
     gain.gain.exponentialRampToValueAtTime(0.0001, t + dur);
-    src.connect(band).connect(gain).connect(master);
+    src.connect(band).connect(gain).connect(out());
     src.start(t);
     src.stop(t + dur + 0.05);
   }

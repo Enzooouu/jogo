@@ -22,6 +22,7 @@ import { AdminPanel } from './screens/admin.js';
 import { initInstall } from './install.js';
 import { WatchPanel, buildWatchSetup, elementColor } from './screens/watch.js';
 import { WatchRecorder, canRecord } from './screens/watch-rec.js';
+import { exportWatchVideo, canExport } from './screens/watch-export.js';
 import { ONLINE_URL } from './config.js';
 import { iconSvg, iconEl } from './icons.js';
 import { TOWER, botBrain, brainName, floorFoes, floorStep, carryAfterWin, towerXp, gravityFor, isGuardianFloor, guardianOf } from '/shared/tower.js';
@@ -94,6 +95,7 @@ export function show(name) {
     $('#watch-rec').hidden = true;
     $('#watch-intro').hidden = true;
     $('#watch-mark').hidden = true;
+    if (state.watchExport) cancelWatchExport();
     document.body.classList.remove('watch-portrait', 'watching');
     stopWatchRecording();
   }
@@ -1217,7 +1219,14 @@ function openWatchPanel() {
   watchPanel.open();
 }
 
+function cancelWatchExport() {
+  state.watchExport = null;
+  $('#watch-export').hidden = true;
+  $('#watch-end .watch-actions').hidden = false;
+}
+
 function startWatch(choices) {
+  cancelWatchExport();
   stopWatchRecording();
   watchLastDmg.clear();
   const setup = buildWatchSetup(choices);
@@ -1265,7 +1274,7 @@ function startWatch(choices) {
   $('#watch-intro').textContent = state.watchIntro?.text ?? '';
   watchLayout();
   watchTick();
-  if (choices.record && canRecord()) {
+  if (choices.record && !canExport() && canRecord()) {
     const name = `elementum-${setup.players[0].element}-vs-${setup.players[1].element}`;
     state.watchRec = new WatchRecorder({
       source: $('#game-canvas'),
@@ -1378,6 +1387,50 @@ function watchTick() {
   requestAnimationFrame(watchTick);
 }
 
+function downloadBlob(blob, name) {
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = name;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  setTimeout(() => URL.revokeObjectURL(a.href), 60_000);
+}
+
+async function watchExport(setup, choices) {
+  const box = $('#watch-export');
+  const actions = $('#watch-end .watch-actions');
+  const job = {};
+  state.watchExport = job;
+  box.hidden = false;
+  actions.hidden = true;
+  const show = (f, label) => {
+    box.querySelector('b').textContent = label;
+    box.querySelector('i').style.width = `${Math.round(f * 100)}%`;
+    box.querySelector('small').textContent = `${Math.round(f * 100)}%`;
+  };
+  show(0, 'Gerando o vídeo…');
+  try {
+    const { blob, ext } = await exportWatchVideo({ setup, choices, color: elementColor, onProgress: show, cancelled: () => state.watchExport !== job });
+    if (state.watchExport !== job) return;
+    downloadBlob(blob, `elementum-${setup.players[0].element}-vs-${setup.players[1].element}.${ext}`);
+    const saved = $('#watch-saved');
+    saved.textContent = 'Vídeo salvo (MP4). Veja na pasta Downloads.';
+    saved.hidden = false;
+  } catch (err) {
+    if (state.watchExport !== job) return;
+    const saved = $('#watch-saved');
+    saved.textContent = `Não deu para gerar o vídeo: ${err.message}`;
+    saved.hidden = false;
+  } finally {
+    if (state.watchExport === job) {
+      state.watchExport = null;
+      box.hidden = true;
+      actions.hidden = false;
+    }
+  }
+}
+
 // para a gravação (se tiver) e baixa o vídeo
 function stopWatchRecording() {
   const rec = state.watchRec;
@@ -1423,6 +1476,8 @@ function watchEnd(setup, result) {
   state.runner?.stop();
   state.runner = null;
   watchShowWinner(setup, result.winnerTeam);
+  // vídeo "quadro por quadro": refaz a luta e monta o vídeo com calma
+  if (state.watch?.record && canExport()) watchExport(setup, state.watch);
   // o vídeo continua uns segundos mostrando o vencedor
   if (state.watchRec) state.watchRecTimer = setTimeout(stopWatchRecording, 2800);
 }
@@ -2197,7 +2252,8 @@ function init() {
   $('.mode-tile[data-mode="treino"]').addEventListener('click', () => chooseMode(1, 'treino'));
   $('.mode-tile[data-mode="online"]').addEventListener('click', openOnline);
   watchPanel = new WatchPanel({
-    canRecord: canRecord(),
+    canRecord: canExport() || canRecord(),
+    exact: canExport(),
     onStart: (choices) => {
       closePanels();
       startWatch(choices);
