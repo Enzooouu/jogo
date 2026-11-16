@@ -1,0 +1,98 @@
+{
+  "mapa": "navio",
+  "nivel": "mestre",
+  "vidas": 3,
+  "lutasPorDupla": 100,
+  "duplas": [
+    {
+      "a": "fogo",
+      "b": "agua",
+      "vitoriasA": 57,
+      "vitoriasB": 42,
+      "empates": 1,
+      "duracaoMedia": 82,
+      "kos": 437
+    },
+    {
+      "a": "fogo",
+      "b": "terra",
+      "vitoriasA": 31,
+      "vitoriasB": 69,
+      "empates": 0,
+      "duracaoMedia": 86,
+      "kos": 432
+    },
+    {
+      "a": "fogo",
+      "b": "ar",
+      "vitoriasA": 38,
+      "vitoriasB": 62,
+      "empates": 0,
+      "duracaoMedia": 92,
+      "kos": 450
+    },
+    {
+      "a": "fogo",
+      "b": "mortal",
+      "vitoriasA": 43,
+      "vitoriasB": 57,
+      "empates": 0,
+      "duracaoMedia": 78,
+      "kos": 436
+    },
+    {
+      "a": "agua",
+      "b": "terra",
+      "vitoriasA": 36,
+      "vitoriasB": 64,
+      "empates": 0,
+      "duracaoMedia": 94,
+      "kos": 437
+    },
+    {
+      "a": "agua",
+      "b": "ar",
+      "vitoriasA": 27,
+      "vitoriasB": 73,
+      "empates": 0,
+      "duracaoMedia": 95,
+      "kos": 450
+    },
+    {
+      "a": "agua",
+      "b": "mortal",
+      "vitoriasA": 35,
+      "vitoriasB": 65,
+      "empates": 0,
+      "duracaoMedia": 80,
+      "kos": 433
+    },
+    {
+      "a": "terra",
+      "b": "ar",
+      "vitoriasA": 46,
+      "vitoriasB": 54,
+      "empates": 0,
+      "duracaoMedia": 99,
+      "kos": 430
+    },
+    {
+      "a": "terra",
+      "b": "mortal",
+      "vitoriasA": 61,
+      "vitoriasB": 39,
+      "empates": 0,
+      "duracaoMedia": 89,
+      "kos": 436
+    },
+    {
+      "a": "ar",
+      "b": "mortal",
+      "vitoriasA": 53,
+      "vitoriasB": 47,
+      "empates": 0,
+      "duracaoMedia": 93,
+      "kos": 462
+    }
+  ]
+}

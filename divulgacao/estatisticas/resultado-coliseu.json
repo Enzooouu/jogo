@@ -1,0 +1,98 @@
+{
+  "mapa": "coliseu",
+  "nivel": "mestre",
+  "vidas": 3,
+  "lutasPorDupla": 100,
+  "duplas": [
+    {
+      "a": "fogo",
+      "b": "agua",
+      "vitoriasA": 47,
+      "vitoriasB": 53,
+      "empates": 0,
+      "duracaoMedia": 114,
+      "kos": 464
+    },
+    {
+      "a": "fogo",
+      "b": "terra",
+      "vitoriasA": 69,
+      "vitoriasB": 31,
+      "empates": 0,
+      "duracaoMedia": 116,
+      "kos": 465
+    },
+    {
+      "a": "fogo",
+      "b": "ar",
+      "vitoriasA": 32,
+      "vitoriasB": 68,
+      "empates": 0,
+      "duracaoMedia": 129,
+      "kos": 467
+    },
+    {
+      "a": "fogo",
+      "b": "mortal",
+      "vitoriasA": 32,
+      "vitoriasB": 68,
+      "empates": 0,
+      "duracaoMedia": 107,
+      "kos": 462
+    },
+    {
+      "a": "agua",
+      "b": "terra",
+      "vitoriasA": 67,
+      "vitoriasB": 33,
+      "empates": 0,
+      "duracaoMedia": 124,
+      "kos": 471
+    },
+    {
+      "a": "agua",
+      "b": "ar",
+      "vitoriasA": 34,
+      "vitoriasB": 66,
+      "empates": 0,
+      "duracaoMedia": 142,
+      "kos": 464
+    },
+    {
+      "a": "agua",
+      "b": "mortal",
+      "vitoriasA": 31,
+      "vitoriasB": 69,
+      "empates": 0,
+      "duracaoMedia": 116,
+      "kos": 455
+    },
+    {
+      "a": "terra",
+      "b": "ar",
+      "vitoriasA": 32,
+      "vitoriasB": 68,
+      "empates": 0,
+      "duracaoMedia": 142,
+      "kos": 453
+    },
+    {
+      "a": "terra",
+      "b": "mortal",
+      "vitoriasA": 16,
+      "vitoriasB": 84,
+      "empates": 0,
+      "duracaoMedia": 113,
+      "kos": 444
+    },
+    {
+      "a": "ar",
+      "b": "mortal",
+      "vitoriasA": 42,
+      "vitoriasB": 58,
+      "empates": 0,
+      "duracaoMedia": 134,
+      "kos": 472
+    }
+  ]
+}

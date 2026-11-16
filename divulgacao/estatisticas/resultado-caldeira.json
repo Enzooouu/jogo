@@ -1,0 +1,98 @@
+{
+  "mapa": "caldeira",
+  "nivel": "mestre",
+  "vidas": 3,
+  "lutasPorDupla": 100,
+  "duplas": [
+    {
+      "a": "fogo",
+      "b": "agua",
+      "vitoriasA": 53,
+      "vitoriasB": 47,
+      "empates": 0,
+      "duracaoMedia": 117,
+      "kos": 464
+    },
+    {
+      "a": "fogo",
+      "b": "terra",
+      "vitoriasA": 63,
+      "vitoriasB": 37,
+      "empates": 0,
+      "duracaoMedia": 106,
+      "kos": 455
+    },
+    {
+      "a": "fogo",
+      "b": "ar",
+      "vitoriasA": 44,
+      "vitoriasB": 56,
+      "empates": 0,
+      "duracaoMedia": 129,
+      "kos": 460
+    },
+    {
+      "a": "fogo",
+      "b": "mortal",
+      "vitoriasA": 50,
+      "vitoriasB": 50,
+      "empates": 0,
+      "duracaoMedia": 110,
+      "kos": 460
+    },
+    {
+      "a": "agua",
+      "b": "terra",
+      "vitoriasA": 64,
+      "vitoriasB": 36,
+      "empates": 0,
+      "duracaoMedia": 114,
+      "kos": 439
+    },
+    {
+      "a": "agua",
+      "b": "ar",
+      "vitoriasA": 51,
+      "vitoriasB": 49,
+      "empates": 0,
+      "duracaoMedia": 138,
+      "kos": 454
+    },
+    {
+      "a": "agua",
+      "b": "mortal",
+      "vitoriasA": 56,
+      "vitoriasB": 44,
+      "empates": 0,
+      "duracaoMedia": 113,
+      "kos": 451
+    },
+    {
+      "a": "terra",
+      "b": "ar",
+      "vitoriasA": 53,
+      "vitoriasB": 47,
+      "empates": 0,
+      "duracaoMedia": 126,
+      "kos": 443
+    },
+    {
+      "a": "terra",
+      "b": "mortal",
+      "vitoriasA": 44,
+      "vitoriasB": 56,
+      "empates": 0,
+      "duracaoMedia": 99,
+      "kos": 452
+    },
+    {
+      "a": "ar",
+      "b": "mortal",
+      "vitoriasA": 51,
+      "vitoriasB": 49,
+      "empates": 0,
+      "duracaoMedia": 124,
+      "kos": 455
+    }
+  ]
+}

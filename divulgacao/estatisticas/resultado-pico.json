@@ -1,0 +1,98 @@
+{
+  "mapa": "pico",
+  "nivel": "mestre",
+  "vidas": 3,
+  "lutasPorDupla": 100,
+  "duplas": [
+    {
+      "a": "fogo",
+      "b": "agua",
+      "vitoriasA": 45,
+      "vitoriasB": 55,
+      "empates": 0,
+      "duracaoMedia": 121,
+      "kos": 435
+    },
+    {
+      "a": "fogo",
+      "b": "terra",
+      "vitoriasA": 50,
+      "vitoriasB": 50,
+      "empates": 0,
+      "duracaoMedia": 93,
+      "kos": 438
+    },
+    {
+      "a": "fogo",
+      "b": "ar",
+      "vitoriasA": 53,
+      "vitoriasB": 47,
+      "empates": 0,
+      "duracaoMedia": 103,
+      "kos": 441
+    },
+    {
+      "a": "fogo",
+      "b": "mortal",
+      "vitoriasA": 77,
+      "vitoriasB": 23,
+      "empates": 0,
+      "duracaoMedia": 98,
+      "kos": 438
+    },
+    {
+      "a": "agua",
+      "b": "terra",
+      "vitoriasA": 57,
+      "vitoriasB": 43,
+      "empates": 0,
+      "duracaoMedia": 114,
+      "kos": 451
+    },
+    {
+      "a": "agua",
+      "b": "ar",
+      "vitoriasA": 51,
+      "vitoriasB": 49,
+      "empates": 0,
+      "duracaoMedia": 105,
+      "kos": 437
+    },
+    {
+      "a": "agua",
+      "b": "mortal",
+      "vitoriasA": 74,
+      "vitoriasB": 26,
+      "empates": 0,
+      "duracaoMedia": 98,
+      "kos": 423
+    },
+    {
+      "a": "terra",
+      "b": "ar",
+      "vitoriasA": 42,
+      "vitoriasB": 58,
+      "empates": 0,
+      "duracaoMedia": 89,
+      "kos": 435
+    },
+    {
+      "a": "terra",
+      "b": "mortal",
+      "vitoriasA": 61,
+      "vitoriasB": 39,
+      "empates": 0,
+      "duracaoMedia": 88,
+      "kos": 452
+    },
+    {
+      "a": "ar",
+      "b": "mortal",
+      "vitoriasA": 68,
+      "vitoriasB": 32,
+      "empates": 0,
+      "duracaoMedia": 80,
+      "kos": 444
+    }
+  ]
+}
