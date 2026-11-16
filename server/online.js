@@ -331,8 +331,13 @@ export function createOnline(store, { lobbySeconds = LOBBY_SECONDS, rematchSecon
     send(conn, { t: 'hello', name: conn.name, account: Boolean(user) });
 
     ws.on('message', (data) => {
-      // proteção simples contra flood: no máximo ~200 mensagens por segundo
-      if (++conn.msgs > 200) return;
+      // proteção contra flood: o jogo manda ~60 por segundo; passando de 200
+      // o resto é ignorado, e quem passa de 600 (só um ataque faz isso) é
+      // desconectado
+      if (++conn.msgs > 200) {
+        if (conn.msgs > 600) ws.terminate();
+        return;
+      }
       let msg;
       try {
         msg = JSON.parse(data);

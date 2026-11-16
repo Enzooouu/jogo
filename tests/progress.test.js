@@ -49,7 +49,24 @@ test('progresso: fica na conta, e mudança do servidor ganha', async () => {
   }
 });
 
+test('admin: ninguém cria a conta do administrador sem ADMIN_SIGNUP', async () => {
+  const app = createApp({ db: openDatabase(':memory:') });
+  const server = app.listen(0);
+  const base = `http://127.0.0.1:${server.address().port}/api`;
+  const reg = (username) => fetch(`${base}/auth/register`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ username, password: 'senha-boa-1' }) }).then((r) => r.status);
+  try {
+    delete process.env.ADMIN_SIGNUP;
+    assert.equal(await reg('EnzooFoda'), 409, 'com outra caixa');
+    assert.equal(await reg('enzoofoda'), 409);
+    const big = await fetch(`${base}/progress`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ x: 'y'.repeat(200000) }) });
+    assert.equal(big.status, 413, 'pedido gigante: 413, não erro interno');
+  } finally {
+    server.close();
+  }
+});
+
 test('admin: só enzoofoda entra; muda progresso, senha e apaga conta', async () => {
+  process.env.ADMIN_SIGNUP = '1';
   const app = createApp({ db: openDatabase(':memory:') });
   const server = app.listen(0);
   const base = `http://127.0.0.1:${server.address().port}/api`;
@@ -86,6 +103,7 @@ test('admin: só enzoofoda entra; muda progresso, senha e apaga conta', async ()
     assert.equal((await adm('GET', `/admin/users/${bId}`)).status, 404);
     assert.equal((await bia('GET', '/progress')).status, 401);
   } finally {
+    delete process.env.ADMIN_SIGNUP;
     server.close();
   }
 });

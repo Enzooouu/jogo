@@ -55,6 +55,12 @@ export function createApi(store, online = null) {
     const { username, password } = req.body ?? {};
     const error = validateUsername(username) ?? validatePassword(password);
     if (error) return res.status(400).json({ error });
+    // o nome do administrador é reservado: só dá para criar essa conta com o
+    // servidor configurado para isso (ADMIN_SIGNUP=1). Sem isso, num banco
+    // novo qualquer um que pegasse o nome primeiro viraria administrador.
+    if (isDeveloper(username) && process.env.ADMIN_SIGNUP !== '1') {
+      return res.status(409).json({ error: 'Esse nome de usuário já está em uso.' });
+    }
     if (store.findUserByName(username)) {
       return res.status(409).json({ error: 'Esse nome de usuário já está em uso.' });
     }
